@@ -1,0 +1,55 @@
+{
+  "includeGitInstructions": false,
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "deny": [
+      "Read(**/.ssh/**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(**/credentials)",
+      "Read(**/.aws/**)",
+      "Read(**/.gnupg/**)",
+      "Read(**/permissions)",
+      "Read(**/permission)",
+      "Read(**/permissions.json)",
+
+      "Edit(**/.ssh/**)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Edit(**/*.pem)",
+      "Edit(**/*.key)",
+      "Edit(**/.aws/**)",
+      "Edit(**/.gnupg/**)",
+      "Edit(**/permissions)",
+      "Edit(**/permission)",
+
+      "Write(**/.ssh/**)",
+      "Write(**/.env)",
+      "Write(**/.env.*)",
+      "Write(**/*.pem)",
+      "Write(**/*.key)",
+      "Write(**/.aws/**)",
+      "Write(**/.gnupg/**)",
+      "Write(**/permissions)",
+      "Write(**/permission)",
+
+      "Bash(cat *.env*)",
+      "Bash(type *.env*)",
+      "Bash(cat *id_rsa*)",
+      "Bash(cat *.pem)",
+      "Bash(cat *.key)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf C:*)",
+      "Bash(rm -rf ~:*)"
+    ]
+  },
+  "additionalDirectories": [
+    "C:\\",
+    "D:\\",
+    "E:\\"
+  ]
+}
