@@ -1,5 +1,4 @@
 schema: spec-driven
-
 # ============================================================
 # 專案脈絡（context）
 # 此段內容會在 AI 建立任何產出物時讀入。
@@ -46,7 +45,6 @@ context: |
   存取限制：
   - 不得讀取或修改 `_private/_private_notes/筆記.txt`
   - 受限資料夾名稱：`done`（在 `_private/_private_notes/` 與 `_private/_private_fileAssets/` 下，凡是符合此名稱的資料夾及其底下檔案皆不得碰）
-
 # ============================================================
 # 各類產出物的規則（rules）
 # 對應 /spectra-propose、/spectra-apply 等流程產生的內容。
