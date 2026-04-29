@@ -1,0 +1,83 @@
+schema: spec-driven
+
+# ============================================================
+# 專案脈絡（context）
+# 此段內容會在 AI 建立任何產出物時讀入。
+# 寫得越具體，AI 越能做出貼合專案的決策。
+# ============================================================
+context: |
+  專案類型：
+  - 可在手機離線使用的日文學習 PWA 網站
+
+  技術棧：
+  - 語言：TypeScript（strict 模式，全面取代純 JavaScript）
+  - 框架：Vue 3（Composition API、<script setup lang="ts">）
+  - 樣式：Tailwind CSS
+  - 路由：Vue Router
+  - 狀態管理：Pinia
+  - 持久化：localStorage（離線資料保存）
+  - 部署形態：PWA（可安裝、可完全離線運作）
+
+  程式碼風格：
+  - 一律使用 Composition API 與 <script setup lang="ts">，不寫 Options API
+  - 一律使用 TypeScript，不可在 .vue / .ts 檔內寫純 .js
+  - 開啟 strict 模式，禁止 any（除非有明確註解說明原因）
+  - 公開 API、props、emits、store state 都要明確型別宣告
+  - 優先使用 interface 描述物件、type 描述聯集與工具型別
+  - 元件命名：PascalCase（例：FlashCard.vue）
+  - 檔案名稱：小駝峰（例：FlashCard.vue）
+  - 檔案組織：依功能（feature）分組，而非依類型
+  - 縮排 2 空格、字串單引號
+  - 每個 .vue 檔依序為 <script setup lang="ts"> → <template> → <style>
+
+  領域知識：
+  - 日文學習涵蓋：五十音（平假名／片假名）、漢字、N5–N1 詞彙、基礎文法
+  - 學習機制可能涉及：SRS（間隔重複）、單字卡、聽寫測驗、進度追蹤
+
+  使用情境：
+  - 主要使用情境為「手機 + 離線」（通勤、無網路時段）
+  - 任何新功能都必須優先考慮離線可用性，網路功能須能優雅降級
+
+  語言與編碼規範：
+  - commit 訊息、規格文件、提案、對外說明一律使用「繁體中文」
+  - 所有中文內容以 UTF-8 儲存與提交，不可出現亂碼、問號替代字元、BOM 汙染
+  - commit 訊息建議遵循 conventional commits 風格（例：feat: 新增五十音翻轉卡片）
+
+  存取限制：
+  - 不得讀取或修改 `_private/_private_notes/筆記.txt`
+  - 受限資料夾名稱：`done`（在 `_private/_private_notes/` 與 `_private/_private_fileAssets/` 下，凡是符合此名稱的資料夾及其底下檔案皆不得碰）
+
+# ============================================================
+# 各類產出物的規則（rules）
+# 對應 /spectra-propose、/spectra-apply 等流程產生的內容。
+# ============================================================
+rules:
+  # 變更提案（openspec/changes/<change-id>/proposal.md）
+  proposal:
+    - 開頭明確陳述「使用者要解決的問題」與「為什麼現在要做」
+    - 必須有「Non-goals（不做什麼）」一節，避免範圍蔓延
+    - 控制在 500 字以內，聚焦 What / Why，不寫實作演算法
+    - 涉及離線資料的提案必須說明：資料如何儲存、同步策略、衝突處理
+
+  # 技術設計（openspec/changes/<change-id>/design.md）
+  design:
+    - 描述「怎麼做」與技術決策的原因，不直接貼大段程式碼
+    - 必須有「替代方案」段落，列出至少一個被淘汰的選項與淘汰原因
+    - 涉及離線資料時須明確劃分職責：localStorage / IndexedDB / Pinia store 各自負責什麼
+    - 涉及狀態管理需描述 store 的 state shape（欄位、型別、初始值）
+    - UI 設計以手機優先（mobile-first），桌機為加分項而非主軸
+    - 與外部 API 互動需說明離線時的降級策略（顯示快取、停用功能、錯誤訊息）
+
+  # 任務拆解（openspec/changes/<change-id>/tasks.md）
+  tasks:
+    - 每個任務拆成可在 2 小時內完成的粒度
+    - 每個任務需有明確「完成定義」，可獨立驗證
+    - 必須包含測試任務（單元測試或手動測試步驟），不可只列實作
+    - 涉及 UI 的任務需含「在實機/模擬器離線情境下驗證」步驟
+
+  # 規格文件（openspec/specs/<capability>/spec.md）
+  spec:
+    - 描述「行為」與「介面」，不寫實作細節
+    - 用具體例子說明邊界條件（空資料、首次使用、無網路）
+    - 離線情境必須明確涵蓋（資料快取、同步、衝突）
+    - 使用者可見文案以繁體中文範例呈現
