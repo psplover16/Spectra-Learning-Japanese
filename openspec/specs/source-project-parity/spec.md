@@ -1,0 +1,1035 @@
+# source-project-parity Specification
+
+## Purpose
+
+TBD - created by archiving change 'recreate-japanese-word-practice-vue-ai'. Update Purpose after archive.
+
+## Requirements
+
+### Requirement: Fixed Source Target
+The system SHALL use `C:\Users\Gary\Documents\Japanese_Word_Practice_Vue_AI` on branch `017-refine-n5-content` as the authoritative source target for this parity change.
+
+#### Scenario: Source target verification
+
+- **WHEN** implementation work starts
+- **THEN** the source path and branch SHALL be verified before any parity inventory item is marked ready for recreation
+
+
+<!-- @trace
+source: recreate-japanese-word-practice-vue-ai
+updated: 2026-04-29
+code:
+  - src/modules/practice/components/SeionTable.vue
+  - src/modules/practice/components/HatsuonSection.vue
+  - playwright.config.ts
+  - src/modules/practice/components/SpecialSyllableSection.vue
+  - tests/e2e/testUtils.ts
+  - src/modules/practice/views/PracticeView.vue
+  - src/modules/exam/components/ExamModal.vue
+  - tests/setup.ts
+  - src/modules/practice/components/LoanwordSection.vue
+  - eslint.config.js
+  - src/modules/n5Grammar/components/N5GrammarInfoBlock.vue
+  - public/icons/180.png
+  - _private/discuss.txt
+  - src/shared/components/ToastBanner.vue
+  - src/modules/grammar/components/GrammarAccordionTableShell.vue
+  - src/modules/exam/types/exam.ts
+  - src/app/main.ts
+  - src/modules/grammar/components/InflectionTable.vue
+  - src/modules/practice/data/kanaData.ts
+  - src/modules/grammar/components/GodanVerbTable.vue
+  - docs/parity/screenshots/grammar-mobile.png
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/shared/utils/questionDeck.ts
+  - src/modules/pwa/composables/usePwaLifecycle.ts
+  - src/modules/grammar/components/PosConversionTable.vue
+  - src/modules/grammar/types/changeRules.ts
+  - src/modules/practice/components/SokuonSection.vue
+  - src/modules/practice/types/practice.ts
+  - tests/mocks/pwaRegisterMock.ts
+  - public/icons/512.png
+  - src/shared/components/BaseInput.vue
+  - src/modules/practice/components/SeionYoonSection.vue
+  - src/modules/n5Grammar/types/grammarNotes.ts
+  - src/modules/pwa/types/pwa.ts
+  - src/shared/components/BaseCheckbox.vue
+  - public/vite.ico
+  - src/modules/n5Grammar/views/N5GrammarView.vue
+  - src/modules/practice/data/specialSyllableData.ts
+  - src/modules/exam/storage/latestUnknownResultStorage.ts
+  - src/modules/practice/composables/usePracticeSession.ts
+  - src/modules/pwa/services/pwaLifecycleService.ts
+  - src/modules/practice/components/PracticeToolbar.vue
+  - src/assets/vite.svg
+  - src/assets/vue.svg
+  - src/modules/n5Grammar/utils/highlightParts.ts
+  - src/modules/practice/components/DakuonYoonSection.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/shared/utils/questionCount.ts
+  - README.md
+  - tailwind.config.ts
+  - src/modules/vocabulary/components/VocabularyCountSummary.vue
+  - src/shared/utils/bodyScrollLock.ts
+  - src/shared/utils/storageGuard.ts
+  - src/assets/hero.png
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - vitest.config.ts
+  - postcss.config.js
+  - src/styles/main.css
+  - _private/done/筆記.html
+  - src/shared/config/storageKeys.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - vite.config.ts
+  - index.html
+  - docs/parity/screenshots/vocabulary-mobile.png
+  - scripts/publishPages.mjs
+  - src/shared/components/RouteTabs.vue
+  - docs/parity/screenshots/n5-grammar-mobile.png
+  - docs/parity/screenshots/n5-grammar-desktop.png
+  - package.json
+  - tsconfig.json
+  - docs/parity/screenshots/grammar-desktop.png
+  - src/modules/exam/components/UnknownResultPanel.vue
+  - src/modules/n5Grammar/components/N5GrammarCompareTable.vue
+  - src/modules/practice/components/SelectionDetailPanel.vue
+  - src/modules/practice/components/ChoonRuleSection.vue
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - tests/component/testUtils.ts
+  - src/modules/grammar/views/GrammarView.vue
+  - public/icons/192.png
+  - _private/propose.md
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - tsconfig.node.json
+  - docs/parity/screenshots/vocabulary-desktop.png
+  - src/app/router.ts
+  - src/shared/config/publicAssets.ts
+  - src/app/AppShell.vue
+  - src/modules/practice/components/DakuonTable.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/n5Grammar/config/viewPreferences.ts
+  - PROJECT_ARCHITECTURE.md
+  - docs/parity/source-project-parity.md
+  - scripts/publishPages.d.mts
+  - src/modules/n5Grammar/components/N5GrammarBulletBlock.vue
+  - src/shared/utils/renderSafety.ts
+  - src/modules/grammar/components/SystemDifferenceTable.vue
+  - src/shared/components/BaseButton.vue
+  - tsconfig.app.json
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - docs/parity/screenshots/practice-mobile.png
+  - docs/parity/screenshots/practice-desktop.png
+  - src/modules/exam/composables/useExamSession.ts
+  - src/modules/grammar/components/RuleListTable.vue
+  - src/modules/grammar/data/changeRules.ts
+  - src/env.d.ts
+  - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+  - src/modules/n5Grammar/data/grammarNotes.ts
+tests:
+  - tests/e2e/practice-exam-flow.spec.ts
+  - tests/e2e/practice-layout.smoke.spec.ts
+  - tests/unit/n5GrammarParticleDeExamples.spec.ts
+  - tests/unit/n5GrammarParticleKaDuration.spec.ts
+  - tests/unit/n5GrammarParticleNiExamples.spec.ts
+  - tests/unit/publicAssets.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/SelectionDetailPanel.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/component/N5GrammarSections.spec.ts
+  - tests/unit/publishPages.spec.ts
+  - tests/unit/n5GrammarQuestionWordsExamples.spec.ts
+  - tests/component/ChoonRuleSection.spec.ts
+  - tests/unit/usePracticeSession.spec.ts
+  - tests/component/YoonSections.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/N5GrammarViewSmoke.spec.ts
+  - tests/component/RouteOwnership.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/n5GrammarParticleMadeExamples.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/n5GrammarParticleKaraExamples.spec.ts
+  - tests/unit/pwaLifecycleService.spec.ts
+  - tests/e2e/n5-grammar-layout.spec.ts
+  - tests/component/PracticeViewSmoke.spec.ts
+  - tests/unit/questionDeck.spec.ts
+  - tests/e2e/grammar-change-rules.spec.ts
+  - tests/component/GrammarViewSmoke.spec.ts
+  - tests/unit/n5GrammarDemonstrativesExamples.spec.ts
+  - tests/component/AppShellSmoke.spec.ts
+  - tests/unit/changeRulesData.spec.ts
+  - tests/unit/n5GrammarParticleToCompanionNote.spec.ts
+  - tests/unit/useExamSession.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/LoanwordSection.spec.ts
+  - tests/unit/n5GrammarHighlightParts.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/component/GrammarChangeRulesTables.spec.ts
+  - tests/component/N5GrammarParticleKaDuration.spec.ts
+  - tests/unit/latestUnknownResultStorage.spec.ts
+  - tests/unit/n5GrammarData.spec.ts
+  - tests/e2e/app-shell.smoke.spec.ts
+-->
+
+---
+### Requirement: Source Parity Inventory
+The system SHALL create a parity inventory that records every user-visible page, route, component group, interaction flow, UI state, visible copy category, visual rule, data flow, offline persistence behavior, import or export flow, setting, and progress behavior discovered in the source target.
+
+#### Scenario: Inventory item creation
+
+- **WHEN** a user-visible source behavior is discovered
+- **THEN** the parity inventory SHALL record its source location, expected observable behavior, UI states, data dependencies, offline behavior, and acceptance evidence
+
+##### Example: Page states
+
+- **GIVEN** a source page has empty, active, and completed states
+- **WHEN** the page is added to the parity inventory
+- **THEN** the inventory entry contains empty, active, and completed states as separate acceptance items
+
+
+<!-- @trace
+source: recreate-japanese-word-practice-vue-ai
+updated: 2026-04-29
+code:
+  - src/modules/practice/components/SeionTable.vue
+  - src/modules/practice/components/HatsuonSection.vue
+  - playwright.config.ts
+  - src/modules/practice/components/SpecialSyllableSection.vue
+  - tests/e2e/testUtils.ts
+  - src/modules/practice/views/PracticeView.vue
+  - src/modules/exam/components/ExamModal.vue
+  - tests/setup.ts
+  - src/modules/practice/components/LoanwordSection.vue
+  - eslint.config.js
+  - src/modules/n5Grammar/components/N5GrammarInfoBlock.vue
+  - public/icons/180.png
+  - _private/discuss.txt
+  - src/shared/components/ToastBanner.vue
+  - src/modules/grammar/components/GrammarAccordionTableShell.vue
+  - src/modules/exam/types/exam.ts
+  - src/app/main.ts
+  - src/modules/grammar/components/InflectionTable.vue
+  - src/modules/practice/data/kanaData.ts
+  - src/modules/grammar/components/GodanVerbTable.vue
+  - docs/parity/screenshots/grammar-mobile.png
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/shared/utils/questionDeck.ts
+  - src/modules/pwa/composables/usePwaLifecycle.ts
+  - src/modules/grammar/components/PosConversionTable.vue
+  - src/modules/grammar/types/changeRules.ts
+  - src/modules/practice/components/SokuonSection.vue
+  - src/modules/practice/types/practice.ts
+  - tests/mocks/pwaRegisterMock.ts
+  - public/icons/512.png
+  - src/shared/components/BaseInput.vue
+  - src/modules/practice/components/SeionYoonSection.vue
+  - src/modules/n5Grammar/types/grammarNotes.ts
+  - src/modules/pwa/types/pwa.ts
+  - src/shared/components/BaseCheckbox.vue
+  - public/vite.ico
+  - src/modules/n5Grammar/views/N5GrammarView.vue
+  - src/modules/practice/data/specialSyllableData.ts
+  - src/modules/exam/storage/latestUnknownResultStorage.ts
+  - src/modules/practice/composables/usePracticeSession.ts
+  - src/modules/pwa/services/pwaLifecycleService.ts
+  - src/modules/practice/components/PracticeToolbar.vue
+  - src/assets/vite.svg
+  - src/assets/vue.svg
+  - src/modules/n5Grammar/utils/highlightParts.ts
+  - src/modules/practice/components/DakuonYoonSection.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/shared/utils/questionCount.ts
+  - README.md
+  - tailwind.config.ts
+  - src/modules/vocabulary/components/VocabularyCountSummary.vue
+  - src/shared/utils/bodyScrollLock.ts
+  - src/shared/utils/storageGuard.ts
+  - src/assets/hero.png
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - vitest.config.ts
+  - postcss.config.js
+  - src/styles/main.css
+  - _private/done/筆記.html
+  - src/shared/config/storageKeys.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - vite.config.ts
+  - index.html
+  - docs/parity/screenshots/vocabulary-mobile.png
+  - scripts/publishPages.mjs
+  - src/shared/components/RouteTabs.vue
+  - docs/parity/screenshots/n5-grammar-mobile.png
+  - docs/parity/screenshots/n5-grammar-desktop.png
+  - package.json
+  - tsconfig.json
+  - docs/parity/screenshots/grammar-desktop.png
+  - src/modules/exam/components/UnknownResultPanel.vue
+  - src/modules/n5Grammar/components/N5GrammarCompareTable.vue
+  - src/modules/practice/components/SelectionDetailPanel.vue
+  - src/modules/practice/components/ChoonRuleSection.vue
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - tests/component/testUtils.ts
+  - src/modules/grammar/views/GrammarView.vue
+  - public/icons/192.png
+  - _private/propose.md
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - tsconfig.node.json
+  - docs/parity/screenshots/vocabulary-desktop.png
+  - src/app/router.ts
+  - src/shared/config/publicAssets.ts
+  - src/app/AppShell.vue
+  - src/modules/practice/components/DakuonTable.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/n5Grammar/config/viewPreferences.ts
+  - PROJECT_ARCHITECTURE.md
+  - docs/parity/source-project-parity.md
+  - scripts/publishPages.d.mts
+  - src/modules/n5Grammar/components/N5GrammarBulletBlock.vue
+  - src/shared/utils/renderSafety.ts
+  - src/modules/grammar/components/SystemDifferenceTable.vue
+  - src/shared/components/BaseButton.vue
+  - tsconfig.app.json
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - docs/parity/screenshots/practice-mobile.png
+  - docs/parity/screenshots/practice-desktop.png
+  - src/modules/exam/composables/useExamSession.ts
+  - src/modules/grammar/components/RuleListTable.vue
+  - src/modules/grammar/data/changeRules.ts
+  - src/env.d.ts
+  - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+  - src/modules/n5Grammar/data/grammarNotes.ts
+tests:
+  - tests/e2e/practice-exam-flow.spec.ts
+  - tests/e2e/practice-layout.smoke.spec.ts
+  - tests/unit/n5GrammarParticleDeExamples.spec.ts
+  - tests/unit/n5GrammarParticleKaDuration.spec.ts
+  - tests/unit/n5GrammarParticleNiExamples.spec.ts
+  - tests/unit/publicAssets.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/SelectionDetailPanel.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/component/N5GrammarSections.spec.ts
+  - tests/unit/publishPages.spec.ts
+  - tests/unit/n5GrammarQuestionWordsExamples.spec.ts
+  - tests/component/ChoonRuleSection.spec.ts
+  - tests/unit/usePracticeSession.spec.ts
+  - tests/component/YoonSections.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/N5GrammarViewSmoke.spec.ts
+  - tests/component/RouteOwnership.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/n5GrammarParticleMadeExamples.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/n5GrammarParticleKaraExamples.spec.ts
+  - tests/unit/pwaLifecycleService.spec.ts
+  - tests/e2e/n5-grammar-layout.spec.ts
+  - tests/component/PracticeViewSmoke.spec.ts
+  - tests/unit/questionDeck.spec.ts
+  - tests/e2e/grammar-change-rules.spec.ts
+  - tests/component/GrammarViewSmoke.spec.ts
+  - tests/unit/n5GrammarDemonstrativesExamples.spec.ts
+  - tests/component/AppShellSmoke.spec.ts
+  - tests/unit/changeRulesData.spec.ts
+  - tests/unit/n5GrammarParticleToCompanionNote.spec.ts
+  - tests/unit/useExamSession.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/LoanwordSection.spec.ts
+  - tests/unit/n5GrammarHighlightParts.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/component/GrammarChangeRulesTables.spec.ts
+  - tests/component/N5GrammarParticleKaDuration.spec.ts
+  - tests/unit/latestUnknownResultStorage.spec.ts
+  - tests/unit/n5GrammarData.spec.ts
+  - tests/e2e/app-shell.smoke.spec.ts
+-->
+
+---
+### Requirement: Observable Behavior Parity
+The system SHALL recreate every parity inventory item in this project so that the user-visible behavior matches the source target.
+
+#### Scenario: Recreated interaction flow
+
+- **WHEN** a user performs an inventoried source flow in this project
+- **THEN** the same visible actions, state transitions, persisted results, and completion outcomes SHALL be available in the same user-facing order
+
+
+<!-- @trace
+source: recreate-japanese-word-practice-vue-ai
+updated: 2026-04-29
+code:
+  - src/modules/practice/components/SeionTable.vue
+  - src/modules/practice/components/HatsuonSection.vue
+  - playwright.config.ts
+  - src/modules/practice/components/SpecialSyllableSection.vue
+  - tests/e2e/testUtils.ts
+  - src/modules/practice/views/PracticeView.vue
+  - src/modules/exam/components/ExamModal.vue
+  - tests/setup.ts
+  - src/modules/practice/components/LoanwordSection.vue
+  - eslint.config.js
+  - src/modules/n5Grammar/components/N5GrammarInfoBlock.vue
+  - public/icons/180.png
+  - _private/discuss.txt
+  - src/shared/components/ToastBanner.vue
+  - src/modules/grammar/components/GrammarAccordionTableShell.vue
+  - src/modules/exam/types/exam.ts
+  - src/app/main.ts
+  - src/modules/grammar/components/InflectionTable.vue
+  - src/modules/practice/data/kanaData.ts
+  - src/modules/grammar/components/GodanVerbTable.vue
+  - docs/parity/screenshots/grammar-mobile.png
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/shared/utils/questionDeck.ts
+  - src/modules/pwa/composables/usePwaLifecycle.ts
+  - src/modules/grammar/components/PosConversionTable.vue
+  - src/modules/grammar/types/changeRules.ts
+  - src/modules/practice/components/SokuonSection.vue
+  - src/modules/practice/types/practice.ts
+  - tests/mocks/pwaRegisterMock.ts
+  - public/icons/512.png
+  - src/shared/components/BaseInput.vue
+  - src/modules/practice/components/SeionYoonSection.vue
+  - src/modules/n5Grammar/types/grammarNotes.ts
+  - src/modules/pwa/types/pwa.ts
+  - src/shared/components/BaseCheckbox.vue
+  - public/vite.ico
+  - src/modules/n5Grammar/views/N5GrammarView.vue
+  - src/modules/practice/data/specialSyllableData.ts
+  - src/modules/exam/storage/latestUnknownResultStorage.ts
+  - src/modules/practice/composables/usePracticeSession.ts
+  - src/modules/pwa/services/pwaLifecycleService.ts
+  - src/modules/practice/components/PracticeToolbar.vue
+  - src/assets/vite.svg
+  - src/assets/vue.svg
+  - src/modules/n5Grammar/utils/highlightParts.ts
+  - src/modules/practice/components/DakuonYoonSection.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/shared/utils/questionCount.ts
+  - README.md
+  - tailwind.config.ts
+  - src/modules/vocabulary/components/VocabularyCountSummary.vue
+  - src/shared/utils/bodyScrollLock.ts
+  - src/shared/utils/storageGuard.ts
+  - src/assets/hero.png
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - vitest.config.ts
+  - postcss.config.js
+  - src/styles/main.css
+  - _private/done/筆記.html
+  - src/shared/config/storageKeys.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - vite.config.ts
+  - index.html
+  - docs/parity/screenshots/vocabulary-mobile.png
+  - scripts/publishPages.mjs
+  - src/shared/components/RouteTabs.vue
+  - docs/parity/screenshots/n5-grammar-mobile.png
+  - docs/parity/screenshots/n5-grammar-desktop.png
+  - package.json
+  - tsconfig.json
+  - docs/parity/screenshots/grammar-desktop.png
+  - src/modules/exam/components/UnknownResultPanel.vue
+  - src/modules/n5Grammar/components/N5GrammarCompareTable.vue
+  - src/modules/practice/components/SelectionDetailPanel.vue
+  - src/modules/practice/components/ChoonRuleSection.vue
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - tests/component/testUtils.ts
+  - src/modules/grammar/views/GrammarView.vue
+  - public/icons/192.png
+  - _private/propose.md
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - tsconfig.node.json
+  - docs/parity/screenshots/vocabulary-desktop.png
+  - src/app/router.ts
+  - src/shared/config/publicAssets.ts
+  - src/app/AppShell.vue
+  - src/modules/practice/components/DakuonTable.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/n5Grammar/config/viewPreferences.ts
+  - PROJECT_ARCHITECTURE.md
+  - docs/parity/source-project-parity.md
+  - scripts/publishPages.d.mts
+  - src/modules/n5Grammar/components/N5GrammarBulletBlock.vue
+  - src/shared/utils/renderSafety.ts
+  - src/modules/grammar/components/SystemDifferenceTable.vue
+  - src/shared/components/BaseButton.vue
+  - tsconfig.app.json
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - docs/parity/screenshots/practice-mobile.png
+  - docs/parity/screenshots/practice-desktop.png
+  - src/modules/exam/composables/useExamSession.ts
+  - src/modules/grammar/components/RuleListTable.vue
+  - src/modules/grammar/data/changeRules.ts
+  - src/env.d.ts
+  - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+  - src/modules/n5Grammar/data/grammarNotes.ts
+tests:
+  - tests/e2e/practice-exam-flow.spec.ts
+  - tests/e2e/practice-layout.smoke.spec.ts
+  - tests/unit/n5GrammarParticleDeExamples.spec.ts
+  - tests/unit/n5GrammarParticleKaDuration.spec.ts
+  - tests/unit/n5GrammarParticleNiExamples.spec.ts
+  - tests/unit/publicAssets.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/SelectionDetailPanel.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/component/N5GrammarSections.spec.ts
+  - tests/unit/publishPages.spec.ts
+  - tests/unit/n5GrammarQuestionWordsExamples.spec.ts
+  - tests/component/ChoonRuleSection.spec.ts
+  - tests/unit/usePracticeSession.spec.ts
+  - tests/component/YoonSections.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/N5GrammarViewSmoke.spec.ts
+  - tests/component/RouteOwnership.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/n5GrammarParticleMadeExamples.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/n5GrammarParticleKaraExamples.spec.ts
+  - tests/unit/pwaLifecycleService.spec.ts
+  - tests/e2e/n5-grammar-layout.spec.ts
+  - tests/component/PracticeViewSmoke.spec.ts
+  - tests/unit/questionDeck.spec.ts
+  - tests/e2e/grammar-change-rules.spec.ts
+  - tests/component/GrammarViewSmoke.spec.ts
+  - tests/unit/n5GrammarDemonstrativesExamples.spec.ts
+  - tests/component/AppShellSmoke.spec.ts
+  - tests/unit/changeRulesData.spec.ts
+  - tests/unit/n5GrammarParticleToCompanionNote.spec.ts
+  - tests/unit/useExamSession.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/LoanwordSection.spec.ts
+  - tests/unit/n5GrammarHighlightParts.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/component/GrammarChangeRulesTables.spec.ts
+  - tests/component/N5GrammarParticleKaDuration.spec.ts
+  - tests/unit/latestUnknownResultStorage.spec.ts
+  - tests/unit/n5GrammarData.spec.ts
+  - tests/e2e/app-shell.smoke.spec.ts
+-->
+
+---
+### Requirement: Visual And Responsive Parity
+The system SHALL match the source target's layout, control hierarchy, visible text meaning, colors, spacing, typography scale, UI states, and responsive behavior for every parity inventory item unless a documented project constraint prevents exact matching.
+
+#### Scenario: Visual parity acceptance
+
+- **WHEN** a recreated screen is reviewed against its source inventory entry
+- **THEN** the parity checklist SHALL include evidence for layout, controls, visible text meaning, state coverage, and mobile responsive behavior
+
+#### Scenario: Documented unavoidable difference
+
+- **WHEN** an exact visual match is blocked by a project constraint
+- **THEN** the parity checklist SHALL document the source behavior, the project constraint, the user-visible difference, and the acceptance decision
+
+
+<!-- @trace
+source: recreate-japanese-word-practice-vue-ai
+updated: 2026-04-29
+code:
+  - src/modules/practice/components/SeionTable.vue
+  - src/modules/practice/components/HatsuonSection.vue
+  - playwright.config.ts
+  - src/modules/practice/components/SpecialSyllableSection.vue
+  - tests/e2e/testUtils.ts
+  - src/modules/practice/views/PracticeView.vue
+  - src/modules/exam/components/ExamModal.vue
+  - tests/setup.ts
+  - src/modules/practice/components/LoanwordSection.vue
+  - eslint.config.js
+  - src/modules/n5Grammar/components/N5GrammarInfoBlock.vue
+  - public/icons/180.png
+  - _private/discuss.txt
+  - src/shared/components/ToastBanner.vue
+  - src/modules/grammar/components/GrammarAccordionTableShell.vue
+  - src/modules/exam/types/exam.ts
+  - src/app/main.ts
+  - src/modules/grammar/components/InflectionTable.vue
+  - src/modules/practice/data/kanaData.ts
+  - src/modules/grammar/components/GodanVerbTable.vue
+  - docs/parity/screenshots/grammar-mobile.png
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/shared/utils/questionDeck.ts
+  - src/modules/pwa/composables/usePwaLifecycle.ts
+  - src/modules/grammar/components/PosConversionTable.vue
+  - src/modules/grammar/types/changeRules.ts
+  - src/modules/practice/components/SokuonSection.vue
+  - src/modules/practice/types/practice.ts
+  - tests/mocks/pwaRegisterMock.ts
+  - public/icons/512.png
+  - src/shared/components/BaseInput.vue
+  - src/modules/practice/components/SeionYoonSection.vue
+  - src/modules/n5Grammar/types/grammarNotes.ts
+  - src/modules/pwa/types/pwa.ts
+  - src/shared/components/BaseCheckbox.vue
+  - public/vite.ico
+  - src/modules/n5Grammar/views/N5GrammarView.vue
+  - src/modules/practice/data/specialSyllableData.ts
+  - src/modules/exam/storage/latestUnknownResultStorage.ts
+  - src/modules/practice/composables/usePracticeSession.ts
+  - src/modules/pwa/services/pwaLifecycleService.ts
+  - src/modules/practice/components/PracticeToolbar.vue
+  - src/assets/vite.svg
+  - src/assets/vue.svg
+  - src/modules/n5Grammar/utils/highlightParts.ts
+  - src/modules/practice/components/DakuonYoonSection.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/shared/utils/questionCount.ts
+  - README.md
+  - tailwind.config.ts
+  - src/modules/vocabulary/components/VocabularyCountSummary.vue
+  - src/shared/utils/bodyScrollLock.ts
+  - src/shared/utils/storageGuard.ts
+  - src/assets/hero.png
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - vitest.config.ts
+  - postcss.config.js
+  - src/styles/main.css
+  - _private/done/筆記.html
+  - src/shared/config/storageKeys.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - vite.config.ts
+  - index.html
+  - docs/parity/screenshots/vocabulary-mobile.png
+  - scripts/publishPages.mjs
+  - src/shared/components/RouteTabs.vue
+  - docs/parity/screenshots/n5-grammar-mobile.png
+  - docs/parity/screenshots/n5-grammar-desktop.png
+  - package.json
+  - tsconfig.json
+  - docs/parity/screenshots/grammar-desktop.png
+  - src/modules/exam/components/UnknownResultPanel.vue
+  - src/modules/n5Grammar/components/N5GrammarCompareTable.vue
+  - src/modules/practice/components/SelectionDetailPanel.vue
+  - src/modules/practice/components/ChoonRuleSection.vue
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - tests/component/testUtils.ts
+  - src/modules/grammar/views/GrammarView.vue
+  - public/icons/192.png
+  - _private/propose.md
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - tsconfig.node.json
+  - docs/parity/screenshots/vocabulary-desktop.png
+  - src/app/router.ts
+  - src/shared/config/publicAssets.ts
+  - src/app/AppShell.vue
+  - src/modules/practice/components/DakuonTable.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/n5Grammar/config/viewPreferences.ts
+  - PROJECT_ARCHITECTURE.md
+  - docs/parity/source-project-parity.md
+  - scripts/publishPages.d.mts
+  - src/modules/n5Grammar/components/N5GrammarBulletBlock.vue
+  - src/shared/utils/renderSafety.ts
+  - src/modules/grammar/components/SystemDifferenceTable.vue
+  - src/shared/components/BaseButton.vue
+  - tsconfig.app.json
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - docs/parity/screenshots/practice-mobile.png
+  - docs/parity/screenshots/practice-desktop.png
+  - src/modules/exam/composables/useExamSession.ts
+  - src/modules/grammar/components/RuleListTable.vue
+  - src/modules/grammar/data/changeRules.ts
+  - src/env.d.ts
+  - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+  - src/modules/n5Grammar/data/grammarNotes.ts
+tests:
+  - tests/e2e/practice-exam-flow.spec.ts
+  - tests/e2e/practice-layout.smoke.spec.ts
+  - tests/unit/n5GrammarParticleDeExamples.spec.ts
+  - tests/unit/n5GrammarParticleKaDuration.spec.ts
+  - tests/unit/n5GrammarParticleNiExamples.spec.ts
+  - tests/unit/publicAssets.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/SelectionDetailPanel.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/component/N5GrammarSections.spec.ts
+  - tests/unit/publishPages.spec.ts
+  - tests/unit/n5GrammarQuestionWordsExamples.spec.ts
+  - tests/component/ChoonRuleSection.spec.ts
+  - tests/unit/usePracticeSession.spec.ts
+  - tests/component/YoonSections.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/N5GrammarViewSmoke.spec.ts
+  - tests/component/RouteOwnership.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/n5GrammarParticleMadeExamples.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/n5GrammarParticleKaraExamples.spec.ts
+  - tests/unit/pwaLifecycleService.spec.ts
+  - tests/e2e/n5-grammar-layout.spec.ts
+  - tests/component/PracticeViewSmoke.spec.ts
+  - tests/unit/questionDeck.spec.ts
+  - tests/e2e/grammar-change-rules.spec.ts
+  - tests/component/GrammarViewSmoke.spec.ts
+  - tests/unit/n5GrammarDemonstrativesExamples.spec.ts
+  - tests/component/AppShellSmoke.spec.ts
+  - tests/unit/changeRulesData.spec.ts
+  - tests/unit/n5GrammarParticleToCompanionNote.spec.ts
+  - tests/unit/useExamSession.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/LoanwordSection.spec.ts
+  - tests/unit/n5GrammarHighlightParts.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/component/GrammarChangeRulesTables.spec.ts
+  - tests/component/N5GrammarParticleKaDuration.spec.ts
+  - tests/unit/latestUnknownResultStorage.spec.ts
+  - tests/unit/n5GrammarData.spec.ts
+  - tests/e2e/app-shell.smoke.spec.ts
+-->
+
+---
+### Requirement: Offline Data Parity
+The system SHALL make recreated core learning flows, settings, progress, and persisted user data available without network access. The system SHALL NOT add cloud synchronization for this change.
+
+#### Scenario: Offline core flow
+
+- **WHEN** network access is unavailable
+- **THEN** recreated core learning flows SHALL load from local application assets and persisted local data
+
+#### Scenario: Local-only persistence
+
+- **WHEN** a recreated flow changes settings, progress, or user-owned learning data
+- **THEN** the system SHALL persist the change locally and SHALL NOT require remote conflict resolution
+
+
+<!-- @trace
+source: recreate-japanese-word-practice-vue-ai
+updated: 2026-04-29
+code:
+  - src/modules/practice/components/SeionTable.vue
+  - src/modules/practice/components/HatsuonSection.vue
+  - playwright.config.ts
+  - src/modules/practice/components/SpecialSyllableSection.vue
+  - tests/e2e/testUtils.ts
+  - src/modules/practice/views/PracticeView.vue
+  - src/modules/exam/components/ExamModal.vue
+  - tests/setup.ts
+  - src/modules/practice/components/LoanwordSection.vue
+  - eslint.config.js
+  - src/modules/n5Grammar/components/N5GrammarInfoBlock.vue
+  - public/icons/180.png
+  - _private/discuss.txt
+  - src/shared/components/ToastBanner.vue
+  - src/modules/grammar/components/GrammarAccordionTableShell.vue
+  - src/modules/exam/types/exam.ts
+  - src/app/main.ts
+  - src/modules/grammar/components/InflectionTable.vue
+  - src/modules/practice/data/kanaData.ts
+  - src/modules/grammar/components/GodanVerbTable.vue
+  - docs/parity/screenshots/grammar-mobile.png
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/shared/utils/questionDeck.ts
+  - src/modules/pwa/composables/usePwaLifecycle.ts
+  - src/modules/grammar/components/PosConversionTable.vue
+  - src/modules/grammar/types/changeRules.ts
+  - src/modules/practice/components/SokuonSection.vue
+  - src/modules/practice/types/practice.ts
+  - tests/mocks/pwaRegisterMock.ts
+  - public/icons/512.png
+  - src/shared/components/BaseInput.vue
+  - src/modules/practice/components/SeionYoonSection.vue
+  - src/modules/n5Grammar/types/grammarNotes.ts
+  - src/modules/pwa/types/pwa.ts
+  - src/shared/components/BaseCheckbox.vue
+  - public/vite.ico
+  - src/modules/n5Grammar/views/N5GrammarView.vue
+  - src/modules/practice/data/specialSyllableData.ts
+  - src/modules/exam/storage/latestUnknownResultStorage.ts
+  - src/modules/practice/composables/usePracticeSession.ts
+  - src/modules/pwa/services/pwaLifecycleService.ts
+  - src/modules/practice/components/PracticeToolbar.vue
+  - src/assets/vite.svg
+  - src/assets/vue.svg
+  - src/modules/n5Grammar/utils/highlightParts.ts
+  - src/modules/practice/components/DakuonYoonSection.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/shared/utils/questionCount.ts
+  - README.md
+  - tailwind.config.ts
+  - src/modules/vocabulary/components/VocabularyCountSummary.vue
+  - src/shared/utils/bodyScrollLock.ts
+  - src/shared/utils/storageGuard.ts
+  - src/assets/hero.png
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - vitest.config.ts
+  - postcss.config.js
+  - src/styles/main.css
+  - _private/done/筆記.html
+  - src/shared/config/storageKeys.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - vite.config.ts
+  - index.html
+  - docs/parity/screenshots/vocabulary-mobile.png
+  - scripts/publishPages.mjs
+  - src/shared/components/RouteTabs.vue
+  - docs/parity/screenshots/n5-grammar-mobile.png
+  - docs/parity/screenshots/n5-grammar-desktop.png
+  - package.json
+  - tsconfig.json
+  - docs/parity/screenshots/grammar-desktop.png
+  - src/modules/exam/components/UnknownResultPanel.vue
+  - src/modules/n5Grammar/components/N5GrammarCompareTable.vue
+  - src/modules/practice/components/SelectionDetailPanel.vue
+  - src/modules/practice/components/ChoonRuleSection.vue
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - tests/component/testUtils.ts
+  - src/modules/grammar/views/GrammarView.vue
+  - public/icons/192.png
+  - _private/propose.md
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - tsconfig.node.json
+  - docs/parity/screenshots/vocabulary-desktop.png
+  - src/app/router.ts
+  - src/shared/config/publicAssets.ts
+  - src/app/AppShell.vue
+  - src/modules/practice/components/DakuonTable.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/n5Grammar/config/viewPreferences.ts
+  - PROJECT_ARCHITECTURE.md
+  - docs/parity/source-project-parity.md
+  - scripts/publishPages.d.mts
+  - src/modules/n5Grammar/components/N5GrammarBulletBlock.vue
+  - src/shared/utils/renderSafety.ts
+  - src/modules/grammar/components/SystemDifferenceTable.vue
+  - src/shared/components/BaseButton.vue
+  - tsconfig.app.json
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - docs/parity/screenshots/practice-mobile.png
+  - docs/parity/screenshots/practice-desktop.png
+  - src/modules/exam/composables/useExamSession.ts
+  - src/modules/grammar/components/RuleListTable.vue
+  - src/modules/grammar/data/changeRules.ts
+  - src/env.d.ts
+  - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+  - src/modules/n5Grammar/data/grammarNotes.ts
+tests:
+  - tests/e2e/practice-exam-flow.spec.ts
+  - tests/e2e/practice-layout.smoke.spec.ts
+  - tests/unit/n5GrammarParticleDeExamples.spec.ts
+  - tests/unit/n5GrammarParticleKaDuration.spec.ts
+  - tests/unit/n5GrammarParticleNiExamples.spec.ts
+  - tests/unit/publicAssets.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/SelectionDetailPanel.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/component/N5GrammarSections.spec.ts
+  - tests/unit/publishPages.spec.ts
+  - tests/unit/n5GrammarQuestionWordsExamples.spec.ts
+  - tests/component/ChoonRuleSection.spec.ts
+  - tests/unit/usePracticeSession.spec.ts
+  - tests/component/YoonSections.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/N5GrammarViewSmoke.spec.ts
+  - tests/component/RouteOwnership.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/n5GrammarParticleMadeExamples.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/n5GrammarParticleKaraExamples.spec.ts
+  - tests/unit/pwaLifecycleService.spec.ts
+  - tests/e2e/n5-grammar-layout.spec.ts
+  - tests/component/PracticeViewSmoke.spec.ts
+  - tests/unit/questionDeck.spec.ts
+  - tests/e2e/grammar-change-rules.spec.ts
+  - tests/component/GrammarViewSmoke.spec.ts
+  - tests/unit/n5GrammarDemonstrativesExamples.spec.ts
+  - tests/component/AppShellSmoke.spec.ts
+  - tests/unit/changeRulesData.spec.ts
+  - tests/unit/n5GrammarParticleToCompanionNote.spec.ts
+  - tests/unit/useExamSession.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/LoanwordSection.spec.ts
+  - tests/unit/n5GrammarHighlightParts.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/component/GrammarChangeRulesTables.spec.ts
+  - tests/component/N5GrammarParticleKaDuration.spec.ts
+  - tests/unit/latestUnknownResultStorage.spec.ts
+  - tests/unit/n5GrammarData.spec.ts
+  - tests/e2e/app-shell.smoke.spec.ts
+-->
+
+---
+### Requirement: Parity Verification Checklist
+The system SHALL maintain a parity checklist that links each parity inventory item to implementation status, functional evidence, visual evidence, responsive evidence, offline evidence, and known differences.
+
+#### Scenario: Checklist completion gate
+
+- **WHEN** implementation reaches the final verification step
+- **THEN** every parity inventory item SHALL be marked complete or documented as an accepted difference with supporting evidence
+
+<!-- @trace
+source: recreate-japanese-word-practice-vue-ai
+updated: 2026-04-29
+code:
+  - src/modules/practice/components/SeionTable.vue
+  - src/modules/practice/components/HatsuonSection.vue
+  - playwright.config.ts
+  - src/modules/practice/components/SpecialSyllableSection.vue
+  - tests/e2e/testUtils.ts
+  - src/modules/practice/views/PracticeView.vue
+  - src/modules/exam/components/ExamModal.vue
+  - tests/setup.ts
+  - src/modules/practice/components/LoanwordSection.vue
+  - eslint.config.js
+  - src/modules/n5Grammar/components/N5GrammarInfoBlock.vue
+  - public/icons/180.png
+  - _private/discuss.txt
+  - src/shared/components/ToastBanner.vue
+  - src/modules/grammar/components/GrammarAccordionTableShell.vue
+  - src/modules/exam/types/exam.ts
+  - src/app/main.ts
+  - src/modules/grammar/components/InflectionTable.vue
+  - src/modules/practice/data/kanaData.ts
+  - src/modules/grammar/components/GodanVerbTable.vue
+  - docs/parity/screenshots/grammar-mobile.png
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/shared/utils/questionDeck.ts
+  - src/modules/pwa/composables/usePwaLifecycle.ts
+  - src/modules/grammar/components/PosConversionTable.vue
+  - src/modules/grammar/types/changeRules.ts
+  - src/modules/practice/components/SokuonSection.vue
+  - src/modules/practice/types/practice.ts
+  - tests/mocks/pwaRegisterMock.ts
+  - public/icons/512.png
+  - src/shared/components/BaseInput.vue
+  - src/modules/practice/components/SeionYoonSection.vue
+  - src/modules/n5Grammar/types/grammarNotes.ts
+  - src/modules/pwa/types/pwa.ts
+  - src/shared/components/BaseCheckbox.vue
+  - public/vite.ico
+  - src/modules/n5Grammar/views/N5GrammarView.vue
+  - src/modules/practice/data/specialSyllableData.ts
+  - src/modules/exam/storage/latestUnknownResultStorage.ts
+  - src/modules/practice/composables/usePracticeSession.ts
+  - src/modules/pwa/services/pwaLifecycleService.ts
+  - src/modules/practice/components/PracticeToolbar.vue
+  - src/assets/vite.svg
+  - src/assets/vue.svg
+  - src/modules/n5Grammar/utils/highlightParts.ts
+  - src/modules/practice/components/DakuonYoonSection.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/shared/utils/questionCount.ts
+  - README.md
+  - tailwind.config.ts
+  - src/modules/vocabulary/components/VocabularyCountSummary.vue
+  - src/shared/utils/bodyScrollLock.ts
+  - src/shared/utils/storageGuard.ts
+  - src/assets/hero.png
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - vitest.config.ts
+  - postcss.config.js
+  - src/styles/main.css
+  - _private/done/筆記.html
+  - src/shared/config/storageKeys.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - vite.config.ts
+  - index.html
+  - docs/parity/screenshots/vocabulary-mobile.png
+  - scripts/publishPages.mjs
+  - src/shared/components/RouteTabs.vue
+  - docs/parity/screenshots/n5-grammar-mobile.png
+  - docs/parity/screenshots/n5-grammar-desktop.png
+  - package.json
+  - tsconfig.json
+  - docs/parity/screenshots/grammar-desktop.png
+  - src/modules/exam/components/UnknownResultPanel.vue
+  - src/modules/n5Grammar/components/N5GrammarCompareTable.vue
+  - src/modules/practice/components/SelectionDetailPanel.vue
+  - src/modules/practice/components/ChoonRuleSection.vue
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - tests/component/testUtils.ts
+  - src/modules/grammar/views/GrammarView.vue
+  - public/icons/192.png
+  - _private/propose.md
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - tsconfig.node.json
+  - docs/parity/screenshots/vocabulary-desktop.png
+  - src/app/router.ts
+  - src/shared/config/publicAssets.ts
+  - src/app/AppShell.vue
+  - src/modules/practice/components/DakuonTable.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/n5Grammar/config/viewPreferences.ts
+  - PROJECT_ARCHITECTURE.md
+  - docs/parity/source-project-parity.md
+  - scripts/publishPages.d.mts
+  - src/modules/n5Grammar/components/N5GrammarBulletBlock.vue
+  - src/shared/utils/renderSafety.ts
+  - src/modules/grammar/components/SystemDifferenceTable.vue
+  - src/shared/components/BaseButton.vue
+  - tsconfig.app.json
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - docs/parity/screenshots/practice-mobile.png
+  - docs/parity/screenshots/practice-desktop.png
+  - src/modules/exam/composables/useExamSession.ts
+  - src/modules/grammar/components/RuleListTable.vue
+  - src/modules/grammar/data/changeRules.ts
+  - src/env.d.ts
+  - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+  - src/modules/n5Grammar/data/grammarNotes.ts
+tests:
+  - tests/e2e/practice-exam-flow.spec.ts
+  - tests/e2e/practice-layout.smoke.spec.ts
+  - tests/unit/n5GrammarParticleDeExamples.spec.ts
+  - tests/unit/n5GrammarParticleKaDuration.spec.ts
+  - tests/unit/n5GrammarParticleNiExamples.spec.ts
+  - tests/unit/publicAssets.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/SelectionDetailPanel.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/component/N5GrammarSections.spec.ts
+  - tests/unit/publishPages.spec.ts
+  - tests/unit/n5GrammarQuestionWordsExamples.spec.ts
+  - tests/component/ChoonRuleSection.spec.ts
+  - tests/unit/usePracticeSession.spec.ts
+  - tests/component/YoonSections.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/N5GrammarViewSmoke.spec.ts
+  - tests/component/RouteOwnership.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/n5GrammarParticleMadeExamples.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/n5GrammarParticleKaraExamples.spec.ts
+  - tests/unit/pwaLifecycleService.spec.ts
+  - tests/e2e/n5-grammar-layout.spec.ts
+  - tests/component/PracticeViewSmoke.spec.ts
+  - tests/unit/questionDeck.spec.ts
+  - tests/e2e/grammar-change-rules.spec.ts
+  - tests/component/GrammarViewSmoke.spec.ts
+  - tests/unit/n5GrammarDemonstrativesExamples.spec.ts
+  - tests/component/AppShellSmoke.spec.ts
+  - tests/unit/changeRulesData.spec.ts
+  - tests/unit/n5GrammarParticleToCompanionNote.spec.ts
+  - tests/unit/useExamSession.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/LoanwordSection.spec.ts
+  - tests/unit/n5GrammarHighlightParts.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/component/GrammarChangeRulesTables.spec.ts
+  - tests/component/N5GrammarParticleKaDuration.spec.ts
+  - tests/unit/latestUnknownResultStorage.spec.ts
+  - tests/unit/n5GrammarData.spec.ts
+  - tests/e2e/app-shell.smoke.spec.ts
+-->
