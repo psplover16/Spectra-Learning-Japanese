@@ -1,2 +1,115 @@
-讀取專案 C:\Users\Gary\Documents\Japanese_Word_Practice_Vue_AI，他目前的分支 017-refine-n5-content。
-請把Japanese_Word_Practice_Vue_AI專案 所有的功能以及所有的UI，完全一模一樣的在本專案重現。
+change名稱 setting-CI-CD
+
+設定這個專案的CI與CD
+
+repo-name 是 Spectra-Learning-Japanese
+github-user 是 psplover16
+
+
+請幫我在這個前端專案設定一套和以下規格一致的 GitHub Actions CI/CD。
+請先檢查專案結構、package.json scripts、build output 目錄與是否使用 Vite/Vue/React 等前端框架，先說明你的實作計畫，再開始修改檔案。
+
+目標規格：
+
+1. CI workflow
+- 建立或更新 `.github/workflows/ci.yml`
+- workflow 名稱：CI
+- 觸發條件：
+  - 所有 pull_request
+  - 所有 push，但排除 `gh-pages` 分支
+- 使用 Ubuntu latest
+- 使用 Node.js 22
+- 使用目前專案的 package manager 安裝依賴；如果是 npm，使用 `npm ci`
+- CI 步驟依序執行：
+  1. checkout repository
+  2. setup Node.js with cache
+  3. install dependencies
+  4. lint
+  5. typecheck
+  6. unit tests
+  7. build
+  8. install Playwright browser if project has e2e tests
+  9. e2e tests if project has e2e tests
+- 如果 e2e 失敗，請上傳 Playwright diagnostics artifact，例如 `playwright-report/` 和 `test-results/`
+- CI 不應該對 `gh-pages` 部署產物分支再次執行
+
+2. CD workflow
+- 建立或更新 `.github/workflows/cd.yml`
+- workflow 名稱：CD
+- 只在 push 到以下分支時觸發：
+  - `dev`
+  - `main`
+- `dev` 部署到 staging
+- `main` 部署到 production
+- 使用 GitHub Pages，發布分支為 `gh-pages`
+- `dev` 的 build output 發布到 `gh-pages/staging/`
+- `main` 的 build output 發布到 `gh-pages` 根目錄
+- 部署 URL 格式：
+  - staging: `https://<github-user>.github.io/<repo-name>/staging/`
+  - production: `https://<github-user>.github.io/<repo-name>/`
+- CD 需要：
+  1. checkout repository with full history
+  2. setup Node.js 22
+  3. install dependencies
+  4. 根據分支設定 build base path
+  5. build static site
+  6. 建立或 checkout `gh-pages` worktree
+  7. 同步 `dist/` 到正確目錄
+  8. commit 並 push 到 `gh-pages`
+  9. 如果內容沒有變更，不要產生空 commit
+- CD 需要使用 concurrency，避免同一分支多次部署互相覆蓋
+- CD 需要 `permissions.contents: write`
+
+3. Build base path
+- 如果專案是 Vite，請讓 build 使用環境變數控制 base path：
+  - production: `/<repo-name>/`
+  - staging: `/<repo-name>/staging/`
+- 如果有 PWA manifest start_url，也要跟著使用相同 base path
+- 如果是 Vue Router，請確認 `createWebHistory(import.meta.env.BASE_URL)` 或等價設定正確
+- 如果不是 Vite，請依照該框架的標準方式設定 base path / public path
+
+4. Publish script
+- 如果需要，請新增 `scripts/publishPages.mjs`
+- script 要能：
+  - 接收 worktree、dist、target 參數
+  - target 支援 `production` 與 `staging`
+  - production 發布到 root
+  - staging 發布到 `staging/`
+  - production 清理 root 時要保留 `.git`、`.nojekyll`、`CNAME`、`staging`
+  - staging 更新時不能破壞 production root
+  - dist 為空時要失敗
+  - 發布後建立 `.nojekyll`
+
+5. package scripts
+- 請檢查並補齊必要 scripts，例如：
+  - `lint`
+  - `typecheck`
+  - `test:unit`
+  - `build`
+  - `test:e2e`
+  - `test:ci`
+- `test:ci` 建議順序：
+  `lint -> typecheck -> unit tests -> build -> e2e`
+
+6. 文件
+- 更新 README，說明：
+  - 本地測試指令
+  - CI 觸發條件
+  - CD 觸發條件
+  - `dev` 對應 staging
+  - `main` 對應 production
+  - GitHub Pages 來源要設定為 `gh-pages` branch
+  - 建議設定 branch protection，禁止直接 push 到 `main`，並要求 CI 通過後才能 merge
+
+7. 驗證
+- 完成後請執行可行的本地驗證：
+  - install 不需要重跑就不要重跑
+  - 至少執行 lint、typecheck、unit、build
+  - 如果有 e2e，也請執行 e2e 或說明無法執行的原因
+- 最後請列出：
+  - 修改了哪些檔案
+  - CI 會在哪些分支/事件觸發
+  - CD 會在哪些分支觸發，以及部署到哪裡
+  - 測試結果
+
+請避免重構與 CI/CD 無關的業務程式碼，不要使用 destructive git 指令，例如 `git reset --hard` 或強制覆蓋使用者修改。
