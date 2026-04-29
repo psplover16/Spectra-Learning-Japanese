@@ -87,10 +87,12 @@ async function readBuiltFile(outDir: string, relativePath: string): Promise<stri
 describe('public asset configuration', () => {
   let buildOutDir = '';
   let stagingBuildOutDir = '';
+  const productionBasePath = '/Spectra-Learning-Japanese/';
+  const stagingBasePath = '/Spectra-Learning-Japanese/staging/';
 
   beforeAll(async () => {
-    buildOutDir = await buildIntoTempDir();
-    stagingBuildOutDir = await buildIntoTempDir('/staging/');
+    buildOutDir = await buildIntoTempDir(productionBasePath);
+    stagingBuildOutDir = await buildIntoTempDir(stagingBasePath);
   }, 120000);
 
   afterAll(async () => {
@@ -119,7 +121,7 @@ describe('public asset configuration', () => {
     const builtHtml = await readBuiltFile(buildOutDir, 'index.html');
 
     expect(builtHtml).toMatch(/rel="icon"/);
-    expect(builtHtml).toContain(`href="/${faviconFileName}"`);
+    expect(builtHtml).toContain(`href="${productionBasePath}${faviconFileName}"`);
 
     await expect(access(join(buildOutDir, faviconFileName))).resolves.toBeUndefined();
 
@@ -131,10 +133,14 @@ describe('public asset configuration', () => {
   it('建置後 manifest 只引用可發布的 PWA icon 路徑', async () => {
     const manifestContent = await readBuiltFile(buildOutDir, 'manifest.webmanifest');
     const manifest = JSON.parse(manifestContent) as {
+      start_url?: string;
       icons?: Array<{ src: string }>;
     };
 
-    expect(manifest.icons?.map((icon) => icon.src)).toEqual(expect.arrayContaining(pwaIconFileNames.map((icon) => `/${icon}`)));
+    expect(manifest.start_url).toBe(productionBasePath);
+    expect(manifest.icons?.map((icon) => icon.src)).toEqual(
+      expect.arrayContaining(pwaIconFileNames.map((icon) => `${productionBasePath}${icon}`))
+    );
     expect(manifestContent).not.toContain(privatePublicAssetReferenceDir);
   });
 
@@ -142,11 +148,15 @@ describe('public asset configuration', () => {
     const builtHtml = await readBuiltFile(stagingBuildOutDir, 'index.html');
     const manifestContent = await readBuiltFile(stagingBuildOutDir, 'manifest.webmanifest');
     const manifest = JSON.parse(manifestContent) as {
+      start_url?: string;
       icons?: Array<{ src: string }>;
     };
 
-    expect(builtHtml).toContain(`href="/staging/${faviconFileName}"`);
-    expect(manifest.icons?.map((icon) => icon.src)).toEqual(expect.arrayContaining(pwaIconFileNames.map((icon) => `/staging/${icon}`)));
+    expect(builtHtml).toContain(`href="${stagingBasePath}${faviconFileName}"`);
+    expect(manifest.start_url).toBe(stagingBasePath);
+    expect(manifest.icons?.map((icon) => icon.src)).toEqual(
+      expect.arrayContaining(pwaIconFileNames.map((icon) => `${stagingBasePath}${icon}`))
+    );
     expect(manifestContent).not.toContain(privatePublicAssetReferenceDir);
   });
 });

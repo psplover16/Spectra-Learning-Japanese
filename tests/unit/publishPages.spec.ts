@@ -63,6 +63,21 @@ describe('publishPages', () => {
     expect(result.removedRootEntries).toContain('src');
   });
 
+  it('creates .nojekyll at the gh-pages root after publishing', async () => {
+    const workspace = await createWorkspace();
+    cleanupRoots.push(workspace.root);
+
+    await writeTextFile(path.join(workspace.distPath, 'index.html'), '<html><body>prod build</body></html>');
+
+    await syncPublishedSite({
+      worktreeRoot: workspace.worktreeRoot,
+      distPath: workspace.distPath,
+      target: 'production'
+    });
+
+    await expect(readFile(path.join(workspace.worktreeRoot, '.nojekyll'), 'utf8')).resolves.toBe('');
+  });
+
   it('keeps valid production root files when syncing staging content', async () => {
     const workspace = await createWorkspace();
     cleanupRoots.push(workspace.root);
@@ -135,5 +150,22 @@ describe('publishPages', () => {
         target: 'qa'
       })
     ).rejects.toThrow('Unsupported publish target');
+  });
+
+  it('rejects missing or empty dist before changing the worktree', async () => {
+    const workspace = await createWorkspace();
+    cleanupRoots.push(workspace.root);
+
+    await writeTextFile(path.join(workspace.worktreeRoot, 'index.html'), '<html><body>existing</body></html>');
+
+    await expect(
+      syncPublishedSite({
+        worktreeRoot: workspace.worktreeRoot,
+        distPath: path.join(workspace.root, 'missing-dist'),
+        target: 'production'
+      })
+    ).rejects.toThrow('No build output found');
+
+    await expect(readFile(path.join(workspace.worktreeRoot, 'index.html'), 'utf8')).resolves.toContain('existing');
   });
 });

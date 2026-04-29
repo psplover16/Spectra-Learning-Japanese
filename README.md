@@ -44,7 +44,7 @@ npm run test:ci
 
 ### CI
 
-- 觸發：`pull_request`、`push`
+- 觸發：所有 `pull_request`、所有 `push`（排除 `gh-pages`）
 - 流程：`npm ci -> lint -> typecheck -> test:unit -> build -> test:e2e`
 - e2e 失敗時會上傳 `playwright-report/` 與 `test-results/` artifact
 
@@ -54,11 +54,13 @@ npm run test:ci
 - `main` push：部署到 production
 - 部署承載：GitHub Pages `gh-pages` branch
 - 發佈方式：`cd.yml` 直接建置 `dist/`、切出 `gh-pages` worktree、清理對應目錄後提交
+- production base path：`/Spectra-Learning-Japanese/`
+- staging base path：`/Spectra-Learning-Japanese/staging/`
 
 預期 URL：
 
-- staging: `https://psplover16.github.io/Japanese_Word_Practice_Vue_AI/staging/`
-- production: `https://psplover16.github.io/Japanese_Word_Practice_Vue_AI/`
+- staging: `https://psplover16.github.io/Spectra-Learning-Japanese/staging/`
+- production: `https://psplover16.github.io/Spectra-Learning-Japanese/`
 
 ## GitHub Pages 設定
 
@@ -68,6 +70,14 @@ npm run test:ci
 2. 發佈來源使用 `gh-pages` branch
 3. 已建立 `staging` 與 `production` environments
 4. 若正式環境需要人工核准，請在 `production` environment 設定 required reviewers
+
+## Branch Protection 建議
+
+建議在 repository settings 中設定 branch protection：
+
+- 禁止直接 push 到 `main`
+- pull request 必須等 CI 通過後才能 merge
+- production 若需要人工把關，可搭配 `production` environment required reviewers
 
 ## 常見排查
 

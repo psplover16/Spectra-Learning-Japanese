@@ -1,2 +1,0 @@
-讀取專案 C:\Users\Gary\Documents\Japanese_Word_Practice_Vue_AI，他目前的分支 017-refine-n5-content。
-請把Japanese_Word_Practice_Vue_AI專案 所有的功能以及所有的UI，完全一模一樣的在本專案重現。

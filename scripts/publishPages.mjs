@@ -1,4 +1,4 @@
-import { cp, mkdir, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -123,6 +123,10 @@ async function cleanupRootForStaging(worktreeRoot, distRootEntries) {
   return removedEntries.sort((left, right) => left.localeCompare(right));
 }
 
+async function ensureNoJekyll(worktreeRoot) {
+  await writeFile(path.join(worktreeRoot, '.nojekyll'), '', 'utf8');
+}
+
 export function formatPublishSummary(result) {
   const removedRootCount = result.removedRootEntries.length;
   const removedTargetCount = result.removedTargetEntries.length;
@@ -160,6 +164,7 @@ export async function syncPublishedSite({ worktreeRoot, distPath, target }) {
 
   const removedTargetEntries = publishTarget.publishSubdir ? await emptyDirectory(targetPath) : [];
   const copiedEntries = await copyDirectoryContents(distPath, targetPath);
+  await ensureNoJekyll(worktreeRoot);
 
   return {
     target: publishTarget.name,
