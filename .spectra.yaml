@@ -12,27 +12,33 @@ locale: tw
 
 # Workflow toggles
 # tdd:    開啟測試驅動開發流程，確保每個功能都有測試保護
-# audit:  變更完成時自動執行稽核，提升程式碼品質與可維護性
 tdd: true
+# audit:  變更完成時自動執行稽核，提升程式碼品質與可維護性
 audit: true
-# parallel_tasks: true
+# 允許平行執行子任務
+parallel_tasks: true
 
 # Claude slash commands (set true to also generate /spectra:X commands)
 # 同時為 Claude Code 產生 /spectra:X 斜線指令，提升輸入體驗
 claude_slash_commands: true
 
-# Enable git worktree support for isolated change branches
-# worktree: true
+# 啟用 Git worktree 隔離分支
+worktree: true
 
-# Custom git worktrees directory
+# worktree 自訂路徑
 # worktrees_dir: .spectra/worktrees
 
 # Claude Code skill effort levels (low/medium/high/xhigh/max)
-# apply 設為 high：實作階段投入更多思考預算，換取更高的程式碼品質
+# 此為要投入多少資源
 claude_effort:
-  apply: high
-#   audit: high
-#   propose: medium
+# 實作任務、寫程式
+  apply: xhigh
+  # 變更完成時稽核（安全、品質）
+  audit: high
+# 建立提案（What / Why）
+  propose: medium
+
+# spectra對claude比較多設定
 
 # AI tools to generate instruction files for
 # 本專案同時使用 Claude Code 與 Codex，兩者皆需產生對應的指引檔

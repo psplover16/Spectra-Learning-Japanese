@@ -1,11 +1,14 @@
 {
+  "additionalDirectories": [
+    "C:\\",
+    "D:\\",
+    "E:\\"
+  ],
   "includeGitInstructions": false,
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "WebSearch",
       "WebFetch",
-
       "Bash(ls:*)",
       "Bash(pwd)",
       "Bash(pwd:*)",
@@ -24,7 +27,6 @@
       "Bash(readlink:*)",
       "Bash(basename:*)",
       "Bash(dirname:*)",
-
       "Bash(cp:*)",
       "Bash(mv:*)",
       "Bash(mkdir:*)",
@@ -34,14 +36,12 @@
       "Bash(rmdir:*)",
       "Bash(chmod:*)",
       "Bash(chown:*)",
-
       "Bash(echo:*)",
       "Bash(printf:*)",
       "Bash(true)",
       "Bash(false)",
       "Bash(test:*)",
       "Bash(:)",
-
       "Bash(env)",
       "Bash(env:*)",
       "Bash(export:*)",
@@ -62,14 +62,12 @@
       "Bash(where:*)",
       "Bash(type:*)",
       "Bash(command:*)",
-
       "Bash(ps:*)",
       "Bash(top)",
       "Bash(htop)",
       "Bash(jobs:*)",
       "Bash(bg:*)",
       "Bash(fg:*)",
-
       "Bash(grep:*)",
       "Bash(egrep:*)",
       "Bash(fgrep:*)",
@@ -87,13 +85,11 @@
       "Bash(comm:*)",
       "Bash(paste:*)",
       "Bash(join:*)",
-
       "Bash(find:*)",
       "Bash(fd:*)",
       "Bash(rg:*)",
       "Bash(ag:*)",
       "Bash(locate:*)",
-
       "Bash(tar:*)",
       "Bash(zip:*)",
       "Bash(unzip:*)",
@@ -101,7 +97,6 @@
       "Bash(gunzip:*)",
       "Bash(bzip2:*)",
       "Bash(7z:*)",
-
       "Bash(curl:*)",
       "Bash(wget:*)",
       "Bash(ping:*)",
@@ -113,10 +108,8 @@
       "Bash(ss:*)",
       "Bash(ip:*)",
       "Bash(ifconfig:*)",
-
       "Bash(git:*)",
       "Bash(gh:*)",
-
       "Bash(node:*)",
       "Bash(npm:*)",
       "Bash(npx:*)",
@@ -124,7 +117,6 @@
       "Bash(yarn:*)",
       "Bash(bun:*)",
       "Bash(deno:*)",
-
       "Bash(tsc:*)",
       "Bash(ts-node:*)",
       "Bash(vite:*)",
@@ -136,7 +128,6 @@
       "Bash(remix:*)",
       "Bash(svelte:*)",
       "Bash(svelte-kit:*)",
-
       "Bash(vitest:*)",
       "Bash(jest:*)",
       "Bash(mocha:*)",
@@ -150,7 +141,6 @@
       "Bash(webpack:*)",
       "Bash(parcel:*)",
       "Bash(turbo:*)",
-
       "Bash(python:*)",
       "Bash(python3:*)",
       "Bash(pip:*)",
@@ -161,7 +151,6 @@
       "Bash(ruff:*)",
       "Bash(black:*)",
       "Bash(mypy:*)",
-
       "Bash(cargo:*)",
       "Bash(rustc:*)",
       "Bash(rustup:*)",
@@ -172,7 +161,6 @@
       "Bash(gradle:*)",
       "Bash(make:*)",
       "Bash(cmake:*)",
-
       "Bash(docker ps:*)",
       "Bash(docker images:*)",
       "Bash(docker logs:*)",
@@ -180,18 +168,16 @@
       "Bash(docker exec:*)",
       "Bash(docker compose:*)",
       "Bash(docker-compose:*)",
-
       "Bash(spectra:*)",
-
       "Bash(pwsh:*)",
       "Bash(powershell:*)",
-
       "Read(**/*)",
       "Edit(**/*)",
       "Write(**/*)",
       "Glob(**/*)",
       "Grep(**/*)"
     ],
+    "defaultMode": "bypassPermissions",
     "deny": [
       "Read(**/.ssh/**)",
       "Read(**/.env)",
@@ -206,7 +192,6 @@
       "Read(**/permissions)",
       "Read(**/permission)",
       "Read(**/permissions.json)",
-
       "Edit(**/.ssh/**)",
       "Edit(**/.env)",
       "Edit(**/.env.*)",
@@ -216,7 +201,6 @@
       "Edit(**/.gnupg/**)",
       "Edit(**/permissions)",
       "Edit(**/permission)",
-
       "Write(**/.ssh/**)",
       "Write(**/.env)",
       "Write(**/.env.*)",
@@ -226,7 +210,6 @@
       "Write(**/.gnupg/**)",
       "Write(**/permissions)",
       "Write(**/permission)",
-
       "Bash(cat *.env*)",
       "Bash(type *.env*)",
       "Bash(cat *id_rsa*)",
@@ -242,10 +225,5 @@
       "Bash(shutdown:*)",
       "Bash(reboot:*)"
     ]
-  },
-  "additionalDirectories": [
-    "C:\\",
-    "D:\\",
-    "E:\\"
-  ]
+  }
 }

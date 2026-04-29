@@ -10,19 +10,25 @@ context: |
   - 可在手機離線使用的日文學習 PWA 網站
 
   技術棧：
-  - 框架：Vue 3（Composition API、<script setup>）
+  - 語言：TypeScript（strict 模式，全面取代純 JavaScript）
+  - 框架：Vue 3（Composition API、<script setup lang="ts">）
   - 樣式：Tailwind CSS
   - 路由：Vue Router
   - 狀態管理：Pinia
   - 持久化：localStorage（離線資料保存）
-  - 部署形態：PWA（可安裝、可離線運作）
+  - 部署形態：PWA（可安裝、可完全離線運作）
 
   程式碼風格：
-  - 一律使用 Composition API 與 <script setup>，不寫 Options API
+  - 一律使用 Composition API 與 <script setup lang="ts">，不寫 Options API
+  - 一律使用 TypeScript，不可在 .vue / .ts 檔內寫純 .js
+  - 開啟 strict 模式，禁止 any（除非有明確註解說明原因）
+  - 公開 API、props、emits、store state 都要明確型別宣告
+  - 優先使用 interface 描述物件、type 描述聯集與工具型別
   - 元件命名：PascalCase（例：FlashCard.vue）
+  - 檔案名稱：小駝峰（例：FlashCard.vue）
   - 檔案組織：依功能（feature）分組，而非依類型
   - 縮排 2 空格、字串單引號
-  - 每個 .vue 檔依序為 <script setup> → <template> → <style>
+  - 每個 .vue 檔依序為 <script setup lang="ts"> → <template> → <style>
 
   領域知識：
   - 日文學習涵蓋：五十音（平假名／片假名）、漢字、N5–N1 詞彙、基礎文法
