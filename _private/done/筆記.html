@@ -906,7 +906,7 @@ rg --files -g "package.json" -g "src/**" -g "vite.config.*" -g "vitest.config.*"
 <pre><code># 1. 需求還不夠清楚時，先 discuss
 /spectra-discuss 我想做一個錯題本功能
 # 或讀指定檔案
-/spectra-discuss 請讀取指定 Markdown 檔案 `@/need/discuss.md` 的內容，並以它作為唯一輸入。最終把結果放入 @/need/propose.md
+/spectra-discuss 請讀取指定 Markdown 檔案 `@/_private/discuss.txt` 的內容，並以它作為唯一輸入。最終把結果放入 @/_private/propose.md
 
 # 2. propose 前先對齊需求和 repo 現況（防呆）
 #    - proposal.md 的 Impact -> Modified：只能寫真的存在的檔案
@@ -919,7 +919,7 @@ rg --files -g "package.json" -g "src/**" -g "vite.config.*" -g "vitest.config.*"
 # 3. 產出四份文件
 /spectra-propose 加上錯題本：答錯的題目自動加入錯題本，使用者可以重做
 # 或讀指定檔案
-/spectra-propose 請讀取指定 Markdown 檔案 `@/need/propose.md` 的內容，並以它作為唯一輸入。
+/spectra-propose 請讀取指定 Markdown 檔案 `@/_private/propose.md` 的內容，並以它作為唯一輸入。
 # → 產出 `&lt;changeDir&gt;/{proposal,design,tasks,specs/...}.md`
 
 # 4. 人工檢查 4 份文件

@@ -1,7 +1,7 @@
 ---
 name: spectra-apply
 description: "Implement or resume tasks from a Spectra change"
-effort: high
+effort: xhigh
 license: MIT
 compatibility: Requires spectra CLI.
 metadata:

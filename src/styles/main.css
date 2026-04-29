@@ -1,0 +1,848 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #2f1f18;
+  background: #f6f0e8;
+  font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: #f6f0e8;
+  color: #2f1f18;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .app-shell-frame {
+    @apply min-w-0;
+  }
+
+  .app-shell-header {
+    @apply min-w-0 gap-2;
+  }
+
+  .surface-card {
+    @apply rounded-lg border border-clay/15 bg-white/80 shadow-soft backdrop-blur;
+  }
+
+  .section-card {
+    @apply surface-card p-2;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-lg border border-clay/20 bg-white/75;
+  }
+
+  .fixed-grid-table {
+    @apply w-full table-fixed border-collapse;
+  }
+
+  .content-fit-table {
+    @apply w-full table-auto border-collapse;
+  }
+
+  .kana-header {
+    @apply bg-sand/90 text-center text-[11px] font-semibold text-ink sm:text-xs;
+  }
+
+  .kana-cell-selected {
+    @apply bg-clay/15;
+  }
+
+  .route-tabs {
+    @apply flex w-full flex-wrap items-center justify-start gap-1;
+  }
+
+  .route-tab-link {
+    @apply inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded border px-2 py-1 font-medium leading-none transition-colors;
+    font-size: 0.875rem;
+  }
+
+  .practice-kana-table {
+    font-size: 12px;
+  }
+
+  .practice-kana-header-button {
+    font-size: inherit;
+  }
+
+  .practice-kana-button {
+    font-size: inherit;
+  }
+
+  .practice-kana-text-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1;
+  }
+
+  .practice-kana-main-text {
+    font-size: 13px;
+  }
+
+  .practice-kana-romaji-text {
+    font-size: 11px;
+  }
+
+  .practice-kana-placeholder {
+    font-size: 13px;
+  }
+
+  .practice-reference-grid {
+    @apply min-w-0;
+  }
+
+  .practice-static-stack {
+    @apply min-w-0;
+  }
+
+  .practice-grid-header-cell {
+    @apply kana-header px-2 py-2 text-center align-middle;
+  }
+
+  .practice-grid-cell {
+    @apply px-2 py-2 text-center align-middle text-ink;
+  }
+
+  .practice-kana-cell {
+    @apply whitespace-nowrap text-center;
+  }
+
+  .practice-kana-text {
+    @apply block whitespace-nowrap text-sm font-semibold text-ink;
+  }
+
+  .practice-romaji-text {
+    @apply block text-[11px] text-ink/70;
+  }
+
+  .practice-translation-text {
+    @apply block text-sm text-ink/80;
+  }
+
+  .practice-long-vowel-romaji-text {
+    @apply block text-xs text-ink/75 sm:text-sm;
+  }
+
+  .practice-long-vowel-translation-text {
+    @apply block text-base text-ink/85 sm:text-[1.0625rem];
+  }
+
+  .practice-placeholder-text {
+    @apply block text-sm font-semibold text-ink/45;
+  }
+
+  .practice-long-vowel-rule-cell {
+    @apply border-b border-clay/10 bg-sand/70 px-2 py-2 text-left align-middle text-sm;
+  }
+
+  .practice-long-vowel-cell {
+    @apply border-b border-clay/10 px-2 py-2 align-middle;
+  }
+
+  .practice-long-vowel-example-cell {
+    @apply text-left;
+  }
+
+  .practice-long-vowel-kana-text {
+    @apply text-left;
+  }
+
+  .detail-pill {
+    @apply inline-flex items-center gap-1 rounded-full bg-sand/80 px-2 py-1 text-xs font-medium text-ink;
+  }
+
+  .exam-modal-card {
+    @apply flex h-[22.5rem] w-full max-w-[23.5rem] flex-col overflow-hidden sm:h-[24rem] sm:max-w-[26rem];
+  }
+
+  .exam-modal-body {
+    @apply flex h-full flex-col items-center justify-center gap-3 text-center sm:gap-4;
+  }
+
+  .exam-modal-prompt {
+    @apply whitespace-nowrap text-[5.5rem] font-bold leading-none text-clay sm:text-[6rem];
+  }
+
+  .grammar-section-card {
+    @apply overflow-hidden rounded border border-gray-200 bg-white;
+  }
+
+  .grammar-stack {
+    @apply space-y-0;
+  }
+
+  .grammar-table {
+    @apply w-full border-collapse;
+  }
+
+  .grammar-title-cell {
+    @apply relative cursor-pointer border border-gray-300 bg-neutral-100 p-1 text-center text-base font-bold text-black transition-colors hover:bg-neutral-200;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .grammar-title-cell-pre {
+    @apply px-3;
+    white-space: pre;
+  }
+
+  .grammar-title-copy {
+    @apply whitespace-pre-wrap text-black;
+  }
+
+  .grammar-subtitle-text {
+    @apply whitespace-pre-wrap text-base font-bold text-black;
+  }
+
+  .grammar-subtitle-cell {
+    @apply border border-gray-300 bg-neutral-100 p-[2px] text-center text-base font-bold text-black;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .grammar-inflection-example-cell {
+    @apply border border-gray-300 bg-white p-3 text-left;
+  }
+
+  .grammar-inflection-example-title {
+    @apply mb-2 text-sm font-bold text-black;
+  }
+
+  .grammar-inflection-example-grid {
+    @apply grid gap-2 sm:grid-cols-2;
+  }
+
+  .grammar-inflection-example-card {
+    @apply rounded border border-gray-200 bg-neutral-50 p-2 text-sm text-black;
+  }
+
+  .grammar-inflection-example-form {
+    @apply inline-block rounded bg-neutral-200 px-2 py-0.5 text-xs font-bold text-black;
+  }
+
+  .grammar-inflection-example-japanese {
+    @apply mt-1 font-semibold;
+  }
+
+  .grammar-inflection-example-reading,
+  .grammar-inflection-example-note {
+    @apply mt-1 text-xs text-black/70;
+  }
+
+  .grammar-inflection-example-translation {
+    @apply mt-1 text-sm text-black/85;
+  }
+
+  .grammar-toggle-icon {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 text-xs text-black;
+  }
+
+  .grammar-header-cell {
+    @apply border border-gray-300 bg-neutral-100 px-2 py-1 text-center text-sm font-bold text-black;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .grammar-header-cell-wide {
+    @apply text-base;
+  }
+
+  .grammar-header-cell-pre {
+    white-space: pre-wrap;
+  }
+
+  .grammar-body-cell {
+    @apply border border-gray-300 bg-white p-[2px] text-base text-black;
+    text-align: left;
+    vertical-align: middle;
+    white-space: normal;
+  }
+
+  .grammar-no-select {
+    @apply select-none;
+  }
+
+  .grammar-center-cell {
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+
+  .grammar-row-title-cell {
+    @apply w-[80px] border border-gray-300 bg-neutral-100 p-[2px] text-center text-xs font-bold text-black;
+    text-align: center;
+    vertical-align: middle;
+    white-space: normal;
+  }
+
+  .grammar-row-title-footer-cell {
+    @apply bg-transparent;
+  }
+
+  .grammar-prefix-cell {
+    @apply w-[80px] border border-gray-300 bg-white p-[2px] text-center text-xs font-bold text-black;
+    text-align: center;
+    vertical-align: middle;
+    white-space: normal;
+  }
+
+  .grammar-highlight-cell,
+  .grammar-subtable-highlight-cell {
+    box-shadow: inset -1px 0 0 #9ca3af;
+  }
+
+  .grammar-highlight-cell {
+    @apply !bg-red-900 text-white;
+  }
+
+  .grammar-footer-row {
+    @apply bg-neutral-200;
+  }
+
+  .grammar-footnote-cell {
+    @apply border border-gray-300 bg-neutral-100 p-[2px] text-base font-bold text-black;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .grammar-footnote-line {
+    @apply text-left;
+  }
+
+  .grammar-table tbody tr > td:first-child,
+  .grammar-table tfoot tr > td:first-child {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .grammar-example-line {
+    @apply ml-2 text-sm text-gray-500;
+  }
+
+  .grammar-example-indent {
+    @apply ml-5;
+  }
+
+  .grammar-rule-line {
+    @apply flex items-start gap-1;
+  }
+
+  .grammar-rule-index {
+    @apply w-5 shrink-0 text-left;
+  }
+
+  .grammar-rule-text {
+    @apply flex-1 whitespace-normal break-words;
+  }
+
+  .grammar-substack {
+    @apply mt-2;
+  }
+
+  .grammar-substack-tight {
+    @apply mt-1;
+  }
+
+  .grammar-pos-group-title {
+    @apply font-bold;
+  }
+
+  .grammar-alpha-list {
+    @apply list-inside list-[upper-alpha] pl-2;
+  }
+
+  .grammar-alpha-item {
+    @apply pl-0;
+  }
+
+  .grammar-square-list {
+    @apply ml-1 list-inside list-[square];
+  }
+
+  .grammar-disc-list {
+    @apply ml-1 list-inside list-disc;
+  }
+
+  .grammar-example-heading {
+    @apply font-bold;
+  }
+
+  .grammar-nowrap {
+    white-space: nowrap !important;
+  }
+
+  .grammar-normal-space-cell {
+    white-space: normal !important;
+  }
+
+  .grammar-force-nowrap {
+    white-space: nowrap !important;
+  }
+
+  .grammar-kana-nowrap-cell {
+    white-space: nowrap !important;
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+
+  .grammar-pre-wrap-cell {
+    white-space: pre-wrap !important;
+  }
+
+  .grammar-derived-cell {
+    @apply !bg-neutral-200;
+  }
+
+  .grammar-fixed-break-cell {
+    white-space: pre-line !important;
+    word-break: keep-all;
+  }
+
+  .grammar-subtable-highlight-cell {
+    @apply !bg-red-700 text-white;
+  }
+
+  .n5-grammar-view {
+    @apply space-y-1 py-1;
+  }
+
+  .n5-grammar-section-card {
+    @apply overflow-hidden rounded border border-gray-200 bg-white;
+  }
+
+  .n5-grammar-section-header {
+    @apply border-b border-gray-300 bg-neutral-100;
+  }
+
+  .n5-grammar-section-heading {
+    @apply m-0;
+  }
+
+  .n5-grammar-section-title {
+    @apply block whitespace-pre-wrap text-black;
+  }
+
+  .n5-grammar-section-toggle {
+    @apply relative flex w-full items-center justify-center px-8 py-1 text-center text-base font-bold text-black transition-colors hover:bg-neutral-200;
+  }
+
+  .n5-grammar-section-toggle-icon {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 text-xs text-black;
+  }
+
+  .n5-grammar-section-body {
+    @apply space-y-3 bg-white px-3 py-3;
+  }
+
+  .n5-grammar-section-description {
+    @apply text-sm leading-6 text-ink/85;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-topic-stack {
+    @apply space-y-3;
+  }
+
+  .n5-grammar-topic-card {
+    @apply rounded-lg border border-clay/15 bg-white/80 p-3;
+  }
+
+  .n5-grammar-topic-title {
+    @apply text-sm font-bold text-ink;
+    font-size: 1rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-topic-summary {
+    @apply mt-1 text-sm leading-6 text-ink/85;
+    font-size: 1rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-detail-list,
+  .n5-grammar-bullet-summary {
+    @apply mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-ink/85;
+    font-size: 1rem;
+  }
+
+  .n5-grammar-detail-item {
+    @apply break-words;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-detail-highlight {
+    @apply font-bold text-red-700;
+  }
+
+  .n5-grammar-subheading {
+    @apply text-xs font-bold uppercase tracking-[0.08em] text-clay;
+    font-size: 0.8571428571rem;
+  }
+
+  .n5-grammar-shared-note-box {
+    @apply mt-3 rounded-md bg-sand/45 p-2;
+  }
+
+  .n5-grammar-shared-note-line {
+    @apply mt-1 text-sm leading-6 text-ink/80;
+    font-size: 1rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-example-box {
+    @apply mt-3 space-y-2;
+  }
+
+  .n5-grammar-example-card {
+    @apply rounded-md border border-clay/10 bg-sand/25 p-2;
+  }
+
+  .n5-grammar-example-japanese {
+    @apply text-sm font-semibold text-ink;
+    font-size: 1rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-example-highlight {
+    @apply rounded bg-red-100 px-1 font-bold text-red-700;
+  }
+
+  .n5-grammar-example-reading {
+    @apply mt-1 text-xs text-ink/60;
+    font-size: 0.8571428571rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-example-translation {
+    @apply mt-1 text-sm text-ink/85;
+    font-size: 1rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-example-note {
+    @apply mt-1 text-xs leading-5 text-ink/70;
+    font-size: 0.8571428571rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-table-shell {
+    @apply overflow-hidden rounded-lg border border-clay/15 bg-white/80;
+  }
+
+  .n5-grammar-table {
+    @apply w-full table-fixed border-collapse;
+  }
+
+  .n5-grammar-table-head-cell {
+    @apply border border-clay/15 bg-sand/70 px-2 py-2 text-center align-middle text-xs font-bold text-ink;
+    font-size: 0.8571428571rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-table-row-head {
+    @apply border border-clay/15 bg-sand/40 px-2 py-2 text-center align-middle text-xs font-semibold text-ink;
+    font-size: 0.8571428571rem;
+    white-space: pre-line;
+  }
+
+  .n5-grammar-table-body-cell {
+    @apply border border-clay/15 px-2 py-2 align-middle text-xs leading-5 text-ink;
+    font-size: 0.8571428571rem;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  .n5-grammar-table-example-stack {
+    @apply space-y-3;
+  }
+
+  .n5-grammar-table-example-card {
+    @apply rounded-lg border border-clay/15 bg-sand/25 p-3;
+  }
+
+  .n5-grammar-table-example-header {
+    @apply space-y-1;
+  }
+
+  .n5-grammar-table-example-title {
+    @apply text-sm font-bold text-ink;
+    font-size: 1rem;
+  }
+
+  .n5-grammar-table-example-forms {
+    @apply mt-2 flex flex-wrap gap-2;
+  }
+
+  .n5-grammar-table-example-form {
+    @apply inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-clay;
+    font-size: 0.8571428571rem;
+  }
+
+  .n5-grammar-table-example-note {
+    @apply mt-2 text-xs leading-5 text-ink/70;
+    font-size: 0.8571428571rem;
+    white-space: pre-line;
+  }
+
+  .vocabulary-control-bar {
+    @apply space-y-1.5;
+  }
+
+  .vocabulary-view {
+    @apply flex h-full flex-col gap-2;
+  }
+
+  .vocabulary-control-bar {
+    @apply flex flex-col gap-0 px-1;
+  }
+
+  .vocabulary-control-row,
+  .vocabulary-toolbar {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .vocabulary-toolbar {
+    @apply px-1;
+  }
+
+  .vocabulary-control-left {
+    @apply flex min-w-0 flex-1 items-center;
+  }
+
+  .vocabulary-control-right {
+    @apply flex shrink-0 items-center justify-end;
+  }
+
+  .vocabulary-control-right-stack {
+    @apply flex flex-col items-start gap-2;
+  }
+
+  .vocabulary-search-input {
+    @apply h-10 w-full rounded-md border border-gray-300 bg-white px-2 py-1 outline-none transition focus:border-gray-500;
+  }
+
+  .vocabulary-count-summary {
+    @apply text-sm font-medium text-ink;
+  }
+
+  .vocabulary-table-scroll {
+    @apply overflow-y-auto;
+    max-height: calc(100dvh - 196px);
+  }
+
+  .vocabulary-table {
+    @apply w-full border-separate border-spacing-0;
+  }
+
+  .vocabulary-header-row {
+    @apply sticky top-0 z-10 bg-neutral-100;
+  }
+
+  .vocabulary-header-cell {
+    @apply border border-gray-300 bg-neutral-100 px-0.5 py-0.5 text-left align-top text-xs font-bold leading-4 text-ink;
+  }
+
+  .vocabulary-header-toggle {
+    @apply inline-flex items-center gap-2 whitespace-nowrap;
+  }
+
+  .vocabulary-body-cell {
+    @apply border border-gray-300 px-0.5 py-0.5 align-top text-sm leading-5 text-ink;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  .vocabulary-cell-content {
+    @apply block select-none;
+  }
+
+  .vocabulary-hidden-content {
+    visibility: hidden;
+  }
+
+  .vocabulary-mark-header-cell {
+    @apply border border-gray-300 bg-neutral-100 align-middle;
+    width: 22px;
+  }
+
+  .vocabulary-mark-cell {
+    @apply border border-gray-300 align-middle text-center;
+    width: 22px;
+  }
+
+  .vocabulary-clear-marks-shell {
+    @apply flex justify-center p-1;
+  }
+
+  .vocabulary-mark-cell-shell {
+    @apply flex items-center justify-center p-1;
+  }
+
+  .vocabulary-marked-row {
+    @apply bg-red-200;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell-header {
+    gap: 0.375rem;
+  }
+
+  .route-tab-link {
+    padding: 0.3125rem 0.5rem;
+  }
+
+  .practice-grid-header-cell,
+  .practice-grid-cell,
+  .practice-long-vowel-rule-cell,
+  .practice-long-vowel-cell {
+    padding: 0.375rem 0.25rem;
+  }
+
+  .exam-modal-card {
+    height: 21.5rem;
+    max-width: 21rem;
+  }
+
+  .exam-modal-prompt {
+    font-size: 5rem;
+  }
+
+  .grammar-header-cell,
+  .grammar-body-cell,
+  .grammar-row-title-cell,
+  .grammar-prefix-cell {
+    padding: 2px;
+  }
+
+  .vocabulary-header-cell,
+  .vocabulary-body-cell {
+    padding: 2px;
+  }
+
+  .n5-grammar-section-body,
+  .n5-grammar-topic-card,
+  .n5-grammar-example-card,
+  .n5-grammar-table-example-card {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+  }
+
+  .n5-grammar-section-toggle {
+    padding-left: 0.625rem;
+    padding-right: 1.75rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .route-tab-link {
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.4375rem;
+  }
+
+  .practice-kana-table {
+    font-size: 11.5px;
+  }
+
+  .practice-kana-main-text,
+  .practice-kana-placeholder {
+    font-size: 12px;
+  }
+
+  .practice-kana-romaji-text {
+    font-size: 10.5px;
+  }
+
+  .practice-grid-header-cell,
+  .practice-grid-cell,
+  .practice-long-vowel-rule-cell,
+  .practice-long-vowel-cell {
+    font-size: 0.6875rem;
+  }
+
+  .practice-kana-text {
+    font-size: 0.75rem;
+  }
+
+  .practice-romaji-text {
+    font-size: 0.625rem;
+  }
+
+  .practice-translation-text {
+    font-size: 0.6875rem;
+  }
+
+  .practice-long-vowel-romaji-text {
+    font-size: 0.75rem;
+  }
+
+  .practice-long-vowel-translation-text {
+    font-size: 0.8125rem;
+  }
+
+  .exam-modal-card {
+    height: 20.5rem;
+  }
+
+  .exam-modal-prompt {
+    font-size: 4.75rem;
+  }
+
+  .grammar-title-copy {
+    font-size: 0.9375rem;
+  }
+
+  .n5-grammar-section-title {
+    font-size: 0.9375rem;
+  }
+
+  .n5-grammar-table-head-cell,
+  .n5-grammar-table-row-head,
+  .n5-grammar-table-body-cell,
+  .n5-grammar-subheading,
+  .n5-grammar-example-reading,
+  .n5-grammar-example-note,
+  .n5-grammar-table-example-form,
+  .n5-grammar-table-example-note {
+    font-size: 0.8571428571rem;
+  }
+
+  .n5-grammar-topic-title,
+  .n5-grammar-topic-summary,
+  .n5-grammar-detail-list,
+  .n5-grammar-bullet-summary,
+  .n5-grammar-shared-note-line,
+  .n5-grammar-example-japanese,
+  .n5-grammar-example-translation,
+  .n5-grammar-table-example-title {
+    font-size: 1rem;
+  }
+
+  .vocabulary-control-row,
+  .vocabulary-toolbar {
+    gap: 0.75rem;
+  }
+
+  .vocabulary-header-cell,
+  .vocabulary-body-cell,
+  .vocabulary-count-summary {
+    font-size: 0.6875rem;
+  }
+}
