@@ -54,7 +54,7 @@ src/
 ├─ app/ (應用程式入口層：啟動 Vue、切路由、提供全域殼層)
 │  ├─ AppShell.vue (整個網站的外框；建立 PracticeSession、提供 RouterView、共享 route tabs 頁首與 PWA Toast，並處理小螢幕下 tabs-only header 的換列穩定性)
 │  ├─ main.ts (Vue 啟動入口；createApp(AppShell).use(router).mount('#app'))
-│  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n5-grammar 與對應 route meta)
+│  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 與對應 route meta)
 │
 ├─ assets/ (靜態素材)
 │  ├─ hero.png (專案使用的圖片素材)
@@ -76,17 +76,28 @@ src/
 │  ├─ grammar/ (文法頁模組)
 │  │  ├─ components/
 │  │  │  ├─ GodanVerbTable.vue (五段動詞主表與音便子表；以兩個 accordion table 呈現詞尾母音變化與音便規則)
+│  │  │  ├─ GrammarLevelSwitcher.vue (主路由列的文法等級切換器；串接 grammar level config、localStorage 偏好、router 與共用 RouteSubMenu)
 │  │  │  ├─ GrammarAccordionTableShell.vue (文法表格共用殼層；提供標題列、展開收合、`data-testid`、標題/說明分離與一致表格骨架)
 │  │  │  ├─ InflectionTable.vue (一般活用表 renderer；支援一段、サ變、カ變、形容詞與助動詞等多組列資料，並可在表格下方顯示例句組)
 │  │  │  ├─ PosConversionTable.vue (詞性變化規則 renderer；顯示分組標題、條列規則與例句)
 │  │  │  ├─ RuleListTable.vue (規則清單表 renderer；顯示編號規則與多行補充說明)
 │  │  │  └─ SystemDifferenceTable.vue (語法系統差異比較表 renderer；顯示系統別對照與備註列)
+│  │  ├─ config/
+│  │  │  └─ grammarLevels.ts (N1～N5 文法等級單一設定來源；集中管理 value、label、route、testId 與預設等級)
+│  │  ├─ composables/
+│  │  │  └─ useGrammarLevel.ts (文法等級偏好狀態；從 storage 還原 selected level，提供目前選項與切換方法)
 │  │  ├─ data/
 │  │  │  └─ changeRules.ts (文法頁 11 個 section 的靜態資料來源；集中管理標題、payload 與穩定 id)
+│  │  ├─ storage/
+│  │  │  └─ grammarLevelStorage.ts (文法等級 localStorage 存取；只保存 level value，驗證設定與 route，並清除壞資料)
 │  │  ├─ types/
 │  │  │  └─ changeRules.ts (文法表格資料型別定義，例如 section、比較列、活用表、可選例句組與詞性變化結構)
 │  │  └─ views/
-│  │     └─ GrammarView.vue (文法頁畫面；組裝 11 個規則容器並依資料型別切換對應 renderer)
+│  │     ├─ GrammarView.vue (文法頁畫面；組裝 11 個規則容器並依資料型別切換對應 renderer)
+│  │     ├─ N1GrammarView.vue (N1 文法 placeholder 路由頁；顯示準備中狀態並保持 route 可進入)
+│  │     ├─ N2GrammarView.vue (N2 文法 placeholder 路由頁；顯示準備中狀態並保持 route 可進入)
+│  │     ├─ N3GrammarView.vue (N3 文法 placeholder 路由頁；顯示準備中狀態並保持 route 可進入)
+│  │     └─ N4GrammarView.vue (N4 文法 placeholder 路由頁；顯示準備中狀態並保持 route 可進入)
 │  │
 │  ├─ n5Grammar/ (N5 文法學習頁模組)
 │  │  ├─ components/
@@ -157,11 +168,12 @@ src/
 │  │  ├─ BaseButton.vue (全站共用按鈕元件)
 │  │  ├─ BaseCheckbox.vue (全站共用核取方塊元件)
 │  │  ├─ BaseInput.vue (全站共用輸入框元件)
-│  │  ├─ RouteTabs.vue (頁面主路由切換導覽列；固定呈現「字母練習 / 變化規則 / N5文法 / 單字練習」，按鈕文字不斷行且可在小螢幕換列)
+│  │  ├─ RouteSubMenu.vue (可重用路由子列表；由 options/config 渲染按鈕、提供 overlay 外部點擊關閉與 Escape 關閉，不耦合業務 storage 或 router)
+│  │  ├─ RouteTabs.vue (頁面主路由切換導覽列；呈現「字母練習 / 變化規則 / 目前文法等級 / 單字練習」，並委派文法等級切換給 GrammarLevelSwitcher)
 │  │  └─ ToastBanner.vue (全站共用 Toast 提示；主要用於 PWA 更新 / 離線提示)
 │  ├─ config/
 │  │  ├─ publicAssets.ts (公開資產常數；集中定義 favicon 與 PWA icon 檔名，供 Vite 設定與測試共用)
-│  │  └─ storageKeys.ts (localStorage key 常數；集中管理 PWA 延後更新、最近不熟結果、N5 文法完成註記與單字註記 key)
+│  │  └─ storageKeys.ts (localStorage key 常數；集中管理 PWA 延後更新、最近不熟結果、N5 文法完成註記、文法等級偏好與單字註記 key)
 │  └─ utils/
 │     ├─ questionCount.ts (依已選假名數與是否包含平假名/片假名，計算建議題數)
 │     ├─ questionDeck.ts (提供洗牌與循環補足題組的工具函式)
@@ -169,7 +181,7 @@ src/
 │     └─ storageGuard.ts (localStorage 讀寫保護工具；含 JSON parse 驗證與移除壞資料)
 │
 ├─ styles/ (全域樣式層)
-│  └─ main.css (全域 CSS 與 Tailwind / 主題樣式入口；含共享 route tabs、`/practice` 指定表格字級、`/grammar`、`/vocabulary`、`/n5-grammar` 等 route-specific 樣式與小螢幕退讓規則)
+│  └─ main.css (全域 CSS 與 Tailwind / 主題樣式入口；含共享 route tabs、route submenu、grammar placeholder、`/practice` 指定表格字級、`/grammar`、`/vocabulary`、`/n5-grammar` 等 route-specific 樣式與小螢幕退讓規則)
 │
 └─ env.d.ts (Vite / TypeScript 環境型別宣告)
 ```
@@ -182,12 +194,14 @@ tests/
 │  ├─ AppShellSmoke.spec.ts (AppShell 基本渲染與核心外框 smoke test；驗證 tabs-only header 與四主路由)
 │  ├─ ChoonRuleSection.spec.ts (長音規則大表格的結構與例字三段資訊測試)
 │  ├─ ExamModal.spec.ts (ExamModal 的關鍵互動、題目列顯示與關閉測試)
+│  ├─ GrammarLevelRoutes.spec.ts (文法等級路由測試；驗證 N1～N4 placeholder 與 N5 既有內容)
 │  ├─ GrammarChangeRulesTables.spec.ts (文法頁複雜表格 renderer 測試；驗證五段動詞、活用表、サ變例句與詞性變化內容)
 │  ├─ GrammarViewSmoke.spec.ts (文法頁 11 個規則容器、標題/說明分離與 accordion 初始狀態 smoke test)
 │  ├─ LoanwordSection.spec.ts (外來語矩陣的標頭、內容格與假名/羅馬音呈現測試)
 │  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證敬體總覽與 v16 新 section 收合/展開、完成 checkbox 不冒泡、完成後鎖定收合、storage 還原、背景 class、ARIA 與不同內容模式 renderer)
 │  ├─ N5GrammarViewSmoke.spec.ts (N5 文法正式頁 smoke test；驗證核心詞類、敬體與 v16 區塊標題、render-safe 初始渲染與無非預期外溢內容)
 │  ├─ PracticeViewSmoke.spec.ts (PracticeView 的基本渲染、指定假名表字級 class、下半部區塊首屏存在與最近結果清除/捲動測試)
+│  ├─ RouteSubMenu.spec.ts (共用路由子列表元件測試；驗證 config-driven options、select emit、overlay 關閉與 Escape 關閉)
 │  ├─ RouteOwnership.spec.ts (驗證 `/practice`、`/grammar`、`/vocabulary`、`/n5-grammar` 的 feature ownership 與 negative ownership，並確認 N5 文法內容不外溢)
 │  ├─ SelectionDetailPanel.spec.ts (選取明細面板的顯示邏輯測試)
 │  ├─ VocabularyControlBar.spec.ts (單字頁控制區測試；驗證搜尋、JLPT 全選/單選同步、控制列排序與 checkbox 疊加控制事件)
@@ -196,18 +210,19 @@ tests/
 │  ├─ YoonSections.spec.ts (清音拗音與合拗音矩陣的全表羅馬音測試)
 │  └─ testUtils.ts (元件測試共用 helper；例如先 provide PracticeSession 再 mount，並可傳入額外 mount options)
 ├─ e2e/ (Playwright 端到端測試)
-│  ├─ app-shell.smoke.spec.ts (整個網站 shell 與基本進站流程 smoke test；驗證四主路由導覽、N5 入口與 direct URL)
+│  ├─ app-shell.smoke.spec.ts (整個網站 shell 與基本進站流程 smoke test；驗證四主路由導覽、文法等級切換、N5 direct URL 與持久化)
 │  ├─ grammar-change-rules.spec.ts (375px 下 `/grammar` 的展開流程、主要文法表格可見性與不破版驗證)
 │  ├─ practice-layout.smoke.spec.ts (375px 下 `/practice` 首屏、表格可讀性與無水平捲動 smoke test)
 │  ├─ practice-exam-flow.spec.ts (從選字到開始測驗的完整流程測試，含 modal 題目列存在驗證)
 │  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性、不破版與 N5 section sticky header 接續黏頂驗證)
 │  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證 375px 下 JLPT 篩選、搜尋、註記持久化、長按揭露、離線控制列與窄版穩定性)
-│  └─ testUtils.ts (e2e 共用 helper；含四主路由 tabs、nowrap 與無水平捲動斷言)
+│  └─ testUtils.ts (e2e 共用 helper；含四主路由 controls、動態文法等級 label、nowrap 與無水平捲動斷言)
 ├─ mocks/ (測試替身 / mock 模組)
 │  └─ pwaRegisterMock.ts (mock `virtual:pwa-register`，讓測試不真的註冊 service worker)
 ├─ unit/ (純邏輯單元測試)
 │  ├─ latestUnknownResultStorage.spec.ts (最近不熟結果 storage 的讀寫與驗證測試)
 │  ├─ changeRulesData.spec.ts (文法頁靜態資料測試；驗證 section 數量、id 唯一性與關鍵 payload 完整度)
+│  ├─ grammarLevelStorage.spec.ts (文法等級偏好 storage 測試；驗證只保存 value、合法還原、無效值與壞 JSON 清除)
 │  ├─ n5GrammarData.spec.ts (N5 文法靜態資料測試；驗證核心區塊排序、12 組儲存格例句、v16 來源覆蓋、助詞排序與重點字欄位)
 │  ├─ n5GrammarCompletionStorage.spec.ts (N5 文法完成註記 storage 測試；驗證 version 1 snapshot 寫入讀回、完成 id 快照、空資料與 invalid payload 清除)
 │  ├─ pwaLifecycleService.spec.ts (PWA 更新流程與 toast 狀態測試)
@@ -248,7 +263,7 @@ index.html
   -> /src/app/main.ts
   -> AppShell.vue
   -> router.ts 決定目前頁面
-  -> PracticeView / GrammarView / VocabularyView / N5GrammarView
+  -> PracticeView / GrammarView / VocabularyView / N1GrammarView～N4GrammarView / N5GrammarView
   -> 各模組 composables、components、utils
 ```
 

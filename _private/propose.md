@@ -1,94 +1,159 @@
-# improve-vocabulary-leveling-and-performance
+# add-persistent-grammar-level-route-switcher
 
-## 唯一輸入來源
+> 由 `_private/discuss.txt` 整理而成的變更草案。確認內容後可用 `/spectra-propose add-persistent-grammar-level-route-switcher` 正式建立 Spectra 變更。
 
-`_private/discuss.txt`
+---
 
-## 討論結論
+## Why（為何要做）
 
-本 change 主要處理「子路由：單字練習」的三個問題：
+1. **手機可擴充性受限**：現有「N5文法」主路由按鈕僅支援單一等級，未來新增 N1–N4 後將無處可擴充，手機橫向空間更不夠。
+2. **無持久化偏好**：使用者每次重開網站都被迫從預設等級開始，不符離線優先 PWA「短時段、無干擾學習」的場景。
+3. **缺可重用元件**：未來如有其他「下拉式路由切換」需求（如語言、難度、章節等），目前沒有共用底層，易重複造輪子。
+4. **既有按鈕間距不適合手機**：現有 padding `0.3125rem 0.5rem` 在手機單手操作下偏大、易誤觸鄰近按鈕。
 
-1. 新增單字難度分級篩選，使用 N1、N2、N3、N4、N5 checkbox 控制實際顯示的單字。
-2. 將字典資料 `jpWords.ts` 中每個單字的 `stage` 內容調整為 JLPT 難度分級 `N1`～`N5`。
-3. 在保持既有功能前提下改善單字練習頁程式效率，並同步調整部分 UI 排列與移除單字數量統計 UI。
+## What（要做什麼）
 
-建議 change 名稱維持：
+- 微調主路由列按鈕 padding 為 `0.3rem 0.39rem`
+- 將主路由列「N5文法」改為**動態文法等級切換按鈕**（N1–N5）
+- 新增 N1–N4 路由（內容暫為 placeholder）
+- 在文法頁點主路由按鈕：開**子列表**讓使用者選等級
+- 在非文法頁點主路由按鈕：直接跳到目前選定等級
+- 持久化使用者選定等級（localStorage），含無效值的 fallback 機制
+- 抽出**可重用的子列表元件**（options/config 驅動），未來可服務其他下拉切換需求
 
-`improve-vocabulary-leveling-and-performance`
+## Non-goals（不做什麼）
 
-## 需求範圍
+- 不實作 N1–N4 文法的實際內容（本變更只開路由 + placeholder）
+- 不持久化「子列表開／關狀態」（重開網頁子列表一律關閉）
+- 不動「字母練習」「變化規則」「單字練習」三個路由的行為
+- 不引入新狀態管理或 UI 套件，沿用既有 Pinia + Tailwind
+- 不變更主路由列的視覺樣式（除按鈕 padding 外）
 
-### 1. 單字難度分級 checkbox
+---
 
-單字練習頁需要新增 N1～N5 五個難度 checkbox。使用者勾選或取消任一難度後，實際顯示的單字清單必須依照目前勾選的難度集合更新。
+## Impact（影響範圍）
 
-需要另外新增一個「全部勾選」checkbox，行為如下：
+### 新增檔案
+- `src/modules/grammar/config/grammarLevels.ts` — N1–N5 等級設定資料（label、route、value、testId）
+- `src/modules/grammar/composables/useGrammarLevel.ts` — 等級狀態與持久化
+- `src/modules/grammar/storage/grammarLevelStorage.ts` — localStorage 讀寫與驗證
+- `src/shared/components/RouteSubMenu.vue`（或類似命名）— 可重用的子列表元件
+- `src/modules/grammar/components/GrammarLevelSwitcher.vue` — 文法等級切換按鈕（包裝 RouteSubMenu）
+- `src/modules/grammar/views/N1GrammarView.vue`、`N2GrammarView.vue`、`N3GrammarView.vue`、`N4GrammarView.vue` — placeholder 頁面
 
-- 勾選「全部勾選」時，N1、N2、N3、N4、N5 必須全部變成勾選。
-- 在「全部勾選」為勾選狀態時，若使用者取消任一個 N1～N5 checkbox，則「全部勾選」必須自動取消勾選。
-- 在「全部勾選」為勾選狀態時，若使用者直接取消「全部勾選」，則 N1、N2、N3、N4、N5 必須全部取消勾選。
-- 建議補充規則：若使用者手動把 N1～N5 全部勾選回來，「全部勾選」也應自動回到勾選狀態，讓 UI 狀態保持一致。
+### 修改檔案
+- `src/app/router.ts` — 註冊 `/n1-grammar`、`/n2-grammar`、`/n3-grammar`、`/n4-grammar`、`/n5-grammar`
+- `src/app/AppShell.vue` 或主路由列元件（`RouteTabs.vue`）— 整合 GrammarLevelSwitcher、調整 padding
+- `PROJECT_ARCHITECTURE.md` — 補上新模組與元件責任
 
-### 2. `jpWords.ts` 的 stage 改為 JLPT 難度
+---
 
-目前字典檔為 `jpWords.ts`，每一個單字都有 `stage`。本 change 需要將 `stage` 內的內容調整為 JLPT 難度分級：
+## 詳細需求（分類整理）
 
-- `N1`
-- `N2`
-- `N3`
-- `N4`
-- `N5`
+### A. 路由結構
+- A1. 文法等級路由命名為 `/n1-grammar`、`/n2-grammar`、`/n3-grammar`、`/n4-grammar`、`/n5-grammar`
+- A2. N1–N4 路由內容可為空白或簡單 placeholder，只需可正常進入且不報錯
+- A3. 既有 `/n5-grammar` 路由保留不動
 
-所有單字資料都應使用上述五種值之一，避免同一欄位混用舊 stage 與新 JLPT level。
+### B. 主路由按鈕行為
+- B1. 主路由列上的文法按鈕文字顯示目前選定等級（例：「N5文法」、「N1文法」）
+- B2. 預設等級為 N5
+- B3. **非文法頁**點按鈕 → 直接跳到目前選定等級的文法路由
+- B4. **文法頁（任一等級）**點按鈕 → 不跳轉，開啟子列表
+- B5. 主路由列按鈕 padding 改為 `0.3rem 0.39rem`
 
-### 3. 單字練習頁效率改善
+### C. 子列表行為
+- C1. 子列表提供 N1–N5 五個等級按鈕
+- C2. 點任一等級後：跳轉到該等級路由 + 更新主按鈕文字 + 寫入 localStorage
+- C3. 子列表開啟期間，點擊**畫面其他物件**時：**不執行該物件原動作**，只關閉子列表
+  - 例外：點擊子列表自身按鈕、主路由列按鈕仍正常作用
+- C4. 子列表開啟狀態不持久化，重開網頁一律關閉
 
-目前單字練習頁程式效率很差。本 change 應在保持既有功能與畫面行為的前提下改善效率。
+### D. 子列表元件設計（可重用）
+- D1. 元件需獨立可重用，不可硬寫於 RouteTabs
+- D2. 元件透過 `options` / `config` 驅動：每個選項由外部傳入 label、route、value、testId 等
+- D3. 元件職責限定為：
+  - 渲染選項
+  - 開／關狀態
+  - 點擊外部關閉
+  - 派發選項點擊事件
+- D4. **跳轉到哪個路由 + 寫入哪個偏好值**由父層或 composable 處理，元件不耦合具體業務
 
-建議方向：
+### E. 視覺與排版
+- E1. 子列表位置：在主按鈕**下方 4px**
+- E2. 子列表為**懸浮層**（absolute / fixed），不推動 layout
+- E3. 子列表 `padding: 0`、按鈕間 `gap: 2px`
+- E4. 子列表內 button 樣式與目前主路由列 button **完全一致**
+- E5. 子列表背景顏色：與專案背景接近，但**略深**
 
-- 避免在每次 render 或每次輸入變更時重複做高成本資料轉換。
-- 將可預先整理的單字資料結構集中處理。
-- 篩選 N1～N5 時應以清楚且可測試的資料流處理，避免多處重複 filter / map。
-- 保留既有搜尋、註記、顯示欄位、長按揭露、練習模式與只顯示註記等功能，不因效能調整造成行為回歸。
+### F. 持久化與容錯
+- F1. 使用者選定等級存入 localStorage（key 自訂，例：`grammarLevel`）
+- F2. 啟動時讀取 localStorage：
+  - 若記憶值有效（屬於設定中的等級、對應路由存在）→ 使用該值
+  - 若無效（不是合法等級、路由不存在、已從設定中移除）→ **刪除該記憶值** + 回到預設 N5
+- F3. 等級設定（A–F 通用）集中於 `grammarLevels.ts`，方便未來新增／刪除／調整順序
 
-### 4. UI 調整
+---
 
-單字練習頁目前有「XXXX 個單字」這類文字，表示實際上總共顯示幾個單字。本 change 要移除此功能與 UI。
+## 開放問題（建議在 design 階段處理）
 
-控制項排列需調整如下：
+1. **子列表元件命名**：建議 `RouteSubMenu.vue` 或 `RouteDropdown.vue`，待 design 確認 → 採用 RouteSubMenu.vue
+2. **「點擊外部僅關閉、不執行原動作」的實作策略**：
+   - 方案 A：全屏透明 overlay 攔截點擊
+   - 方案 B：document 全域監聽 + `event.preventDefault()` / `stopPropagation()`
+   - 方案 A 較直觀，方案 B 較輕量
+   - 建議在 design 階段選定
+   - 採用方案A
+3. **「略深」量化**：背景比專案主背景深多少？建議在 design 用 Tailwind class（例：`bg-neutral-100` → `bg-neutral-200`）明確化
+     → 原先的色彩不是很清楚，但顏色深度的幅度變化 要像例子一樣的幅度 `bg-neutral-100` → `bg-neutral-300`
+4. **PWA 離線可用性**：本功能完全前端，無 API 呼叫，預設可離線運作；無需特別降級策略
 
-- N1～N5 checkbox 與「全部勾選」checkbox 放在控制列上方。
-- 「練習」checkbox、「只顯示註記」checkbox 與「儲存註記」按鈕放在同一行。
-- 「練習」與「只顯示註記」靠左排列，兩者之間保留 gap。
-- 「儲存註記」按鈕放在同一行右側。
+---
 
-## 非目標
+## 風險
 
-- 不新增伺服器、帳號、雲端同步或 analytics。
-- 不改成跨頁面的完整學習進度系統。
-- 不把本 change 擴大成 SRS 或單字熟練度演算法。
-- 不重做整個單字頁 UI，只針對 N1～N5 篩選、控制列排列、單字數量統計 UI 移除與效能改善。
+| # | 風險 | 緩解 |
+|---|---|---|
+| 1 | 子列表元件抽得太通用，反而難用 | 先寫死實際使用情境（grammar level switcher）→ 確認可用 → 再抽出共用部分 |
+| 2 | localStorage 寫入時機過頻 | 只在等級切換時寫一次，不每次 render 寫 |
+| 3 | 「點外部不執行原動作」可能影響 a11y / 鍵盤操作 | 需保留 ESC 關閉子列表的鍵盤行為 |
+| 4 | N1–N4 placeholder 頁面影響使用者信任感 | 顯示明確「敬請期待」訊息，避免使用者以為功能壞掉 |
+
+---
 
 ## 驗收條件
 
-- 單字練習頁顯示 N1～N5 checkbox 與「全部勾選」checkbox。
-- 勾選 N1～N5 後，實際顯示的單字會依目前勾選難度更新。
-- 「全部勾選」與 N1～N5 checkbox 的連動符合需求範圍定義。
-- `jpWords.ts` 中每個單字的 `stage` 值皆為 `N1`～`N5` 之一。
-- 「XXXX 個單字」的單字數量統計功能與 UI 已移除。
-- N1～N5 與「全部勾選」checkbox 顯示在「練習 / 只顯示註記 / 儲存註記」控制列上方。
-- 「練習」與「只顯示註記」checkbox 位於同一行左側並有 gap；「儲存註記」按鈕位於同一行右側。
-- 效率改善後，既有單字頁功能仍維持可用。
-- 需要補測試覆蓋 checkbox 連動、難度篩選、資料合法性、單字數量 UI 移除、控制列排列與既有功能不回歸。
+- 主路由列按鈕 padding 為 `0.3rem 0.39rem`
+- 文法按鈕文字會顯示目前選定等級（預設 N5）
+- N1–N5 路由皆可進入且不報錯
+- 在非文法頁點文法按鈕 → 直接跳到目前選定等級
+- 在文法頁點文法按鈕 → 開啟子列表
+- 子列表提供 N1–N5 五個按鈕，按下後跳轉並更新主按鈕文字
+- localStorage 記錄並在重開網頁後恢復選擇
+- localStorage 含無效值時：刪除並 fallback 回 N5
+- 子列表開啟期間，點外部僅關閉，不觸發原動作
+- 重開網頁子列表一律關閉
+- 子列表視覺：下方 4px、padding 0、gap 2px、背景略深、按鈕樣式一致
+- 子列表元件可被獨立用於其他下拉切換場景（驗證可重用性）
+- 補測試覆蓋：路由切換、持久化讀寫、無效值 fallback、子列表互動、外部點擊處理
 
-## 建議後續 Spectra 提案重點
+---
 
-若後續使用 `$spectra-propose` 建立正式 change artifacts，建議 proposal 聚焦在：
+## 建議的 spec 切分（給 design 參考）
 
-- 新增 `Vocabulary JLPT level filtering` 能力。
-- 修改單字資料模型，將 `stage` 收斂為 `N1`～`N5`。
-- 移除單字練習頁的顯示數量統計 UI。
-- 調整單字練習頁控制列布局。
-- 最小範圍效能優化，不擴大到 unrelated route。
-- 測試策略需包含資料層、元件互動、控制列 UI 與必要 e2e。
+可拆成以下 capability spec：
+
+- `grammar-level-routing` — 路由結構與切換邏輯
+- `grammar-level-persistence` — 持久化與 fallback
+- `route-sub-menu` — 共用元件層級的 spec
+
+---
+
+## 下一步
+
+1. 使用者確認本草案內容
+2. 跑 `/spectra-propose add-persistent-grammar-level-route-switcher`，把本檔內容餵入正式 proposal
+3. `/spectra-apply` 階段建議順序：
+   - 先做 A、F（路由與持久化資料層）
+   - 再做 D（共用子列表元件）
+   - 最後做 B、C、E（整合與 UI 細節）
