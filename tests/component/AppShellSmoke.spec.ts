@@ -3,9 +3,11 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import AppShell from '@/app/AppShell.vue';
 import router from '@/app/router';
+import { grammarLevelStorageKey } from '@/modules/grammar/storage/grammarLevelStorage';
 
 describe('AppShell', () => {
   beforeEach(async () => {
+    window.localStorage.removeItem(grammarLevelStorageKey);
     await router.push('/practice');
     await router.isReady();
   });
@@ -19,11 +21,15 @@ describe('AppShell', () => {
 
     const header = wrapper.get('[data-testid="app-header"]');
     expect(header.find('h1').exists()).toBe(false);
+    expect(header.classes()).toEqual(expect.arrayContaining(['p-1']));
+    expect(header.classes()).not.toEqual(expect.arrayContaining(['px-2', 'py-2']));
+    expect(wrapper.get('.app-shell-frame').classes()).toEqual(expect.arrayContaining(['p-2']));
+    expect(wrapper.get('.app-shell-frame').classes()).not.toEqual(expect.arrayContaining(['px-2', 'py-3']));
     expect(wrapper.findAll('[data-testid^="route-tab-"]')).toHaveLength(4);
     expect(wrapper.get('[data-testid="route-tab-practice"]').text()).toBe('字母練習');
     expect(wrapper.get('[data-testid="route-tab-grammar"]').text()).toBe('變化規則');
     expect(wrapper.get('[data-testid="route-tab-vocabulary"]').text()).toBe('單字練習');
-    expect(wrapper.get('[data-testid="route-tab-n5-grammar"]').text()).toBe('N5文法');
+    expect(wrapper.get('[data-testid="route-tab-grammar-level"]').text()).toBe('N5文法');
     expect(wrapper.text()).toContain('清音');
 
     await router.push('/grammar');

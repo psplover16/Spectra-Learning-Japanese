@@ -34,7 +34,7 @@ textarea {
   }
 
   .app-shell-header {
-    @apply min-w-0 gap-2;
+    @apply relative z-30 min-w-0 gap-2;
   }
 
   .surface-card {
@@ -66,12 +66,38 @@ textarea {
   }
 
   .route-tabs {
-    @apply flex w-full flex-wrap items-center justify-start gap-1;
+    @apply relative z-30 flex w-full flex-wrap items-center justify-start gap-1;
   }
 
   .route-tab-link {
     @apply inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded border px-2 py-1 font-medium leading-none transition-colors;
     font-size: 0.875rem;
+    padding: 0.3rem 0.39rem;
+  }
+
+  .grammar-level-switcher {
+    @apply relative shrink-0;
+  }
+
+  .route-sub-menu-overlay {
+    @apply fixed inset-0 z-20 bg-transparent;
+  }
+
+  .route-sub-menu {
+    @apply absolute left-1/2 z-40 flex -translate-x-1/2 flex-col gap-[4px] rounded border border-clay/20 bg-sand p-[2px] shadow-soft;
+    top: calc(100% + 4px);
+  }
+
+  .route-sub-menu .route-tab-link {
+    @apply w-full;
+  }
+
+  .grammar-placeholder-view {
+    @apply flex min-h-[12rem] items-center justify-center text-center;
+  }
+
+  .grammar-placeholder-title {
+    @apply text-base font-bold text-ink;
   }
 
   .practice-kana-table {
@@ -727,7 +753,7 @@ textarea {
   }
 
   .route-tab-link {
-    padding: 0.3125rem 0.5rem;
+    padding: 0.3rem 0.39rem;
   }
 
   .practice-grid-header-cell,
@@ -779,7 +805,7 @@ textarea {
 @media (max-width: 375px) {
   .route-tab-link {
     font-size: 0.8125rem;
-    padding: 0.25rem 0.4375rem;
+    padding: 0.3rem 0.39rem;
   }
 
   .practice-kana-table {

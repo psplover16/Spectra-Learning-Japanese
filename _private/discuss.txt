@@ -37,3 +37,8 @@ change名稱 add-persistent-grammar-level-route-switcher
 
 
 
+3. 
+實作完成之後，還有些部分需要調整：
+1. 子列表padding改成 2px、gap改成4px。 位置 多一個水平位置條件，需要 與 目前對齊的按鈕水平置中。
+2. 子路由切換按鈕的容器，目前是 px-2 py-2， 改為p-1
+3. 目前整個頁面被一個容器包住，該容器目前設定 px-2 py-3，調整成 p-2
