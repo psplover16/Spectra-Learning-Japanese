@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import PracticeView from '@/modules/practice/views/PracticeView.vue';
-import GrammarView from '@/modules/grammar/views/GrammarView.vue';
-import VocabularyView from '@/modules/vocabulary/views/VocabularyView.vue';
-import N5GrammarView from '@/modules/n5Grammar/views/N5GrammarView.vue';
+
+const PracticeView = () => import('@/modules/practice/views/PracticeView.vue');
+const GrammarView = () => import('@/modules/grammar/views/GrammarView.vue');
+const VocabularyView = () => import('@/modules/vocabulary/views/VocabularyView.vue');
+const N5GrammarView = () => import('@/modules/n5Grammar/views/N5GrammarView.vue');
 
 export default createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

@@ -40,6 +40,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: appBasePath,
+    build: {
+      chunkSizeWarningLimit: 500
+    },
     plugins: [
       vue(),
       VitePWA({
