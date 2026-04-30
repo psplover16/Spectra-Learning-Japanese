@@ -6,7 +6,7 @@ N5 文法頁由 `N5GrammarView.vue` 依資料渲染多個 `N5GrammarSectionCard.
 
 **Goals:**
 
-- N5 文法 section 的開合狀態只以標題背景色表達，展開時背景色更深。
+- N5 文法 section 的開合狀態只以標題背景色表達；收合狀態使用接近白色的淺灰，展開時背景色更深，已完成狀態保留低彩度背景區分。
 - 原箭頭位置改為完成 checkbox，checkbox 點擊不觸發 section 開合。
 - 已完成 section 立即收合、不可展開，取消完成後不自動展開。
 - 完成狀態以本機 localStorage snapshot 持久保存，重新開啟頁面仍一致。
@@ -49,7 +49,7 @@ localStorage 負責少量完成旗標；IndexedDB 不參與，因為資料量小
 
 ### Background-only expansion indicator and completed styling
 
-移除 `.n5-grammar-section-toggle-icon` 與箭頭文案。Header 關閉時沿用淺色背景；展開時加 expanded 修飾 class，背景比關閉更深；completed 時加 completed 修飾 class，呈現低彩度與不可展開狀態。顏色使用既有 Tailwind / CSS token，不新增大範圍主題。
+移除 `.n5-grammar-section-toggle-icon` 與箭頭文案。Header 關閉時使用接近白色的淺灰背景，避免未展開容器看起來過重；展開時加 expanded 修飾 class，背景比關閉更深；completed 時加 completed 修飾 class，呈現低彩度與不可展開狀態。顏色使用既有 Tailwind / CSS token，不新增大範圍主題。
 
 替代方案：使用另一個 icon 表示完成後鎖定。淘汰原因是需求明確要求開合狀態只留背景色，完成狀態已由 checkbox 表達。
 

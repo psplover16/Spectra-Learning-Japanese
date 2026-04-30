@@ -93,13 +93,15 @@ src/
 │  │  │  ├─ N5GrammarBulletBlock.vue (條列式文法說明 renderer；適合規則重點與例句混合閱讀的群組，支援例句重點字標記)
 │  │  │  ├─ N5GrammarCompareTable.vue (差異對照表 renderer；先顯示比較表，再補充每個儲存格例句群組與必要的主題說明/例句，支援例句重點字標記)
 │  │  │  ├─ N5GrammarInfoBlock.vue (說明後接例句的 renderer；適合連續閱讀型內容，支援例句重點字標記)
-│  │  │  └─ N5GrammarSectionCard.vue (N5 文法群組容器；提供標題列、右側收合按鈕與標題分離的說明區)
+│  │  │  └─ N5GrammarSectionCard.vue (N5 文法群組容器；提供 section 標題 toggle、右側完成 checkbox、完成後鎖定收合、背景色展開狀態與 sticky header)
 │  │  ├─ data/
 │  │  │  └─ grammarNotes.ts (N5 文法結構化靜態資料；整理 v11~v16 筆記、排序規則、來源覆蓋、共通註記、圖片轉表格資料與敬體總覽儲存格例句)
+│  │  ├─ storage/
+│  │  │  └─ n5GrammarCompletionStorage.ts (N5 文法 section 完成註記 storage；以 `duotify.n5Grammar.completed` 保存 version 1 snapshot、completed section ids 與更新時間，並清除壞資料)
 │  │  ├─ types/
 │  │  │  └─ grammarNotes.ts (N5 文法資料型別定義，例如 section、topic、可標記重點字的 example、compare table、tableExampleGroups 與來源覆蓋項)
 │  │  └─ views/
-│  │     └─ N5GrammarView.vue (N5 文法正式學習頁；依 section 的 presentation mode 組裝 compare/info/bullet 三種 renderer)
+│  │     └─ N5GrammarView.vue (N5 文法正式學習頁；依 section 的 presentation mode 組裝 compare/info/bullet 三種 renderer，並在 mounted 後還原完成註記、由父層持有 completedSectionIds)
 │  │
 │  ├─ practice/ (主練習頁模組：假名選擇、練習設定、規則說明)
 │  │  ├─ components/
@@ -158,7 +160,8 @@ src/
 │  │  ├─ RouteTabs.vue (頁面主路由切換導覽列；固定呈現「字母練習 / 變化規則 / N5文法 / 單字練習」，按鈕文字不斷行且可在小螢幕換列)
 │  │  └─ ToastBanner.vue (全站共用 Toast 提示；主要用於 PWA 更新 / 離線提示)
 │  ├─ config/
-│  │  └─ publicAssets.ts (公開資產常數；集中定義 favicon 與 PWA icon 檔名，供 Vite 設定與測試共用)
+│  │  ├─ publicAssets.ts (公開資產常數；集中定義 favicon 與 PWA icon 檔名，供 Vite 設定與測試共用)
+│  │  └─ storageKeys.ts (localStorage key 常數；集中管理 PWA 延後更新、最近不熟結果、N5 文法完成註記與單字註記 key)
 │  └─ utils/
 │     ├─ questionCount.ts (依已選假名數與是否包含平假名/片假名，計算建議題數)
 │     ├─ questionDeck.ts (提供洗牌與循環補足題組的工具函式)
@@ -182,7 +185,7 @@ tests/
 │  ├─ GrammarChangeRulesTables.spec.ts (文法頁複雜表格 renderer 測試；驗證五段動詞、活用表、サ變例句與詞性變化內容)
 │  ├─ GrammarViewSmoke.spec.ts (文法頁 11 個規則容器、標題/說明分離與 accordion 初始狀態 smoke test)
 │  ├─ LoanwordSection.spec.ts (外來語矩陣的標頭、內容格與假名/羅馬音呈現測試)
-│  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證敬體總覽與 v16 新 section 收合/展開、儲存格例句群組、重點字標記與不同內容模式 renderer)
+│  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證敬體總覽與 v16 新 section 收合/展開、完成 checkbox 不冒泡、完成後鎖定收合、storage 還原、背景 class、ARIA 與不同內容模式 renderer)
 │  ├─ N5GrammarViewSmoke.spec.ts (N5 文法正式頁 smoke test；驗證核心詞類、敬體與 v16 區塊標題、render-safe 初始渲染與無非預期外溢內容)
 │  ├─ PracticeViewSmoke.spec.ts (PracticeView 的基本渲染、指定假名表字級 class、下半部區塊首屏存在與最近結果清除/捲動測試)
 │  ├─ RouteOwnership.spec.ts (驗證 `/practice`、`/grammar`、`/vocabulary`、`/n5-grammar` 的 feature ownership 與 negative ownership，並確認 N5 文法內容不外溢)
@@ -197,7 +200,7 @@ tests/
 │  ├─ grammar-change-rules.spec.ts (375px 下 `/grammar` 的展開流程、主要文法表格可見性與不破版驗證)
 │  ├─ practice-layout.smoke.spec.ts (375px 下 `/practice` 首屏、表格可讀性與無水平捲動 smoke test)
 │  ├─ practice-exam-flow.spec.ts (從選字到開始測驗的完整流程測試，含 modal 題目列存在驗證)
-│  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性與不破版驗證)
+│  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性、不破版與 N5 section sticky header 接續黏頂驗證)
 │  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證搜尋、註記持久化、長按揭露與窄版穩定性)
 │  └─ testUtils.ts (e2e 共用 helper；含四主路由 tabs、nowrap 與無水平捲動斷言)
 ├─ mocks/ (測試替身 / mock 模組)
@@ -206,6 +209,7 @@ tests/
 │  ├─ latestUnknownResultStorage.spec.ts (最近不熟結果 storage 的讀寫與驗證測試)
 │  ├─ changeRulesData.spec.ts (文法頁靜態資料測試；驗證 section 數量、id 唯一性與關鍵 payload 完整度)
 │  ├─ n5GrammarData.spec.ts (N5 文法靜態資料測試；驗證核心區塊排序、12 組儲存格例句、v16 來源覆蓋、助詞排序與重點字欄位)
+│  ├─ n5GrammarCompletionStorage.spec.ts (N5 文法完成註記 storage 測試；驗證 version 1 snapshot 寫入讀回、完成 id 快照、空資料與 invalid payload 清除)
 │  ├─ pwaLifecycleService.spec.ts (PWA 更新流程與 toast 狀態測試)
 │  ├─ questionDeck.spec.ts (洗牌與循環題組工具測試)
 │  ├─ useExamSession.spec.ts (測驗流程狀態機測試)

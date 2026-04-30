@@ -1,5 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { expectNoHorizontalOverflow, expectPrimaryTabs, gotoApp } from './testUtils';
+
+async function topGrammarHeaderTestId(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    const target = document.elementFromPoint(window.innerWidth / 2, 1);
+    return target?.closest('[data-testid^="n5-grammar-header-"]')?.getAttribute('data-testid') ?? null;
+  });
+}
 
 test('375px 下的 /n5-grammar 可展開 v16 核心區塊且不破版', async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -147,4 +154,67 @@ test('375px 下的 /n5-grammar 可展開 v16 核心區塊且不破版', async ({
   await expectNoHorizontalOverflow(page);
   expect(consoleErrors).toEqual([]);
   expect(pageErrors).toEqual([]);
+});
+
+test('375px 下 N5 文法 section header 會在滾動時接續黏在頂端', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await gotoApp(page, '/n5-grammar');
+
+  const politeToggle = page.getByTestId('n5-grammar-toggle-polite-overview');
+  const sentenceBasicsToggle = page.getByTestId('n5-grammar-toggle-sentence-basics');
+  await politeToggle.click();
+  await sentenceBasicsToggle.click();
+
+  const politeHeader = page.getByTestId('n5-grammar-header-polite-overview');
+  const sentenceBasicsHeader = page.getByTestId('n5-grammar-header-sentence-basics');
+  await expect(politeHeader).toHaveCSS('position', 'sticky');
+  await expect(politeHeader).toHaveCSS('top', '0px');
+  await expect(sentenceBasicsHeader).toHaveCSS('position', 'sticky');
+  await expect(sentenceBasicsHeader).toHaveCSS('top', '0px');
+
+  await page.getByTestId('n5-grammar-body-polite-overview').scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 260));
+  await expect.poll(() => topGrammarHeaderTestId(page)).toBe('n5-grammar-header-polite-overview');
+
+  await page.getByTestId('n5-grammar-body-sentence-basics').scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 120));
+  await expect.poll(() => topGrammarHeaderTestId(page)).toBe('n5-grammar-header-sentence-basics');
+});
+
+test('375px 下完成註記 reload 後保留，且離線時仍鎖定收合', async ({ context, page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await gotoApp(page, '/n5-grammar');
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload();
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+
+  const toggle = page.getByTestId('n5-grammar-toggle-sentence-basics');
+  const checkbox = page.getByTestId('n5-grammar-completion-sentence-basics');
+  const header = page.getByTestId('n5-grammar-header-sentence-basics');
+  const body = page.getByTestId('n5-grammar-body-sentence-basics');
+
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(header).toHaveCSS('background-color', 'rgb(250, 250, 250)');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(header).toHaveCSS('background-color', 'rgb(163, 163, 163)');
+  await toggle.click();
+  await checkbox.click();
+  await expect(checkbox).toBeChecked();
+  await expect(toggle).toHaveAttribute('aria-disabled', 'true');
+  await expect(header).toHaveCSS('background-color', 'rgb(214, 211, 209)');
+  await expect(body).toBeHidden();
+
+  await page.reload();
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+  await expect(checkbox).toBeChecked();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle).toHaveAttribute('aria-disabled', 'true');
+  await expect(body).toBeHidden();
+
+  await context.setOffline(true);
+  await toggle.click({ force: true });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(body).toBeHidden();
+  await context.setOffline(false);
 });

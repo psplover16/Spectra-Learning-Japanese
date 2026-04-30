@@ -61,7 +61,7 @@ A section marked completed SHALL be collapsed and MUST NOT expand until the user
 
 ### Requirement: Expansion state uses header background only
 
-The N5 grammar section expansion state SHALL be communicated by the section header background color, with a darker background while expanded than while collapsed. The system MUST NOT rely on arrow glyphs to communicate expansion state.
+The N5 grammar section expansion state SHALL be communicated by the section header background color, with a near-white gray collapsed background and a darker background while expanded than while collapsed. The system MUST NOT rely on arrow glyphs to communicate expansion state.
 
 #### Scenario: Section expands
 
@@ -73,6 +73,7 @@ The N5 grammar section expansion state SHALL be communicated by the section head
 
 - **WHEN** a user collapses an uncompleted section
 - **THEN** the section header uses the collapsed background style
+- **AND** the collapsed background is a near-white gray
 
 ### Requirement: Completion persistence
 
