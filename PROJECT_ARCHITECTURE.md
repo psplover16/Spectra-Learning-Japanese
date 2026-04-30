@@ -9,25 +9,29 @@
 ## 根目錄架構
 
 ```text
-Japanese_Word_Practice_Vue_AI/
-├─ .agents/ (本地代理技能與輔助資源，提供 AI / agent 工作流程用)
-├─ .codex/ (Codex 本地設定與工作資料)
+Spectra-Learning-Japanese/
+├─ .agents/ (Codex / 本地代理技能與輔助資源)
+├─ .claude/ (Claude Code 指令、技能與本地設定)
 ├─ .github/
 │  └─ workflows/
 │     ├─ ci.yml (CI 驗證流程：lint、typecheck、unit test、build、e2e)
 │     └─ cd.yml (CD 部署流程：建置後建立 `gh-pages` worktree，交由 `scripts/publishPages.mjs` 同步 production root 與 `staging/`)
-├─ .specify/ (Spec-driven 開發模板、腳本與專案規範記憶)
-├─ dist/ (Vite build 後產生的靜態網站輸出)
-├─ node_modules/ (npm 安裝的套件)
-├─ playwright-report/ (Playwright 測試報告輸出)
+├─ .spectra/ (Spectra 本地狀態，已由 `.gitignore` 排除)
+├─ docs/ (輔助文件與 parity 驗證紀錄)
+├─ openspec/ (Spectra / OpenSpec 規格、變更與專案憲法設定)
+│  ├─ config.yaml (本專案的 Spectra schema、脈絡、憲法規則與 artifact 規則)
+│  ├─ specs/ (已歸檔為目前真相的能力規格)
+│  └─ changes/ (進行中與封存的 Spectra 變更)
 ├─ public/ (正式公開靜態資產；提供 favicon 與 PWA icons，會直接進入 Vite build 輸出)
-├─ specs/ (功能規格、研究、計畫、任務與契約文件)
+├─ scripts/ (專案自訂 Node 腳本，例如 GitHub Pages 發布同步)
 ├─ src/ (專案核心原始碼：畫面、路由、資料、商業邏輯、共用元件)
-├─ test-results/ (Playwright 執行後的原始測試結果)
 ├─ tests/ (Vitest / Playwright 測試程式)
-├─ _private/ (私人資料區；本次未展開受限制內容)
+├─ _private/ (私人資料區；本文件不展開私人筆記與受限制內容)
 ├─ .gitignore (Git 忽略規則)
-├─ AGENTS.md (此專案給代理 / 助手的工作規則)
+├─ .spectra.yaml (Spectra 應用程式設定：locale、TDD、audit、worktree、目標工具)
+├─ AGENTS.md (此專案給 Codex / agent 的工作規則)
+├─ CLAUDE.md (此專案給 Claude Code 的工作規則)
+├─ constitution.md (專案英文 constitution 與治理規則)
 ├─ eslint.config.js (ESLint 規則設定)
 ├─ index.html (前端入口 HTML，載入 `/src/app/main.ts`)
 ├─ package-lock.json (npm 依賴鎖定檔)
@@ -39,7 +43,7 @@ Japanese_Word_Practice_Vue_AI/
 ├─ tsconfig.app.json (前端 app TypeScript 設定)
 ├─ tsconfig.json (TypeScript 基礎設定)
 ├─ tsconfig.node.json (Node / 工具腳本 TypeScript 設定)
-├─ vite.config.ts (Vite 建置、alias、PWA 等設定；使用 Vite 標準 `public/` 目錄提供 favicon 與 PWA icons)
+├─ vite.config.ts (Vite 建置、alias、PWA、public assets 與 500 KB chunk 警戒線設定)
 └─ vitest.config.ts (Vitest 設定：jsdom、setup、排除 e2e)
 ```
 
@@ -212,23 +216,22 @@ tests/
 └─ setup.ts (Vitest 共用初始化；載入 `jest-dom` matcher)
 ```
 
-## specs / .specify / scripts 的角色
+## openspec / agents / scripts 的角色
 
 ```text
-specs/ (每個功能需求的規格資料夾)
-├─ 001-japanese-pwa-study/ (第一階段功能規格：主功能、畫面契約、研究、任務拆解)
-├─ 002-testing-cicd-foundation/ (第二階段規格：測試與 CI/CD 基礎建設)
-├─ 003-practice-romaji-layout/ (第三階段規格：字母練習排版與羅馬音補強)
-├─ 004-romaji-layout-stability/ (第四階段規格：長音大表格、外來語矩陣、首屏穩定渲染與 375px 補強)
-├─ 011-route-tabs-n5-grammar/ (第十一階段規格：共享 route tabs 重構、N5 文法入口與 `/practice` 指定表格字級調整)
-├─ 012-n5-grammar-route/ (第十二階段規格：N5 文法正式學習頁、資料整理、群組／收合與來源覆蓋)
-├─ 013-add-vocabulary-entries/ (第十三階段規格：單字練習補齊詞條與字典驗證)
-└─ 014-n5-grammar-table/ (第十四階段規格：N5 文法敬體變化總覽、儲存格例句與前兩個區塊重整)
+openspec/ (Spectra / OpenSpec 規格導向開發資料)
+├─ config.yaml (schema、專案脈絡、憲法精簡版與 artifact 規則)
+├─ specs/ (已完成並歸檔為目前真相的 capability 規格)
+│  ├─ ci-cd-pipeline/ (CI/CD 驗證與部署能力規格)
+│  └─ source-project-parity/ (來源專案 parity 驗證能力規格)
+└─ changes/ (變更提案、任務、delta spec 與封存歷史)
 
-.specify/ (規格導向開發工具資源)
-├─ templates/ (spec、plan、tasks 等模板)
-├─ scripts/ (建立新 feature、檢查前置條件、更新 agent context 的腳本)
-└─ memory/ (專案規範記憶，例如 constitution)
+.agents/ (Codex 使用的 Spectra 技能)
+└─ skills/ (spectra-apply、spectra-propose、spectra-audit 等技能)
+
+.claude/ (Claude Code 使用的 Spectra 指令與技能)
+├─ commands/spectra/ (`/spectra:*` 斜線指令)
+└─ skills/ (與 Codex 對應的 Spectra 技能文件)
 
 scripts/ (專案自訂腳本目錄)
 └─ publishPages.mjs (GitHub Pages 發布同步腳本：清理不安全 root 殘留、保留合法 production 內容、同步 `dist/` 到 production 或 `staging/`)
@@ -257,5 +260,6 @@ index.html
 
 - `src/`：真正的產品邏輯與畫面實作。
 - `tests/`：驗證 `src/` 是否正確。
-- `specs/` / `.specify/`：規格、計畫、任務與開發流程支援。
+- `openspec/`：規格、變更提案、任務與 Spectra 專案規則。
+- `.agents/` / `.claude/`：AI agent 的專案內 Spectra 工作流程支援。
 - `.github/workflows/`：自動化驗證與部署，包含呼叫 `scripts/publishPages.mjs` 管理 `gh-pages` 內容的 CD。

@@ -30,6 +30,6 @@
 
 - Affected specs: constitution-compliance.
 - Affected code:
-  - Modified: Existing source, test, script, and configuration files governed by openspec/config.yaml, identified during the audit.
-  - New: Validation or test files required to prove compliance.
-  - Removed: Non-compliant generated or obsolete files only if the audit confirms they should not remain.
+  - Modified: `PROJECT_ARCHITECTURE.md`, `src/app/router.ts`, `vite.config.ts`, `openspec/changes/align-with-constitution/tasks.md`.
+  - New: `openspec/changes/align-with-constitution/compliance-report.md`, `tests/unit/constitutionCompliance.spec.ts`.
+  - Removed: (none)
