@@ -1,12 +1,14 @@
-change名稱 add-n5-grammar-section-completion
+change名稱 improve-vocabulary-leveling-and-performance
 
-子路由 N5文法，目前頁面內有許多container，分別收錄不同的日文用法。
-每個 container 有 用 ▼ 與 ▲ 以及 容器標題的div背景色的切換，來表達容器開合狀態 
+添加 及 調整效率，子路由-單字練習：
+1. 要添加 單字難度分級(N1~N5)的 checkbox，勾選後會影響實際顯示的單字，另外也要有個checkbox是 全部勾選，勾選之後
+N1~N5checkbox會全部打勾，這時 N1~N5checkbox 一個取消勾選，全部勾選會自動取消勾選。
+在全部勾選的狀態是打勾的情況下，取消勾選，N1~N5checkbox 都會取消勾選
 
-我希望改成
-1. 表達開合狀態的方式，只留下 容器標題的 背景色，但背景色 在打開後要更深。
-2. 原本放置  ▼ 的UI，要改成 checkbox，點該 checkbox不會觸發container 開關收合狀態，checkbox被勾選的狀態時，container無法打開，已經打開的會收合。
-該狀態在使用者關閉網頁後，下次開啟 checkbox的狀態要還在。
-此功能主要是用來作為 學習已完成的 註記。
+2. 
+目前字典檔是 jpWords.ts，每一個單字都有 stage，stage內的 內容 要改成 N1/N2/N3/N4/N5
+
+
+2. 再加上目前程式效率很差，在保持功能的前提下，需要改善程式碼效率。
 
 
