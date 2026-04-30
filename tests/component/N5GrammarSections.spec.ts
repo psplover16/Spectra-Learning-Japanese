@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { nextTick } from 'vue';
+import { n5GrammarCompletionStorageKey } from '@/modules/n5Grammar/storage/n5GrammarCompletionStorage';
 import N5GrammarView from '@/modules/n5Grammar/views/N5GrammarView.vue';
 import { mountWithPracticeSession } from './testUtils';
 
 describe('N5GrammarSections', () => {
+  afterEach(() => {
+    window.localStorage.removeItem(n5GrammarCompletionStorageKey);
+  });
+
   it('敬體變化速覽預設收合，展開後顯示 compare table 與 12 組儲存格例句', async () => {
     const { wrapper } = mountWithPracticeSession(N5GrammarView);
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
@@ -141,5 +147,90 @@ describe('N5GrammarSections', () => {
     expect(section.get('[data-testid="n5-grammar-description-demonstratives"]').text()).toContain('N5常見指示詞');
     expect(section.findAll('.n5-grammar-example-highlight').map((node) => node.text())).toContain('これ');
     expect(section.text()).toContain('これは誰の傘ですか。');
+  });
+
+  it('完成 checkbox 不會觸發展開，且會以 section 標題提供無障礙標籤', async () => {
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
+    const checkbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
+    const body = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
+
+    expect(toggle.text()).not.toContain('▼');
+    expect(toggle.text()).not.toContain('▲');
+    expect(checkbox.attributes('aria-label')).toBe('標記 敬體句型：現在型與詞類基礎 為已學完');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(body.attributes('style')).toContain('display: none;');
+
+    await checkbox.trigger('click');
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(toggle.attributes('aria-disabled')).toBe('true');
+    expect(body.attributes('style')).toContain('display: none;');
+  });
+
+  it('會從 localStorage 還原完成狀態，並在變更後寫回 snapshot', async () => {
+    window.localStorage.setItem(
+      n5GrammarCompletionStorageKey,
+      JSON.stringify({
+        version: 1,
+        completedSectionIds: ['sentence-basics'],
+        updatedAt: '2026-04-30T00:00:00.000Z'
+      })
+    );
+
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    await nextTick();
+
+    const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
+    const checkbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
+    const body = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(toggle.attributes('aria-disabled')).toBe('true');
+    expect(body.attributes('style')).toContain('display: none;');
+
+    await checkbox.trigger('click');
+    const snapshot = JSON.parse(window.localStorage.getItem(n5GrammarCompletionStorageKey) ?? 'null') as {
+      completedSectionIds: string[];
+    } | null;
+
+    expect(snapshot?.completedSectionIds).toEqual([]);
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(toggle.attributes('aria-disabled')).toBeUndefined();
+  });
+
+  it('完成後會立即收合並鎖定，取消完成後不會自動展開', async () => {
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const header = wrapper.get('[data-testid="n5-grammar-header-polite-overview"]');
+    const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
+    const checkbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
+    const body = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
+
+    expect(header.classes()).not.toContain('is-expanded');
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(header.classes()).toContain('is-expanded');
+    expect(body.attributes('style') ?? '').not.toContain('display: none;');
+
+    await checkbox.trigger('click');
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(toggle.attributes('aria-disabled')).toBe('true');
+    expect(header.classes()).toContain('is-completed');
+    expect(header.classes()).not.toContain('is-expanded');
+    expect(body.attributes('style')).toContain('display: none;');
+
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(body.attributes('style')).toContain('display: none;');
+
+    await checkbox.trigger('click');
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(toggle.attributes('aria-disabled')).toBeUndefined();
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(body.attributes('style')).toContain('display: none;');
   });
 });
