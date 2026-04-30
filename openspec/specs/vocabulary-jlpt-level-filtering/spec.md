@@ -1,4 +1,10 @@
-## ADDED Requirements
+# vocabulary-jlpt-level-filtering Specification
+
+## Purpose
+
+TBD - created by archiving change 'improve-vocabulary-leveling-and-performance'. Update Purpose after archive.
+
+## Requirements
 
 ### Requirement: Vocabulary stage uses JLPT levels
 
@@ -20,6 +26,18 @@ The vocabulary data SHALL use `stage` values from the JLPT level set `N1`, `N2`,
 | `N4` | accepted |
 | `N5` | accepted |
 
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
 ### Requirement: JLPT level filter controls
 
 The vocabulary practice page SHALL display one checkbox for each JLPT level `N1` through `N5`, plus one select-all checkbox for the full level set.
@@ -49,6 +67,18 @@ The vocabulary practice page SHALL display one checkbox for each JLPT level `N1`
 - **THEN** the visible vocabulary is empty
 - **AND** the page does not throw a console error
 
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
 ### Requirement: Select-all level synchronization
 
 The select-all checkbox SHALL be derived from the selected JLPT level set and SHALL synchronize changes with the individual level checkboxes.
@@ -77,6 +107,18 @@ The select-all checkbox SHALL be derived from the selected JLPT level set and SH
 - **WHEN** a user checks `N1`, `N2`, `N3`, `N4`, and `N5` individually
 - **THEN** the select-all checkbox becomes checked
 
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
 ### Requirement: JLPT filter composes with existing vocabulary filters
 
 JLPT level filtering SHALL compose with existing vocabulary search, mark filtering, practice mode, and long-press reveal behavior without changing their existing meanings.
@@ -104,6 +146,18 @@ JLPT level filtering SHALL compose with existing vocabulary search, mark filteri
 - **WHEN** practice mode is enabled
 - **THEN** the vocabulary table keeps the existing practice-mode behavior for the currently visible vocabulary
 
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
 ### Requirement: Vocabulary count summary is removed
 
 The vocabulary practice page SHALL NOT display the count summary text that reports the number of currently visible words.
@@ -113,10 +167,22 @@ The vocabulary practice page SHALL NOT display the count summary text that repor
 - **WHEN** the vocabulary practice page renders
 - **THEN** no text in the page reports the visible vocabulary count in the format of a word-count summary
 
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
 ### Requirement: Vocabulary controls layout
 
 The vocabulary practice page SHALL place JLPT level controls above the row containing practice mode, mark-only filter, and save marks controls.
-The vocabulary practice page SHALL stack the upper non-table control blocks with no vertical gap between adjacent blocks.
+The vocabulary practice page SHALL stack the upper non-table control blocks with an 8px vertical gap between adjacent blocks.
 
 #### Scenario: Level controls are above action controls
 
@@ -129,11 +195,23 @@ The vocabulary practice page SHALL stack the upper non-table control blocks with
 - **THEN** the practice mode checkbox and mark-only checkbox appear on the left side with a gap between them
 - **AND** the save marks button appears on the right side of the same row
 
-#### Scenario: Upper control blocks have no vertical gap
+#### Scenario: Upper control blocks have an 8px vertical gap
 
 - **WHEN** the vocabulary practice controls render
-- **THEN** the search/global filter block, JLPT level controls block, and action controls block are stacked vertically with no gap between adjacent blocks
+- **THEN** the search/global filter block, JLPT level controls block, and action controls block are stacked vertically with an 8px gap between adjacent blocks
 
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
 ### Requirement: Efficient visible vocabulary derivation
 
 The vocabulary page SHALL derive visible vocabulary through a single filtering path that applies normalized vocabulary data, selected JLPT levels, search state, mark-only state, and practice mode state consistently.
@@ -143,3 +221,13 @@ The vocabulary page SHALL derive visible vocabulary through a single filtering p
 - **WHEN** a user changes JLPT level selection, search text, mark-only state, or practice mode
 - **THEN** the table and vocabulary controls observe the same visible vocabulary result set
 - **AND** the page does not duplicate separate visible-vocabulary derivations across unrelated components
+
+<!-- @trace
+source: improve-vocabulary-leveling-and-performance
+updated: 2026-04-30
+code:
+  - _private/筆記.md
+  - src/styles/main.css
+tests:
+  - tests/component/VocabularyControlBar.spec.ts
+-->

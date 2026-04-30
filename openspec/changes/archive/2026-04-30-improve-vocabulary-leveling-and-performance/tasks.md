@@ -26,6 +26,12 @@
 
 ## 5. Follow-up control spacing
 
-- [ ] 5.1 為 Vocabulary controls layout 與 Zero vertical gap between vocabulary upper control blocks 補強 `tests/component/VocabularyControlBar.spec.ts` 或 `tests/component/VocabularyViewSmoke.spec.ts`；完成定義：測試驗證單字頁上方搜尋/全域篩選、JLPT level controls、action controls 三個垂直 block 的外層 gap 為 0，且 action controls 內部「練習」與「只顯示註記」仍保留 gap。
-- [ ] 5.2 實作 Zero vertical gap between vocabulary upper control blocks；完成定義：`src/styles/main.css` 中 `.vocabulary-control-bar` 的三個上方 block 垂直間距由目前 0.5rem 改為 0，不移除 block 內部 padding、border 或 checkbox 間距，且 5.1 測試通過。
-- [ ] 5.3 驗證 375px 與離線情境；完成定義：執行 `npm run lint`、`npm run typecheck`、相關 unit/component 測試，以及 `PLAYWRIGHT_PORT` 指定的 `npm run test:e2e -- tests/e2e/vocabulary-word-practice.spec.ts`，確認三個控制 block gap 為 0 後仍無水平溢出且離線控制列可操作。
+- [x] 5.1 為 Vocabulary controls layout 與 Zero vertical gap between vocabulary upper control blocks 補強 `tests/component/VocabularyControlBar.spec.ts` 或 `tests/component/VocabularyViewSmoke.spec.ts`；完成定義：測試驗證單字頁上方搜尋/全域篩選、JLPT level controls、action controls 三個垂直 block 的外層 gap 為 0，且 action controls 內部「練習」與「只顯示註記」仍保留 gap。
+- [x] 5.2 實作 Zero vertical gap between vocabulary upper control blocks；完成定義：`src/styles/main.css` 中 `.vocabulary-control-bar` 的三個上方 block 垂直間距由目前 0.5rem 改為 0，不移除 block 內部 padding、border 或 checkbox 間距，且 5.1 測試通過。
+- [x] 5.3 驗證 375px 與離線情境；完成定義：執行 `npm run lint`、`npm run typecheck`、相關 unit/component 測試，以及 `PLAYWRIGHT_PORT` 指定的 `npm run test:e2e -- tests/e2e/vocabulary-word-practice.spec.ts`，確認三個控制 block gap 為 0 後仍無水平溢出且離線控制列可操作。
+
+## 6. Requirement correction for control spacing
+
+- [x] 6.1 為 8px vertical gap between vocabulary upper control blocks 更新 `tests/component/VocabularyControlBar.spec.ts`；完成定義：測試驗證三個上方控制 block 的外層 gap 為 8px，且 action controls 內部「練習」與「只顯示註記」仍保留 gap。
+- [x] 6.2 實作 8px vertical gap between vocabulary upper control blocks；完成定義：`src/styles/main.css` 中 `.vocabulary-control-bar` 使用 8px 外層垂直 gap，不恢復重複的 `space-y-*` 間距來源，不移除 block 內部 padding、border 或 checkbox 間距，且 6.1 測試通過。
+- [x] 6.3 驗證 375px 與離線情境；完成定義：執行 `npm run lint`、`npm run typecheck`、相關 unit/component 測試，以及 `PLAYWRIGHT_PORT` 指定的 `npm run test:e2e -- tests/e2e/vocabulary-word-practice.spec.ts`，確認三個控制 block gap 為 8px 後仍無水平溢出且離線控制列可操作。

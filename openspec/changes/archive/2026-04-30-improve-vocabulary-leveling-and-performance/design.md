@@ -53,11 +53,11 @@ JLPT level filter state 放在 `src/modules/vocabulary/composables/useVocabulary
 
 替代方案：保留數量摘要並只移動位置。淘汰原因是使用者明確要求移除此功能及 UI。
 
-### Zero vertical gap between vocabulary upper control blocks
+### 8px vertical gap between vocabulary upper control blocks
 
-`VocabularyControlBar.vue` 的上方非字母區塊由搜尋/全域篩選、JLPT level controls、action controls 三個垂直 block 組成；外層 `.vocabulary-control-bar` 的 block 間距需改為 0，避免目前 `0.5rem` 讓三塊看起來分離。此調整只影響三個 block 之間的垂直 gap，不移除 block 內部的水平 gap 或 checkbox 之間的可讀間距。
+`VocabularyControlBar.vue` 的上方非字母區塊由搜尋/全域篩選、JLPT level controls、action controls 三個垂直 block 組成；外層 `.vocabulary-control-bar` 的 block 間距需為 8px。此調整只影響三個 block 之間的垂直 gap，不移除 block 內部的水平 gap 或 checkbox 之間的可讀間距。
 
-替代方案：把外層 gap 從 `0.5rem` 降為較小值，例如 `0.25rem`。淘汰原因是使用者明確指定要改成 0，而非只是縮小。
+替代方案：把外層 gap 改為 0。淘汰原因是使用者修正需求，明確指定最終應為 8px。
 
 ### Test-first vocabulary verification
 
@@ -71,7 +71,7 @@ JLPT level filter state 放在 `src/modules/vocabulary/composables/useVocabulary
 - [Risk] 新增 level 篩選可能與搜尋、只顯示註記、練習模式互相覆蓋。→ Mitigation: 將所有條件集中在單一路徑推導 visible words，並以組合測試覆蓋。
 - [Risk] selected set 為空時畫面可能看似沒有資料。→ Mitigation: 規格明確定義空集合顯示空清單，不視為錯誤；既有 empty 狀態不得 console error。
 - [Risk] 移除數量摘要可能讓使用者少一個回饋。→ Mitigation: 這是明確需求；其他控制與 table 可見性仍保留。
-- [Risk] 移除外層垂直 gap 可能讓三個控制 block 顯得過於緊密。→ Mitigation: 只將 block 間距改為 0，保留 block 內部 padding、border 與水平 gap，並以 375px e2e 確認不水平溢出。
+- [Risk] 外層垂直 gap 若太小或太大，可能讓三個控制 block 看起來過緊或分離。→ Mitigation: 將 block 間距固定為 8px，保留 block 內部 padding、border 與水平 gap，並以 375px e2e 確認不水平溢出。
 
 ## Migration Plan
 
@@ -79,7 +79,7 @@ JLPT level filter state 放在 `src/modules/vocabulary/composables/useVocabulary
 2. 更新 vocabulary 型別與 `jpWords.ts` stage 值。
 3. 更新 session/filter 資料流，加入 selectedJlptLevels 與全部勾選同步。
 4. 更新控制列與 view UI，移除數量摘要渲染並調整控制列排列。
-5. 將上方三個控制 block 的外層垂直 gap 調整為 0。
+5. 將上方三個控制 block 的外層垂直 gap 調整為 8px。
 6. 更新 `PROJECT_ARCHITECTURE.md`。
 7. 執行 lint、typecheck、unit test、build 與 vocabulary e2e。
 

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import VocabularyControlBar from '@/modules/vocabulary/components/VocabularyControlBar.vue';
@@ -57,6 +59,25 @@ function expectLastSelectedJlptLevels(wrapper: VueWrapper, expected: Iterable<Jl
 
 function appearsBefore(first: Element, second: Element) {
   return Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
+function readMainCss() {
+  return readFileSync(join(process.cwd(), 'src/styles/main.css'), 'utf8');
+}
+
+function cssBlocksForSelector(css: string, selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const selectorBlockPattern = new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`, 'g');
+
+  return Array.from(css.matchAll(selectorBlockPattern), (match) => match[1]);
+}
+
+function cssBodyForSelector(css: string, selector: string) {
+  const blocks = cssBlocksForSelector(css, selector);
+
+  expect(blocks.length).toBeGreaterThan(0);
+
+  return blocks.join('\n');
 }
 
 describe('VocabularyControlBar', () => {
@@ -137,5 +158,25 @@ describe('VocabularyControlBar', () => {
     }
 
     expect(checked(wrapper, 'all')).toBe(true);
+  });
+
+  it('keeps 8px outer gap between upper control blocks while action checkboxes keep a gap', () => {
+    const wrapper = mountControlBar();
+    const controlBar = wrapper.get('[data-testid="vocabulary-control-bar"]');
+    const controlBlocks = Array.from(controlBar.element.children);
+
+    expect(controlBlocks).toHaveLength(3);
+    expect(controlBlocks[0]?.classList.contains('vocabulary-search-controls')).toBe(true);
+    expect(controlBlocks[1]).toBe(wrapper.get('[data-testid="vocabulary-level-controls"]').element);
+    expect(controlBlocks[2]).toBe(wrapper.get('[data-testid="vocabulary-action-controls"]').element);
+
+    const css = readMainCss();
+    const controlBarCss = cssBodyForSelector(css, '.vocabulary-control-bar');
+    const actionControlsLeftCss = cssBodyForSelector(css, '.vocabulary-action-controls-left');
+
+    expect(controlBarCss).toContain('gap-2');
+    expect(controlBarCss).not.toContain('gap-0');
+    expect(controlBarCss).not.toMatch(/\bspace-y-/);
+    expect(actionControlsLeftCss).toContain('gap-3');
   });
 });

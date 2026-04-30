@@ -614,10 +614,6 @@ textarea {
     white-space: pre-line;
   }
 
-  .vocabulary-control-bar {
-    @apply space-y-1.5;
-  }
-
   .vocabulary-view {
     @apply flex h-full flex-col gap-2;
   }
