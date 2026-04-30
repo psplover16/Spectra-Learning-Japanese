@@ -1,34 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { rawVocabularyEntries, vocabularyEntries, vocabularyStageGroups } from '@/modules/vocabulary/data/jpWords';
 
+const allowedJlptStages = new Set(['N1', 'N2', 'N3', 'N4', 'N5']);
+
 const expectedTailEntries = [
   {
     text: 'はだ',
     romanization: 'ha-da',
     kanji: '肌',
     meaning: '皮膚',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   },
   {
     text: 'なめらか',
     romanization: 'na-me-ra-ka',
     kanji: '滑らか',
     meaning: '光滑(な形容詞)',
-    stage: 'Stage2_日常強化'
+    stage: 'N4'
   },
   {
     text: 'うごき',
     romanization: 'u-go-ki',
     kanji: '動き',
     meaning: '動作',
-    stage: 'Stage2_日常強化'
+    stage: 'N4'
   },
   {
     text: 'いざかや',
     romanization: 'i-za-ka-ya',
     kanji: '居酒屋',
     meaning: '居酒屋',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   }
 ];
 
@@ -38,46 +40,56 @@ const expectedV16Entries = [
     romanization: 'ta-ba-ko',
     kanji: '煙草',
     meaning: '香菸',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   },
   {
     text: 'しょくじかい',
     romanization: 'sho-ku-ji-ka-i',
     kanji: '食事会',
     meaning: '餐會／聚餐',
-    stage: 'Stage2_日常強化'
+    stage: 'N4'
   },
   {
     text: 'ひがしぐち',
     romanization: 'hi-ga-shi-gu-chi',
     kanji: '東口',
     meaning: '東口／東邊出口',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   },
   {
     text: 'にしぐち',
     romanization: 'ni-shi-gu-chi',
     kanji: '西口',
     meaning: '西口／西邊出口',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   },
   {
     text: 'きたぐち',
     romanization: 'ki-ta-gu-chi',
     kanji: '北口',
     meaning: '北口／北邊出口',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   },
   {
     text: 'みなみぐち',
     romanization: 'mi-na-mi-gu-chi',
     kanji: '南口',
     meaning: '南口／南邊出口',
-    stage: 'Stage1_基礎生活'
+    stage: 'N5'
   }
 ];
 
 describe('vocabulary data', () => {
+  it('只允許 JLPT N1 到 N5 作為 stage', () => {
+    const rawStages = [...new Set(rawVocabularyEntries.map((entry) => entry.stage))];
+    const normalizedStages = [...new Set(vocabularyEntries.map((entry) => entry.stage))];
+    const groupedStages = vocabularyStageGroups.map((group) => group.stage);
+
+    expect(rawStages.filter((stage) => !allowedJlptStages.has(stage))).toEqual([]);
+    expect(normalizedStages.filter((stage) => !allowedJlptStages.has(stage))).toEqual([]);
+    expect(groupedStages.filter((stage) => !allowedJlptStages.has(stage))).toEqual([]);
+  });
+
   it('將字典正規化為穩定 id 與 stage 分組', () => {
     expect(rawVocabularyEntries).toHaveLength(1086);
     expect(vocabularyEntries).toHaveLength(1086);
@@ -87,12 +99,12 @@ describe('vocabulary data', () => {
       text: 'がいねんてき',
       kanji: '概念的',
       meaning: '概念性的(な形容詞)',
-      stage: 'Stage5_抽象核心'
+      stage: 'N1'
     });
     expect(vocabularyEntries.at(-1)?.id).toBe(1086);
-    expect(vocabularyStageGroups).toHaveLength(19);
-    expect(vocabularyStageGroups[0]?.stage).toBe('Stage1_基礎生活');
-    expect(vocabularyStageGroups.at(-1)?.stage).toBe('Stage5_抽象核心');
+    expect(vocabularyStageGroups).toHaveLength(5);
+    expect(vocabularyStageGroups[0]?.stage).toBe('N5');
+    expect(vocabularyStageGroups.at(-1)?.stage).toBe('N1');
   });
 
   it('只在字典檔尾端追加 v15 與 v16 指定詞條，且不改動既有尾端資料', () => {
@@ -101,7 +113,7 @@ describe('vocabulary data', () => {
       romanization: 'ga-i-nen-te-ki',
       kanji: '概念的',
       meaning: '概念性的(な形容詞)',
-      stage: 'Stage5_抽象核心'
+      stage: 'N1'
     });
     expect(rawVocabularyEntries.slice(-10, -6)).toEqual(expectedTailEntries);
     expect(rawVocabularyEntries.slice(-6)).toEqual(expectedV16Entries);
@@ -129,7 +141,7 @@ describe('vocabulary data', () => {
       text: 'はなす',
       kanji: '話す',
       meaning: '說話(五段動詞)',
-      stage: 'Stage1_基礎生活'
+      stage: 'N5'
     });
     expect(rawVocabularyEntries.filter((entry) => entry.kanji === '肌' && entry.meaning === '皮膚')).toHaveLength(1);
     expect(rawVocabularyEntries.filter((entry) => entry.kanji === '滑らか' && entry.meaning === '光滑(な形容詞)')).toHaveLength(1);

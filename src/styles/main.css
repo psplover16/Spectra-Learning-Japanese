@@ -614,16 +614,12 @@ textarea {
     white-space: pre-line;
   }
 
-  .vocabulary-control-bar {
-    @apply space-y-1.5;
-  }
-
   .vocabulary-view {
     @apply flex h-full flex-col gap-2;
   }
 
   .vocabulary-control-bar {
-    @apply flex flex-col gap-0 px-1;
+    @apply flex flex-col gap-2 px-1;
   }
 
   .vocabulary-control-row,
@@ -645,6 +641,18 @@ textarea {
 
   .vocabulary-control-right-stack {
     @apply flex flex-col items-start gap-2;
+  }
+
+  .vocabulary-level-controls {
+    @apply flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
+  }
+
+  .vocabulary-action-controls {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .vocabulary-action-controls-left {
+    @apply flex min-w-0 flex-wrap items-center gap-3;
   }
 
   .vocabulary-search-input {
@@ -853,6 +861,7 @@ textarea {
   }
 
   .vocabulary-control-row,
+  .vocabulary-action-controls,
   .vocabulary-toolbar {
     gap: 0.75rem;
   }

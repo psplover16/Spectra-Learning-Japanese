@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue';
-import BaseButton from '@/shared/components/BaseButton.vue';
 import VocabularyControlBar from '@/modules/vocabulary/components/VocabularyControlBar.vue';
-import VocabularyCountSummary from '@/modules/vocabulary/components/VocabularyCountSummary.vue';
 import VocabularyStageTable from '@/modules/vocabulary/components/VocabularyStageTable.vue';
 import { useVocabularySession } from '@/modules/vocabulary/composables/useVocabularySession';
 import { lockBodyScroll, unlockBodyScroll } from '@/shared/utils/bodyScrollLock';
@@ -26,19 +24,10 @@ onBeforeUnmount(() => {
       v-model:show-kanji="session.showKanji.value"
       v-model:show-marked-only="session.showMarkedOnly.value"
       v-model:practice-mode="session.practiceMode.value"
+      v-model:selected-jlpt-levels="session.selectedJlptLevels.value"
+      :can-save-marks="session.hasAnyVisibleEntries.value"
+      @save-marks="session.saveMarks"
     />
-
-    <section class="vocabulary-toolbar" data-testid="vocabulary-toolbar">
-      <VocabularyCountSummary :count="session.visibleEntryCount.value" />
-      <BaseButton
-        data-testid="vocabulary-save-marks-button"
-        variant="secondary"
-        :class="{ invisible: !session.hasAnyVisibleEntries.value }"
-        @click="session.saveMarks"
-      >
-        儲存註記
-      </BaseButton>
-    </section>
 
     <VocabularyStageTable
       :entries="session.visibleEntries.value"

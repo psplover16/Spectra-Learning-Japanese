@@ -1,9 +1,13 @@
+export const vocabularyJlptLevels = ['N1', 'N2', 'N3', 'N4', 'N5'] as const;
+
+export type VocabularyJlptLevel = (typeof vocabularyJlptLevels)[number];
+
 export interface RawVocabularyEntry {
   text: string;
   romanization: string;
   kanji: string;
   meaning: string;
-  stage: string;
+  stage: VocabularyJlptLevel;
 }
 
 export interface VocabularyEntry {
@@ -12,13 +16,13 @@ export interface VocabularyEntry {
   romanization: string;
   kanji: string;
   meaning: string;
-  stage: string;
+  stage: VocabularyJlptLevel;
   textKanaUnits: string[];
   hasKanji: boolean;
 }
 
 export interface VocabularyStageGroup {
-  stage: string;
+  stage: VocabularyJlptLevel;
   entries: VocabularyEntry[];
 }
 
@@ -39,6 +43,7 @@ export interface VocabularyFilterState {
   practiceMode: boolean;
   columnVisibility: VocabularyColumnVisibility;
   allowedKanaSet: Set<string>;
+  selectedJlptLevels: Set<VocabularyJlptLevel>;
 }
 
 export interface VocabularyMarkSnapshot {

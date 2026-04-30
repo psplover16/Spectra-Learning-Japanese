@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { usePracticeSession } from '@/modules/practice/composables/usePracticeSession';
 import { vocabularyEntries } from '@/modules/vocabulary/data/jpWords';
 import { deriveAllowedKanaSet, filterVocabularyEntries } from '@/modules/vocabulary/utils/vocabularyFilters';
+import { vocabularyJlptLevels, type VocabularyJlptLevel } from '@/modules/vocabulary/types/vocabulary';
 import {
   clearVocabularyMarksSnapshot,
   readVocabularyMarksSnapshot,
@@ -19,6 +20,7 @@ export function useVocabularySession() {
   const combinedColumnVisible = ref(false);
   const meaningColumnVisible = ref(false);
   const revealedEntryId = ref<number | null>(null);
+  const selectedJlptLevels = ref<Set<VocabularyJlptLevel>>(new Set(vocabularyJlptLevels));
 
   const persistedMarkedIds = ref(readVocabularyMarksSnapshot()?.markedIds ?? []);
   const draftMarkedIds = ref([...persistedMarkedIds.value]);
@@ -42,7 +44,8 @@ export function useVocabularySession() {
       practiceSession.selectedKanaItems.value,
       practiceSession.includeHiragana.value,
       practiceSession.includeKatakana.value
-    )
+    ),
+    selectedJlptLevels: selectedJlptLevels.value
   }));
 
   const visibleEntries = computed(() =>
@@ -57,6 +60,9 @@ export function useVocabularySession() {
 
   const visibleEntryCount = computed(() => visibleEntries.value.length);
   const hasAnyVisibleEntries = computed(() => visibleEntryCount.value > 0);
+  const allJlptLevelsSelected = computed(() =>
+    vocabularyJlptLevels.every((level) => selectedJlptLevels.value.has(level))
+  );
   const hasUnsavedMarkChanges = computed(() => {
     const next = [...draftMarkedIds.value].sort((a, b) => a - b);
     const current = [...persistedMarkedIds.value].sort((a, b) => a - b);
@@ -78,6 +84,26 @@ export function useVocabularySession() {
 
   function toggleMarked(id: number, value: boolean) {
     updateMarkedIds(draftMarkedIds, id, value);
+  }
+
+  function setSelectedJlptLevels(levels: Iterable<VocabularyJlptLevel>) {
+    selectedJlptLevels.value = new Set(levels);
+  }
+
+  function toggleJlptLevel(level: VocabularyJlptLevel, value: boolean) {
+    const next = new Set(selectedJlptLevels.value);
+
+    if (value) {
+      next.add(level);
+    } else {
+      next.delete(level);
+    }
+
+    setSelectedJlptLevels(next);
+  }
+
+  function toggleAllJlptLevels(value: boolean) {
+    setSelectedJlptLevels(value ? vocabularyJlptLevels : []);
   }
 
   function saveMarks() {
@@ -152,14 +178,19 @@ export function useVocabularySession() {
     wordColumnVisible,
     combinedColumnVisible,
     meaningColumnVisible,
+    selectedJlptLevels,
     columnVisibility,
     persistedMarkedIds,
     draftMarkedIds,
     visibleEntries,
     visibleEntryCount,
     hasAnyVisibleEntries,
+    allJlptLevelsSelected,
     hasUnsavedMarkChanges,
     revealedEntryId,
+    setSelectedJlptLevels,
+    toggleJlptLevel,
+    toggleAllJlptLevels,
     toggleMarked,
     saveMarks,
     clearAllMarksWithConfirmation,

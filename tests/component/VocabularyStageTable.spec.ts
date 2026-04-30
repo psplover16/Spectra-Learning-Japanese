@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import VocabularyStageTable from '@/modules/vocabulary/components/VocabularyStageTable.vue';
+import type { VocabularyEntry } from '@/modules/vocabulary/types/vocabulary';
 
-const entries = [
+const entries: VocabularyEntry[] = [
   {
     id: 1,
     text: 'あさ',
     romanization: 'a-sa',
     kanji: '朝',
     meaning: '早上',
-    stage: 'Stage1_基礎生活',
+    stage: 'N5',
     textKanaUnits: ['あ', 'さ'],
     hasKanji: true
   }
