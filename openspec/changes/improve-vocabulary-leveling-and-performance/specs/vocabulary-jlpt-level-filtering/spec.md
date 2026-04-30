@@ -116,6 +116,7 @@ The vocabulary practice page SHALL NOT display the count summary text that repor
 ### Requirement: Vocabulary controls layout
 
 The vocabulary practice page SHALL place JLPT level controls above the row containing practice mode, mark-only filter, and save marks controls.
+The vocabulary practice page SHALL stack the upper non-table control blocks with no vertical gap between adjacent blocks.
 
 #### Scenario: Level controls are above action controls
 
@@ -127,6 +128,11 @@ The vocabulary practice page SHALL place JLPT level controls above the row conta
 - **WHEN** the action controls render
 - **THEN** the practice mode checkbox and mark-only checkbox appear on the left side with a gap between them
 - **AND** the save marks button appears on the right side of the same row
+
+#### Scenario: Upper control blocks have no vertical gap
+
+- **WHEN** the vocabulary practice controls render
+- **THEN** the search/global filter block, JLPT level controls block, and action controls block are stacked vertically with no gap between adjacent blocks
 
 ### Requirement: Efficient visible vocabulary derivation
 

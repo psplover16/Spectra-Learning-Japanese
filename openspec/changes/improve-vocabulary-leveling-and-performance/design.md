@@ -11,6 +11,7 @@
 - 預設狀態為 N1～N5 全部勾選，讓首次進入頁面的可見單字不因新增篩選而消失。
 - 移除「XXXX 個單字」數量統計 UI。
 - 調整控制列：level filter 在上方；練習、只顯示註記與儲存註記同列。
+- 單字頁上方非字母控制區的三個垂直 block 之間不保留外層 gap。
 - 改善單字頁可見資料推導效率，避免多處重複轉換與重複篩選。
 
 **Non-Goals:**
@@ -52,6 +53,12 @@ JLPT level filter state 放在 `src/modules/vocabulary/composables/useVocabulary
 
 替代方案：保留數量摘要並只移動位置。淘汰原因是使用者明確要求移除此功能及 UI。
 
+### Zero vertical gap between vocabulary upper control blocks
+
+`VocabularyControlBar.vue` 的上方非字母區塊由搜尋/全域篩選、JLPT level controls、action controls 三個垂直 block 組成；外層 `.vocabulary-control-bar` 的 block 間距需改為 0，避免目前 `0.5rem` 讓三塊看起來分離。此調整只影響三個 block 之間的垂直 gap，不移除 block 內部的水平 gap 或 checkbox 之間的可讀間距。
+
+替代方案：把外層 gap 從 `0.5rem` 降為較小值，例如 `0.25rem`。淘汰原因是使用者明確指定要改成 0，而非只是縮小。
+
 ### Test-first vocabulary verification
 
 依專案 TDD 偏好，先補資料、filter、component 與必要 e2e 測試，再實作。測試至少覆蓋：stage 僅能是 N1～N5、level 篩選影響 visible words、全部勾選同步、數量統計 UI 移除、控制列排列、既有搜尋/註記/練習功能不回歸。
@@ -64,6 +71,7 @@ JLPT level filter state 放在 `src/modules/vocabulary/composables/useVocabulary
 - [Risk] 新增 level 篩選可能與搜尋、只顯示註記、練習模式互相覆蓋。→ Mitigation: 將所有條件集中在單一路徑推導 visible words，並以組合測試覆蓋。
 - [Risk] selected set 為空時畫面可能看似沒有資料。→ Mitigation: 規格明確定義空集合顯示空清單，不視為錯誤；既有 empty 狀態不得 console error。
 - [Risk] 移除數量摘要可能讓使用者少一個回饋。→ Mitigation: 這是明確需求；其他控制與 table 可見性仍保留。
+- [Risk] 移除外層垂直 gap 可能讓三個控制 block 顯得過於緊密。→ Mitigation: 只將 block 間距改為 0，保留 block 內部 padding、border 與水平 gap，並以 375px e2e 確認不水平溢出。
 
 ## Migration Plan
 
@@ -71,8 +79,9 @@ JLPT level filter state 放在 `src/modules/vocabulary/composables/useVocabulary
 2. 更新 vocabulary 型別與 `jpWords.ts` stage 值。
 3. 更新 session/filter 資料流，加入 selectedJlptLevels 與全部勾選同步。
 4. 更新控制列與 view UI，移除數量摘要渲染並調整控制列排列。
-5. 更新 `PROJECT_ARCHITECTURE.md`。
-6. 執行 lint、typecheck、unit test、build 與 vocabulary e2e。
+5. 將上方三個控制 block 的外層垂直 gap 調整為 0。
+6. 更新 `PROJECT_ARCHITECTURE.md`。
+7. 執行 lint、typecheck、unit test、build 與 vocabulary e2e。
 
 Rollback 策略：還原 vocabulary 型別、資料 stage、session/filter、control bar/view 與測試；此 change 不新增持久化 key，因此沒有 localStorage migration。
 

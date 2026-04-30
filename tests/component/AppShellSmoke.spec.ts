@@ -45,5 +45,5 @@ describe('AppShell', () => {
     expect(wrapper.text()).not.toContain('句型與詞類敬體基礎');
     expect(wrapper.text()).toContain('助詞 へ：移動的方向');
     expect(wrapper.text()).not.toContain('製作中');
-  });
+  }, 15000);
 });

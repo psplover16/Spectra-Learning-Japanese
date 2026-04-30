@@ -4,6 +4,7 @@ import type {
   VocabularyEntry,
   VocabularyStageGroup,
   VisibleVocabularyStageGroup,
+  VocabularyJlptLevel,
   VocabularyFilterState
 } from '@/modules/vocabulary/types/vocabulary';
 
@@ -54,7 +55,7 @@ export function normalizeVocabularyEntries(entries: RawVocabularyEntry[]): Vocab
 }
 
 export function groupVocabularyEntriesByStage(entries: VocabularyEntry[]): VocabularyStageGroup[] {
-  const groups = new Map<string, VocabularyEntry[]>();
+  const groups = new Map<VocabularyJlptLevel, VocabularyEntry[]>();
 
   for (const entry of entries) {
     const current = groups.get(entry.stage) ?? [];
@@ -129,6 +130,10 @@ export function matchesSearch(entry: VocabularyEntry, searchText: string) {
   return haystacks.some((haystack) => haystack.includes(normalizedSearch));
 }
 
+export function matchesJlptLevel(entry: VocabularyEntry, selectedJlptLevels: Set<VocabularyJlptLevel>) {
+  return selectedJlptLevels.has(entry.stage);
+}
+
 export function filterVocabularyEntries(
   entries: VocabularyEntry[],
   filterState: VocabularyFilterState,
@@ -139,6 +144,10 @@ export function filterVocabularyEntries(
   const markedIdSet = new Set(markedIds);
 
   return entries.filter((entry) => {
+    if (!matchesJlptLevel(entry, filterState.selectedJlptLevels)) {
+      return false;
+    }
+
     if (!matchesPracticeSelection(entry, filterState.allowedKanaSet, includeHiragana, includeKatakana, filterState.showAllSounds)) {
       return false;
     }

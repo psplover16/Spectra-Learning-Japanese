@@ -136,21 +136,21 @@ src/
 │  │
 │  └─ vocabulary/ (單字頁模組)
 │     ├─ components/
-│     │  ├─ VocabularyControlBar.vue (單字頁控制區；提供搜尋、練習模式與右側全域篩選入口)
-│     │  ├─ VocabularyCountSummary.vue (單字數量摘要文字；顯示目前可見資料列數)
+│     │  ├─ VocabularyControlBar.vue (單字頁控制區；提供搜尋、N1～N5/全部勾選、練習/註記篩選與儲存註記 action row)
+│     │  ├─ VocabularyCountSummary.vue (舊單字數量摘要元件；單字頁目前不再渲染可見筆數文字)
 │     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、共用欄位顯示、註記欄與長按揭露事件)
 │     ├─ composables/
-│     │  └─ useVocabularySession.ts (單字頁狀態管理；串接 `/practice` 勾選、搜尋條件、註記草稿／持久化與長按揭露)
+│     │  └─ useVocabularySession.ts (單字頁狀態管理；集中持有 JLPT level、`/practice` 勾選、搜尋條件、註記草稿／持久化與長按揭露)
 │     ├─ data/
-│     │  └─ jpWords.ts (單字靜態資料；將既有字典與 v16 補充詞條正規化為可渲染結構，並保留 stage 中繼資訊)
+│     │  └─ jpWords.ts (單字靜態資料；stage 收斂為 N1～N5，並將既有字典與 v16 補充詞條正規化為可渲染結構)
 │     ├─ storage/
 │     │  └─ vocabularyMarksStorage.ts (單字註記 localStorage 存取與格式驗證)
 │     ├─ types/
-│     │  └─ vocabulary.ts (單字資料、顯示欄位、篩選條件與註記快照型別)
+│     │  └─ vocabulary.ts (JLPT level、單字資料、顯示欄位、篩選條件與註記快照型別)
 │     ├─ utils/
-│     │  └─ vocabularyFilters.ts (單字字種轉換、搜尋比對、條件篩選與顯示內容導出)
+│     │  └─ vocabularyFilters.ts (單字字種轉換、JLPT/search/註記/練習條件的單一路徑篩選與顯示內容導出)
 │     └─ views/
-│        └─ VocabularyView.vue (單字頁畫面；重建為參考頁風格的單表格字典、搜尋篩選、註記與長按揭露介面)
+│        └─ VocabularyView.vue (單字頁畫面；組裝不含數量摘要的控制列、單表格字典、搜尋篩選、註記與長按揭露介面)
 │
 ├─ shared/ (跨模組共用的元件與工具)
 │  ├─ components/
@@ -190,9 +190,9 @@ tests/
 │  ├─ PracticeViewSmoke.spec.ts (PracticeView 的基本渲染、指定假名表字級 class、下半部區塊首屏存在與最近結果清除/捲動測試)
 │  ├─ RouteOwnership.spec.ts (驗證 `/practice`、`/grammar`、`/vocabulary`、`/n5-grammar` 的 feature ownership 與 negative ownership，並確認 N5 文法內容不外溢)
 │  ├─ SelectionDetailPanel.spec.ts (選取明細面板的顯示邏輯測試)
-│  ├─ VocabularyControlBar.spec.ts (單字頁控制區測試；驗證搜尋與 checkbox 疊加控制事件)
+│  ├─ VocabularyControlBar.spec.ts (單字頁控制區測試；驗證搜尋、JLPT 全選/單選同步、控制列排序與 checkbox 疊加控制事件)
 │  ├─ VocabularyStageTable.spec.ts (單字表格測試；驗證欄位保留佔位、註記與長按事件輸出)
-│  ├─ VocabularyViewSmoke.spec.ts (單字頁 smoke test；驗證初始渲染、註記儲存、長按揭露與 v16 方位詞搜尋)
+│  ├─ VocabularyViewSmoke.spec.ts (單字頁 smoke test；驗證初始渲染、JLPT 控制列、無數量摘要、註記儲存、長按揭露與 v16 方位詞搜尋)
 │  ├─ YoonSections.spec.ts (清音拗音與合拗音矩陣的全表羅馬音測試)
 │  └─ testUtils.ts (元件測試共用 helper；例如先 provide PracticeSession 再 mount，並可傳入額外 mount options)
 ├─ e2e/ (Playwright 端到端測試)
@@ -201,7 +201,7 @@ tests/
 │  ├─ practice-layout.smoke.spec.ts (375px 下 `/practice` 首屏、表格可讀性與無水平捲動 smoke test)
 │  ├─ practice-exam-flow.spec.ts (從選字到開始測驗的完整流程測試，含 modal 題目列存在驗證)
 │  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性、不破版與 N5 section sticky header 接續黏頂驗證)
-│  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證搜尋、註記持久化、長按揭露與窄版穩定性)
+│  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證 375px 下 JLPT 篩選、搜尋、註記持久化、長按揭露、離線控制列與窄版穩定性)
 │  └─ testUtils.ts (e2e 共用 helper；含四主路由 tabs、nowrap 與無水平捲動斷言)
 ├─ mocks/ (測試替身 / mock 模組)
 │  └─ pwaRegisterMock.ts (mock `virtual:pwa-register`，讓測試不真的註冊 service worker)
@@ -214,8 +214,8 @@ tests/
 │  ├─ questionDeck.spec.ts (洗牌與循環題組工具測試)
 │  ├─ useExamSession.spec.ts (測驗流程狀態機測試)
 │  ├─ usePracticeSession.spec.ts (練習狀態管理測試)
-│  ├─ vocabularyData.spec.ts (單字資料測試；驗證正規化後筆數、id、stage 分組順序與 v16 補充詞條唯一性)
-│  ├─ vocabularyFilters.spec.ts (單字過濾邏輯測試；驗證搜尋與字母條件疊加規則)
+│  ├─ vocabularyData.spec.ts (單字資料測試；驗證正規化後筆數、id、N1～N5 stage 值域與 v16 補充詞條唯一性)
+│  ├─ vocabularyFilters.spec.ts (單字過濾邏輯測試；驗證 JLPT level、搜尋、註記與字母條件的單一路徑疊加規則)
 │  └─ vocabularyMarksStorage.spec.ts (單字註記 storage 測試；驗證格式驗證與壞資料清除)
 └─ setup.ts (Vitest 共用初始化；載入 `jest-dom` matcher)
 ```

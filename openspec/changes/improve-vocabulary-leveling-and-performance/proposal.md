@@ -9,6 +9,7 @@
 - 將 `src/modules/vocabulary/data/jpWords.ts` 中每筆單字的 `stage` 收斂為 N1～N5 之一。
 - 移除單字練習頁顯示「XXXX 個單字」的數量統計 UI。
 - 調整控制列：N1～N5 與全部勾選位於練習控制列上方；練習與只顯示註記靠左同列，儲存註記按鈕靠右同列。
+- 調整單字頁上方非字母控制區：搜尋/全域篩選、JLPT level controls、action controls 三個垂直 block 之間的 gap 改為 0。
 - 在保持既有功能的前提下改善單字頁資料轉換與篩選效率，避免重複高成本 filter / map。
 
 ## Non-Goals
@@ -33,5 +34,5 @@
 - Affected specs: `vocabulary-jlpt-level-filtering`.
 - Affected code:
   - New: (none expected)
-  - Modified: `src/modules/vocabulary/data/jpWords.ts`, `src/modules/vocabulary/types/vocabulary.ts`, `src/modules/vocabulary/utils/vocabularyFilters.ts`, `src/modules/vocabulary/composables/useVocabularySession.ts`, `src/modules/vocabulary/components/VocabularyControlBar.vue`, `src/modules/vocabulary/components/VocabularyCountSummary.vue`, `src/modules/vocabulary/views/VocabularyView.vue`, `tests/unit/vocabularyData.spec.ts`, `tests/unit/vocabularyFilters.spec.ts`, `tests/component/VocabularyControlBar.spec.ts`, `tests/component/VocabularyViewSmoke.spec.ts`, `tests/e2e/vocabulary-word-practice.spec.ts`, `PROJECT_ARCHITECTURE.md`.
+  - Modified: `src/modules/vocabulary/data/jpWords.ts`, `src/modules/vocabulary/types/vocabulary.ts`, `src/modules/vocabulary/utils/vocabularyFilters.ts`, `src/modules/vocabulary/composables/useVocabularySession.ts`, `src/modules/vocabulary/components/VocabularyControlBar.vue`, `src/modules/vocabulary/components/VocabularyCountSummary.vue`, `src/modules/vocabulary/views/VocabularyView.vue`, `src/styles/main.css`, `tests/unit/vocabularyData.spec.ts`, `tests/unit/vocabularyFilters.spec.ts`, `tests/component/VocabularyControlBar.spec.ts`, `tests/component/VocabularyViewSmoke.spec.ts`, `tests/e2e/vocabulary-word-practice.spec.ts`, `PROJECT_ARCHITECTURE.md`.
   - Removed: (none expected; count summary component may become unused if implementation chooses to stop rendering it rather than delete it)
