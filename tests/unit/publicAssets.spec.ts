@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -158,5 +158,17 @@ describe('public asset configuration', () => {
       expect.arrayContaining(pwaIconFileNames.map((icon) => `${stagingBasePath}${icon}`))
     );
     expect(manifestContent).not.toContain(privatePublicAssetReferenceDir);
+  });
+
+  it('建置後的 source 會包含 package metadata 注入的應用版本', async () => {
+    const packageJson = JSON.parse(await readFile(toRepoPath('package.json'), 'utf8')) as { version: string };
+    const builtAssetNames = await readdir(join(buildOutDir, 'assets'));
+    const builtJavaScriptSources = await Promise.all(
+      builtAssetNames
+        .filter((assetName) => assetName.endsWith('.js'))
+        .map((assetName) => readBuiltFile(buildOutDir, `assets/${assetName}`))
+    );
+
+    expect(builtJavaScriptSources.join('\n')).toContain(packageJson.version);
   });
 });

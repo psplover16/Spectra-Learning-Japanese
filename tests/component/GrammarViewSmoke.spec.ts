@@ -7,6 +7,7 @@ describe('GrammarView', () => {
   it('預設 render 顯示 11 個規則容器，且不再顯示舊 placeholder 區塊', () => {
     const { wrapper } = mountWithPracticeSession(GrammarView);
 
+    expect(wrapper.get('[data-testid="grammar-sections"]').classes()).not.toContain('py-1');
     expect(wrapper.find('[data-testid="grammar-view-intro"]').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid^="grammar-section-"]')).toHaveLength(grammarSections.length);
     expect(wrapper.find('[data-testid="selection-detail-panel"]').exists()).toBe(false);

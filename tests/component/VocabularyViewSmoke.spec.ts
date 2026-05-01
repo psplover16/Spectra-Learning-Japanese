@@ -50,6 +50,7 @@ describe('VocabularyViewSmoke', () => {
   it('預設 render 不會出錯，會顯示控制區與表格且不顯示單字數量', () => {
     const { wrapper } = mountWithPracticeSession(VocabularyView);
 
+    expect(wrapper.get('.vocabulary-view').classes()).toContain('py-1');
     expect(wrapper.find('[data-testid="vocabulary-control-bar"]').exists()).toBe(true);
     expectNoWordCountSummary(wrapper);
     expectJlptControlsChecked(wrapper);

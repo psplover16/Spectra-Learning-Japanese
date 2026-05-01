@@ -23,7 +23,10 @@ describe('grammar level routes', () => {
       await router.push(`/${level}-grammar`);
       await nextTick();
 
-      expect(wrapper.get(`[data-testid="${level}-grammar-placeholder-view"]`).text()).toContain(`${level.toUpperCase()}文法內容準備中`);
+      const placeholderView = wrapper.get(`[data-testid="${level}-grammar-placeholder-view"]`);
+
+      expect(placeholderView.text()).toContain(`${level.toUpperCase()}文法內容準備中`);
+      expect(placeholderView.classes()).not.toContain('py-1');
       expect(router.currentRoute.value.path).toBe(`/${level}-grammar`);
       expect(wrapper.find('[data-testid="n5-grammar-view"]').exists()).toBe(false);
     }
@@ -31,7 +34,9 @@ describe('grammar level routes', () => {
     await router.push('/n5-grammar');
     await nextTick();
 
-    expect(wrapper.find('[data-testid="n5-grammar-view"]').exists()).toBe(true);
+    const n5GrammarView = wrapper.get('[data-testid="n5-grammar-view"]');
+
+    expect(n5GrammarView.classes()).not.toContain('py-1');
     expect(wrapper.text()).toContain('核心詞類用法總覽');
     expect(wrapper.text()).not.toContain('N5文法內容準備中');
   });

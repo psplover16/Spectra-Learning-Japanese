@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import { createRequire } from 'node:module';
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -7,6 +8,9 @@ import {
   pwaIconDescriptors,
   pwaIconFileNames
 } from './src/shared/config/publicAssets';
+
+const require = createRequire(import.meta.url);
+const pkg = require('./package.json') as { version: string };
 
 function normalizeBasePath(value: string | undefined): string {
   const rawValue = value?.trim() || '/';
@@ -40,6 +44,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: appBasePath,
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version)
+    },
     build: {
       chunkSizeWarningLimit: 500
     },

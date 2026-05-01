@@ -21,6 +21,9 @@ function isStandaloneMobile(): boolean {
 export function createPwaLifecycleService() {
   const toast = ref<ToastState>({ ...defaultToastState });
   let updateServiceWorker: ((reloadPage?: boolean) => Promise<void>) | undefined;
+  let serviceWorkerRegistration: ServiceWorkerRegistration | undefined;
+  let launchUpdateCheckRequested = false;
+  let launchUpdateCheckTriggered = false;
 
   function dismissToast(): void {
     toast.value = { ...defaultToastState };
@@ -47,6 +50,27 @@ export function createPwaLifecycleService() {
     dismissToast();
   }
 
+  async function triggerLaunchUpdateCheck(): Promise<void> {
+    launchUpdateCheckRequested = true;
+
+    if (launchUpdateCheckTriggered) {
+      return;
+    }
+
+    if (!serviceWorkerRegistration) {
+      return;
+    }
+
+    launchUpdateCheckTriggered = true;
+
+    try {
+      console.info('PWA launch update check triggered.');
+      await serviceWorkerRegistration.update();
+    } catch (error) {
+      console.warn('PWA launch update check failed.', error);
+    }
+  }
+
   function register(): void {
     if (typeof window === 'undefined') {
       return;
@@ -54,6 +78,13 @@ export function createPwaLifecycleService() {
 
     updateServiceWorker = registerSW({
       immediate: true,
+      onRegisteredSW(_swUrl, registration) {
+        serviceWorkerRegistration = registration;
+
+        if (launchUpdateCheckRequested) {
+          void triggerLaunchUpdateCheck();
+        }
+      },
       onOfflineReady() {
         toast.value = {
           visible: true,
@@ -91,6 +122,7 @@ export function createPwaLifecycleService() {
     toast,
     register,
     dismissToast,
-    confirmUpdate
+    confirmUpdate,
+    triggerLaunchUpdateCheck
   };
 }

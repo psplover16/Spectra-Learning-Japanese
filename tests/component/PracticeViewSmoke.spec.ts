@@ -3,6 +3,10 @@ import PracticeView from '@/modules/practice/views/PracticeView.vue';
 import { mountWithPracticeSession } from './testUtils';
 import { clearLatestUnknownResults, writeLatestUnknownResults } from '@/modules/exam/storage/latestUnknownResultStorage';
 
+vi.mock('@/shared/version/appVersion', () => ({
+  appVersion: '0.0.1'
+}));
+
 describe('PracticeView', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -34,6 +38,29 @@ describe('PracticeView', () => {
     expect(wrapper.find('[data-testid="dakuon-yoon-section"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="loanword-section"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="choon-section"]').exists()).toBe(true);
+  });
+
+  it('route root 不加入 py-1 垂直 padding', () => {
+    const { wrapper } = mountWithPracticeSession(PracticeView);
+
+    expect(wrapper.get('.practice-view').classes()).not.toContain('py-1');
+  });
+
+  it('在字母練習頁整個內容流最底部右下顯示版號並維持指定樣式', () => {
+    const { wrapper } = mountWithPracticeSession(PracticeView);
+    const practiceView = wrapper.get('.practice-view');
+    const referenceSections = wrapper.get('[data-testid="practice-reference-sections"]');
+    const versionRow = wrapper.get('[data-testid="practice-version-row"]');
+    const versionLabel = versionRow.get('[data-testid="app-version-label"]');
+
+    expect(referenceSections.classes()).toContain('space-y-1');
+    expect(referenceSections.find('[data-testid="app-version-label"]').exists()).toBe(false);
+    expect(versionRow.element.parentElement).toBe(practiceView.element);
+    expect(practiceView.element.lastElementChild).toBe(versionRow.element);
+    expect(versionRow.classes()).toEqual(expect.arrayContaining(['flex', 'w-full', 'justify-end']));
+    expect(versionLabel.text()).toBe('0.0.1');
+    expect(versionLabel.classes()).toEqual(expect.arrayContaining(['block', 'text-[1rem]', 'text-black']));
+    expect([...versionRow.classes(), ...versionLabel.classes()]).not.toContain('fixed');
   });
 
   it('清音與濁音／半濁音表格維持指定字級 class 與可見性', () => {

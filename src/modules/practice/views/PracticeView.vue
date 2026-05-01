@@ -12,6 +12,7 @@ import ChoonRuleSection from '@/modules/practice/components/ChoonRuleSection.vue
 import SpecialSyllableSection from '@/modules/practice/components/SpecialSyllableSection.vue';
 import ExamModal from '@/modules/exam/components/ExamModal.vue';
 import UnknownResultPanel from '@/modules/exam/components/UnknownResultPanel.vue';
+import AppVersionLabel from '@/shared/components/AppVersionLabel.vue';
 import { usePracticeSession } from '@/modules/practice/composables/usePracticeSession';
 import { createExamSession } from '@/modules/exam/composables/useExamSession';
 
@@ -126,7 +127,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="practice-view space-y-1 py-1">
+  <div class="practice-view space-y-1">
     <PracticeToolbar
       :has-latest-result="Boolean(examSession.latestUnknownSnapshot.value)"
       @start-exam="startExam"
@@ -152,6 +153,10 @@ onBeforeUnmount(() => {
 
     <div ref="resultPanelRef">
       <UnknownResultPanel :snapshot="examSession.latestUnknownSnapshot.value" @clear="clearLatestResult('result-panel')" />
+    </div>
+
+    <div data-testid="practice-version-row" class="flex w-full justify-end">
+      <AppVersionLabel class="block text-[1rem] text-black" />
     </div>
 
     <ExamModal
