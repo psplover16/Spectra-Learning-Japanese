@@ -43,7 +43,7 @@ Spectra-Learning-Japanese/
 ├─ tsconfig.app.json (前端 app TypeScript 設定)
 ├─ tsconfig.json (TypeScript 基礎設定)
 ├─ tsconfig.node.json (Node / 工具腳本 TypeScript 設定)
-├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入與 500 KB chunk 警戒線設定)
+├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入；以 package version + Git commit count 組成版本字串，並保留 500 KB chunk 警戒線設定)
 └─ vitest.config.ts (Vitest 設定：jsdom、setup、排除 e2e)
 ```
 
@@ -176,7 +176,7 @@ src/
 │  │  ├─ publicAssets.ts (公開資產常數；集中定義 favicon 與 PWA icon 檔名，供 Vite 設定與測試共用)
 │  │  └─ storageKeys.ts (localStorage key 常數；集中管理 PWA 延後更新、最近不熟結果、N5 文法完成註記、文法等級偏好與單字註記 key)
 │  ├─ version/
-│  │  └─ appVersion.ts (應用版本單一來源；讀取 Vite build-time 注入的 `__APP_VERSION__`，未注入時 fallback 為 `0.0.0-dev`)
+│  │  └─ appVersion.ts (應用版本單一來源；讀取 Vite build-time 注入的 `__APP_VERSION__`，例如 `0.0.1+36`；未注入時 fallback 為 `0.0.0-dev`)
 │  └─ utils/
 │     ├─ questionCount.ts (依已選假名數與是否包含平假名/片假名，計算建議題數)
 │     ├─ questionDeck.ts (提供洗牌與循環補足題組的工具函式)
@@ -226,8 +226,9 @@ tests/
 ├─ unit/ (純邏輯單元測試)
 │  ├─ latestUnknownResultStorage.spec.ts (最近不熟結果 storage 的讀寫與驗證測試)
 │  ├─ appMain.spec.ts (Vue app bootstrap 測試；驗證 mount 後觸發一次 PWA launch update check)
-│  ├─ appVersion.spec.ts (appVersion 單一來源測試；驗證 build-time 注入值與 fallback)
+│  ├─ appVersion.spec.ts (appVersion 單一來源測試；驗證 build-time 注入值可包含 Git commit count 與 fallback)
 │  ├─ changeRulesData.spec.ts (文法頁靜態資料測試；驗證 section 數量、id 唯一性與關鍵 payload 完整度)
+│  ├─ viteConfigAppVersion.spec.ts (Vite app version helper 測試；驗證 package version + Git commit count 格式與 Git metadata fallback)
 │  ├─ grammarLevelStorage.spec.ts (文法等級偏好 storage 測試；驗證只保存 value、合法還原、無效值與壞 JSON 清除)
 │  ├─ n5GrammarData.spec.ts (N5 文法靜態資料測試；驗證核心區塊排序、12 組儲存格例句、v16 來源覆蓋、助詞排序與重點字欄位)
 │  ├─ n5GrammarCompletionStorage.spec.ts (N5 文法完成註記 storage 測試；驗證 version 1 snapshot 寫入讀回、完成 id 快照、空資料與 invalid payload 清除)
@@ -277,16 +278,16 @@ index.html
 
 - 根目錄 `public/` 是正式公開靜態資產來源，包含 `public/vite.ico` 與 `public/icons/*.png`。
 - `_private/_private_fileAssets/v1/public` 僅保留為原始參考素材位置，不再作為正式 build 的公開來源。
-- `vite.config.ts` 使用 Vite 標準 `public/` 目錄與 PWA 設定輸出 favicon、manifest 與安裝圖示，並以 `define.__APP_VERSION__` 注入 `package.json` 的 version。
+- `vite.config.ts` 使用 Vite 標準 `public/` 目錄與 PWA 設定輸出 favicon、manifest 與安裝圖示，並以 `define.__APP_VERSION__` 注入 `package.json` 的 version 加上 Git commit count，例如 `0.0.1+36`；若 Git metadata 無法解析，build-time 字串 fallback 為 `<package-version>+0`。
 - `src/shared/config/publicAssets.ts` 是 favicon 與 PWA icon 檔名的單一來源，供 Vite 設定與測試共用。
-- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`vite.ico`、`icons/*.png` 與應用版本字串都真的進入可發布產物。
+- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`vite.ico`、`icons/*.png` 與 `package version + Git commit count` 應用版本字串都真的進入可發布產物。
 
 ## PWA 更新與版本顯示責任
 
 - `src/app/main.ts` 在 Vue app mount 後呼叫一次 `triggerLaunchUpdateCheck()`，讓已安裝 PWA App 每次啟動都會主動要求 service worker registration 更新檢查。
 - `src/modules/pwa/composables/usePwaLifecycle.ts` 持有單一 PWA lifecycle service，避免 AppShell toast 狀態與 main.ts 啟動檢查各自建立不同 service。
 - `src/modules/pwa/services/pwaLifecycleService.ts` 保存 Workbox 回傳的 `ServiceWorkerRegistration`，呼叫 `registration.update()`；若 registration 尚未到位會保留一次 launch check request，待 `onRegisteredSW` 回來後補跑。
-- `src/shared/version/appVersion.ts` 是前端版本號單一來源；正式 build 讀取 `__APP_VERSION__`，測試或未注入時 fallback 為 `0.0.0-dev`。
+- `src/shared/version/appVersion.ts` 是前端版本號單一來源；正式 build 讀取 `__APP_VERSION__`，該值由 `vite.config.ts` 於 build-time 組成 `package.json#version + Git commit count`，測試或未注入時 fallback 為 `0.0.0-dev`。
 - `src/shared/components/AppVersionLabel.vue` 只渲染版本字串，不包含更新檢查、副作用或互動 UI。
 - `PracticeView.vue` 將 `AppVersionLabel` 放在 Practice 頁面所有非 overlay 內容之後的全寬版號列，靠右對齊整個頁面內容寬度；它不屬於右欄 `practice-reference-sections`，也不是 fixed viewport 元素。
 

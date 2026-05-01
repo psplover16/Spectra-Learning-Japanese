@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
@@ -11,6 +12,31 @@ import {
 
 const require = createRequire(import.meta.url);
 const pkg = require('./package.json') as { version: string };
+
+type GitCommitCountReader = () => string;
+
+function normalizeGitCommitCount(value: string): string {
+  const commitCount = value.trim();
+  return /^\d+$/.test(commitCount) ? commitCount : '0';
+}
+
+export function resolveGitCommitCount(
+  readCommitCount: GitCommitCountReader = () =>
+    execFileSync('git', ['rev-list', '--count', 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    })
+): string {
+  try {
+    return normalizeGitCommitCount(readCommitCount());
+  } catch {
+    return '0';
+  }
+}
+
+export function formatAppVersion(packageVersion: string, gitCommitCount: string): string {
+  return `${packageVersion}+${normalizeGitCommitCount(gitCommitCount)}`;
+}
 
 function normalizeBasePath(value: string | undefined): string {
   const rawValue = value?.trim() || '/';
@@ -41,11 +67,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const appBasePath = normalizeBasePath(env.VITE_APP_BASE_PATH);
   const appStartUrl = normalizeStartUrl(env.VITE_APP_START_URL, appBasePath);
+  const appVersion = formatAppVersion(pkg.version, resolveGitCommitCount());
 
   return {
     base: appBasePath,
     define: {
-      __APP_VERSION__: JSON.stringify(pkg.version)
+      __APP_VERSION__: JSON.stringify(appVersion)
     },
     build: {
       chunkSizeWarningLimit: 500

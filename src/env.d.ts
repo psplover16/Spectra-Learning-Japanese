@@ -11,6 +11,7 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+// Build-time app version string injected by Vite, for example "0.0.1+36".
 declare const __APP_VERSION__: string | undefined;
 
 declare module 'virtual:pwa-register' {
