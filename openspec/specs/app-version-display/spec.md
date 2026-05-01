@@ -55,51 +55,56 @@ tests:
 ---
 ### Requirement: Version source MUST be automatically derived from package metadata
 
-The version string SHALL come from the project's `package.json#version` field, injected at build time as the global constant `__APP_VERSION__`. Engineers MUST NOT need to manually update any UI string when releasing a new version. The initial version MUST be `0.0.1`.
+The version string SHALL come from the project's `package.json#version` field combined with the Git commit count at build time. The injected global constant `__APP_VERSION__` SHALL use the format `<package-version>+<git-commit-count>`, for example `0.0.1+36`. Engineers MUST NOT manually update any UI string when releasing a new version. Engineers MUST NOT modify `package.json#version` as part of the build process. If Git commit count cannot be resolved in a non-deployment build environment, the build SHALL inject `<package-version>+0` rather than failing the application runtime.
 
-#### Scenario: Build-time version injection
+#### Scenario: Build-time version injection includes commit count
 
-- **WHEN** the project is built with `vite build`
-- **THEN** the global constant `__APP_VERSION__` equals the value of `package.json#version`
+- **WHEN** the project is built with `vite build` in a Git checkout with full commit history
+- **THEN** the global constant `__APP_VERSION__` equals the value of `package.json#version` followed by `+` and the Git commit count
 - **AND** the Practice page renders that exact value at runtime
 
-##### Example: initial version
+##### Example: current project commit count
+
 - **GIVEN** `package.json` contains `"version": "0.0.1"`
+- **AND** the Git commit count is `36`
 - **WHEN** the build completes and the user opens the Practice page
-- **THEN** the version label shows `0.0.1`
+- **THEN** the version label shows `0.0.1+36`
+
+#### Scenario: New commit increments displayed build metadata
+
+- **GIVEN** a build from commit count `36` displays `0.0.1+36`
+- **WHEN** one new commit is added and the project is rebuilt from commit count `37`
+- **THEN** the version label shows `0.0.1+37`
+
+#### Scenario: Package version remains the semantic version base
+
+- **GIVEN** `package.json` contains `"version": "0.0.2"`
+- **AND** the Git commit count is `37`
+- **WHEN** the project is built
+- **THEN** the version label shows `0.0.2+37`
+
+#### Scenario: Build without Git count keeps runtime safe
+
+- **GIVEN** `package.json` contains `"version": "0.0.1"`
+- **AND** Git commit count cannot be resolved during a non-deployment build
+- **WHEN** the project is built
+- **THEN** the injected version label value is `0.0.1+0`
+- **AND** the application runtime does not throw because of missing Git metadata
 
 
 <!-- @trace
-source: improve-pwa-versioning-and-n5-learning-sections
+source: append-git-commit-count-to-app-version
 updated: 2026-05-01
 code:
   - src/env.d.ts
-  - src/modules/pwa/services/pwaLifecycleService.ts
-  - src/shared/version/appVersion.ts
-  - src/modules/n5Grammar/views/N5GrammarView.vue
-  - tests/mocks/pwaRegisterMock.ts
-  - src/styles/main.css
   - PROJECT_ARCHITECTURE.md
   - _private/筆記.md
-  - package.json
-  - src/shared/components/AppVersionLabel.vue
-  - src/modules/practice/views/PracticeView.vue
-  - src/app/main.ts
   - vite.config.ts
-  - src/modules/grammar/views/GrammarView.vue
-  - src/modules/pwa/composables/usePwaLifecycle.ts
 tests:
-  - tests/component/GrammarLevelRoutes.spec.ts
-  - tests/unit/routeRootVerticalPadding.spec.ts
-  - tests/unit/pwaLifecycleService.spec.ts
-  - tests/component/N5GrammarSections.spec.ts
-  - tests/component/PracticeViewSmoke.spec.ts
-  - tests/component/GrammarViewSmoke.spec.ts
-  - tests/unit/appMain.spec.ts
-  - tests/component/VocabularyViewSmoke.spec.ts
-  - tests/component/AppVersionLabel.spec.ts
   - tests/unit/appVersion.spec.ts
+  - tests/unit/viteConfigAppVersion.spec.ts
   - tests/unit/publicAssets.spec.ts
+  - tests/unit/githubActionsWorkflows.spec.ts
 -->
 
 ---
