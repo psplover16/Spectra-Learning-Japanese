@@ -40,6 +40,7 @@ function toggleExpanded() {
 }
 
 function toggleCompleted(event: Event) {
+  event.preventDefault();
   event.stopPropagation();
 
   const nextCompleted = !props.completed;
@@ -59,14 +60,19 @@ function toggleCompleted(event: Event) {
       :class="{ 'is-expanded': contentVisible, 'is-completed': completed }"
     >
       <h2 class="n5-grammar-section-heading">
-        <input
-          type="checkbox"
-          :data-testid="`n5-grammar-completion-${section.id}`"
-          class="n5-grammar-section-completion"
-          :checked="completed"
-          :aria-label="completionLabel"
+        <label
+          :data-testid="`n5-grammar-completion-hit-area-${section.id}`"
+          class="n5-grammar-section-completion-hit-area"
           @click="toggleCompleted"
-        />
+        >
+          <input
+            type="checkbox"
+            :data-testid="`n5-grammar-completion-${section.id}`"
+            class="n5-grammar-section-completion"
+            :checked="completed"
+            :aria-label="completionLabel"
+          />
+        </label>
         <button
           type="button"
           :data-testid="`n5-grammar-toggle-${section.id}`"

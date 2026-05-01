@@ -153,15 +153,18 @@ describe('N5GrammarSections', () => {
     const { wrapper } = mountWithPracticeSession(N5GrammarView);
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
+    const completionHitArea = wrapper.get('[data-testid="n5-grammar-completion-hit-area-sentence-basics"]');
     const body = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
 
     expect(toggle.text()).not.toContain('▼');
     expect(toggle.text()).not.toContain('▲');
+    expect(completionHitArea.classes()).toContain('n5-grammar-section-completion-hit-area');
+    expect(checkbox.classes()).toEqual(['n5-grammar-section-completion']);
     expect(checkbox.attributes('aria-label')).toBe('標記 敬體句型：現在型與詞類基礎 為已學完');
     expect(toggle.attributes('aria-expanded')).toBe('false');
     expect(body.attributes('style')).toContain('display: none;');
 
-    await checkbox.trigger('click');
+    await completionHitArea.trigger('click');
 
     const completedToggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
     const completedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
@@ -171,6 +174,29 @@ describe('N5GrammarSections', () => {
     expect(completedToggle.attributes('aria-expanded')).toBe('false');
     expect(completedToggle.attributes('aria-disabled')).toBe('true');
     expect(completedBody.attributes('style')).toContain('display: none;');
+  });
+
+  it('展開與收合控制不會切換完成 checkbox', async () => {
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
+    const checkbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
+    const body = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(body.attributes('style')).toContain('display: none;');
+
+    await toggle.trigger('click');
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(body.attributes('style') ?? '').not.toContain('display: none;');
+
+    await toggle.trigger('click');
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(body.attributes('style')).toContain('display: none;');
   });
 
   it('會從 localStorage 還原完成狀態，並在變更後寫回 snapshot', async () => {

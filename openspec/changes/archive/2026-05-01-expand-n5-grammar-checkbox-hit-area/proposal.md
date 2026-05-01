@@ -33,6 +33,7 @@ N5 文法頁的 checkbox 在手機模式下很難準確點擊，使用者容易�
   - New: (none)
   - Modified:
     - src/modules/n5Grammar/components/N5GrammarSectionCard.vue
+    - src/styles/main.css
     - tests/component/N5GrammarSections.spec.ts
     - PROJECT_ARCHITECTURE.md
   - Removed: (none)
