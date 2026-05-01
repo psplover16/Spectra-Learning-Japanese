@@ -24,6 +24,10 @@ function normalizePathForAssertion(path: string): string {
   return path.replaceAll('\\', '/');
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function expectRepoFileExists(relativePath: string): Promise<void> {
   await expect(access(toRepoPath(relativePath))).resolves.toBeUndefined();
 }
@@ -160,7 +164,7 @@ describe('public asset configuration', () => {
     expect(manifestContent).not.toContain(privatePublicAssetReferenceDir);
   });
 
-  it('建置後的 source 會包含 package metadata 注入的應用版本', async () => {
+  it('建置後的 source 會包含 package metadata 與 git commit count 組成的應用版本', async () => {
     const packageJson = JSON.parse(await readFile(toRepoPath('package.json'), 'utf8')) as { version: string };
     const builtAssetNames = await readdir(join(buildOutDir, 'assets'));
     const builtJavaScriptSources = await Promise.all(
@@ -168,7 +172,9 @@ describe('public asset configuration', () => {
         .filter((assetName) => assetName.endsWith('.js'))
         .map((assetName) => readBuiltFile(buildOutDir, `assets/${assetName}`))
     );
+    const builtJavaScriptSource = builtJavaScriptSources.join('\n');
 
-    expect(builtJavaScriptSources.join('\n')).toContain(packageJson.version);
+    expect(builtJavaScriptSource).toMatch(new RegExp(`${escapeRegExp(packageJson.version)}\\+\\d+`));
+    expect(builtJavaScriptSource).not.toContain(`"${packageJson.version}"`);
   });
 });
