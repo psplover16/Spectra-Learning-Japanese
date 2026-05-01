@@ -16,7 +16,7 @@ import {
 </script>
 
 <template>
-  <div class="space-y-1 py-1" data-testid="grammar-sections">
+  <div class="space-y-1" data-testid="grammar-sections">
     <section
       v-for="section in grammarSections"
       :key="section.id"

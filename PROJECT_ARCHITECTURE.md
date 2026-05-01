@@ -43,7 +43,7 @@ Spectra-Learning-Japanese/
 ├─ tsconfig.app.json (前端 app TypeScript 設定)
 ├─ tsconfig.json (TypeScript 基礎設定)
 ├─ tsconfig.node.json (Node / 工具腳本 TypeScript 設定)
-├─ vite.config.ts (Vite 建置、alias、PWA、public assets 與 500 KB chunk 警戒線設定)
+├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入與 500 KB chunk 警戒線設定)
 └─ vitest.config.ts (Vitest 設定：jsdom、setup、排除 e2e)
 ```
 
@@ -53,7 +53,7 @@ Spectra-Learning-Japanese/
 src/
 ├─ app/ (應用程式入口層：啟動 Vue、切路由、提供全域殼層)
 │  ├─ AppShell.vue (整個網站的外框；建立 PracticeSession、提供 RouterView、共享 route tabs 頁首與 PWA Toast，並處理小螢幕下 tabs-only header 的換列穩定性)
-│  ├─ main.ts (Vue 啟動入口；createApp(AppShell).use(router).mount('#app'))
+│  ├─ main.ts (Vue 啟動入口；createApp(AppShell).use(router).mount('#app') 後觸發一次 PWA launch update check)
 │  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 與對應 route meta)
 │
 ├─ assets/ (靜態素材)
@@ -112,7 +112,7 @@ src/
 │  │  ├─ types/
 │  │  │  └─ grammarNotes.ts (N5 文法資料型別定義，例如 section、topic、可標記重點字的 example、compare table、tableExampleGroups 與來源覆蓋項)
 │  │  └─ views/
-│  │     └─ N5GrammarView.vue (N5 文法正式學習頁；依 section 的 presentation mode 組裝 compare/info/bullet 三種 renderer，並在 mounted 後還原完成註記、由父層持有 completedSectionIds)
+│  │     └─ N5GrammarView.vue (N5 文法正式學習頁；依 section completion 狀態拆成未學習/已學習兩個 zone，並依 presentation mode 組裝 compare/info/bullet 三種 renderer)
 │  │
 │  ├─ practice/ (主練習頁模組：假名選擇、練習設定、規則說明)
 │  │  ├─ components/
@@ -135,13 +135,13 @@ src/
 │  │  ├─ types/
 │  │  │  └─ practice.ts (練習模組的型別定義，例如 KanaCell、長音規則列、拗音格、外來語矩陣列與明細項目)
 │  │  └─ views/
-│  │     └─ PracticeView.vue (主練習頁；組裝 toolbar、表格、規則區塊、最近結果與 ExamModal，並提供 `/practice` 專屬樣式作用範圍與結果區清除後的平滑回頂)
+│  │     └─ PracticeView.vue (主練習頁；組裝 toolbar、表格、規則區塊、整個內容流底部右側版本號、最近結果與 ExamModal，並提供 `/practice` 專屬樣式作用範圍與結果區清除後的平滑回頂)
 │  │
 │  ├─ pwa/ (PWA 安裝 / 更新體驗模組)
 │  │  ├─ composables/
-│  │  │  └─ usePwaLifecycle.ts (在元件 mounted 時註冊 PWA service，回傳 toast 狀態與更新操作)
+│  │  │  └─ usePwaLifecycle.ts (提供全域 PWA lifecycle service；在元件 mounted 時註冊 service，並暴露 main.ts 可呼叫的 launch update check)
 │  │  ├─ services/
-│  │  │  └─ pwaLifecycleService.ts (PWA 更新邏輯核心；呼叫 registerSW、控制更新提示、延後更新與清快取)
+│  │  │  └─ pwaLifecycleService.ts (PWA 更新邏輯核心；呼叫 registerSW、保存 registration、啟動時主動 update check、控制更新提示、延後更新與清快取)
 │  │  └─ types/
 │  │     └─ pwa.ts (PWA ToastState 型別定義)
 │  │
@@ -165,6 +165,7 @@ src/
 │
 ├─ shared/ (跨模組共用的元件與工具)
 │  ├─ components/
+│  │  ├─ AppVersionLabel.vue (共用應用版本顯示元件；只負責渲染 build-time 注入的 appVersion，不含更新檢查邏輯)
 │  │  ├─ BaseButton.vue (全站共用按鈕元件)
 │  │  ├─ BaseCheckbox.vue (全站共用核取方塊元件)
 │  │  ├─ BaseInput.vue (全站共用輸入框元件)
@@ -174,6 +175,8 @@ src/
 │  ├─ config/
 │  │  ├─ publicAssets.ts (公開資產常數；集中定義 favicon 與 PWA icon 檔名，供 Vite 設定與測試共用)
 │  │  └─ storageKeys.ts (localStorage key 常數；集中管理 PWA 延後更新、最近不熟結果、N5 文法完成註記、文法等級偏好與單字註記 key)
+│  ├─ version/
+│  │  └─ appVersion.ts (應用版本單一來源；讀取 Vite build-time 注入的 `__APP_VERSION__`，未注入時 fallback 為 `0.0.0-dev`)
 │  └─ utils/
 │     ├─ questionCount.ts (依已選假名數與是否包含平假名/片假名，計算建議題數)
 │     ├─ questionDeck.ts (提供洗牌與循環補足題組的工具函式)
@@ -192,15 +195,16 @@ src/
 tests/
 ├─ component/ (Vue 元件測試)
 │  ├─ AppShellSmoke.spec.ts (AppShell 基本渲染與核心外框 smoke test；驗證 tabs-only header 與四主路由)
+│  ├─ AppVersionLabel.spec.ts (共用版本號元件測試；驗證只渲染版本文字且不含更新檢查互動)
 │  ├─ ChoonRuleSection.spec.ts (長音規則大表格的結構與例字三段資訊測試)
 │  ├─ ExamModal.spec.ts (ExamModal 的關鍵互動、題目列顯示與關閉測試)
 │  ├─ GrammarLevelRoutes.spec.ts (文法等級路由測試；驗證 N1～N4 placeholder 與 N5 既有內容)
 │  ├─ GrammarChangeRulesTables.spec.ts (文法頁複雜表格 renderer 測試；驗證五段動詞、活用表、サ變例句與詞性變化內容)
 │  ├─ GrammarViewSmoke.spec.ts (文法頁 11 個規則容器、標題/說明分離與 accordion 初始狀態 smoke test)
 │  ├─ LoanwordSection.spec.ts (外來語矩陣的標頭、內容格與假名/羅馬音呈現測試)
-│  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證敬體總覽與 v16 新 section 收合/展開、完成 checkbox 不冒泡、完成後鎖定收合、storage 還原、背景 class、ARIA 與不同內容模式 renderer)
+│  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證未學習/已學習分區、in-zone order、敬體總覽與 v16 新 section 收合/展開、完成 checkbox 不冒泡、完成後鎖定收合、storage 還原、背景 class、ARIA 與不同內容模式 renderer)
 │  ├─ N5GrammarViewSmoke.spec.ts (N5 文法正式頁 smoke test；驗證核心詞類、敬體與 v16 區塊標題、render-safe 初始渲染與無非預期外溢內容)
-│  ├─ PracticeViewSmoke.spec.ts (PracticeView 的基本渲染、指定假名表字級 class、下半部區塊首屏存在與最近結果清除/捲動測試)
+│  ├─ PracticeViewSmoke.spec.ts (PracticeView 的基本渲染、整頁內容流底部右側版本號位置樣式、指定假名表字級 class、下半部區塊首屏存在與最近結果清除/捲動測試)
 │  ├─ RouteSubMenu.spec.ts (共用路由子列表元件測試；驗證 config-driven options、select emit、overlay 關閉與 Escape 關閉)
 │  ├─ RouteOwnership.spec.ts (驗證 `/practice`、`/grammar`、`/vocabulary`、`/n5-grammar` 的 feature ownership 與 negative ownership，並確認 N5 文法內容不外溢)
 │  ├─ SelectionDetailPanel.spec.ts (選取明細面板的顯示邏輯測試)
@@ -221,6 +225,8 @@ tests/
 │  └─ pwaRegisterMock.ts (mock `virtual:pwa-register`，讓測試不真的註冊 service worker)
 ├─ unit/ (純邏輯單元測試)
 │  ├─ latestUnknownResultStorage.spec.ts (最近不熟結果 storage 的讀寫與驗證測試)
+│  ├─ appMain.spec.ts (Vue app bootstrap 測試；驗證 mount 後觸發一次 PWA launch update check)
+│  ├─ appVersion.spec.ts (appVersion 單一來源測試；驗證 build-time 注入值與 fallback)
 │  ├─ changeRulesData.spec.ts (文法頁靜態資料測試；驗證 section 數量、id 唯一性與關鍵 payload 完整度)
 │  ├─ grammarLevelStorage.spec.ts (文法等級偏好 storage 測試；驗證只保存 value、合法還原、無效值與壞 JSON 清除)
 │  ├─ n5GrammarData.spec.ts (N5 文法靜態資料測試；驗證核心區塊排序、12 組儲存格例句、v16 來源覆蓋、助詞排序與重點字欄位)
@@ -271,9 +277,24 @@ index.html
 
 - 根目錄 `public/` 是正式公開靜態資產來源，包含 `public/vite.ico` 與 `public/icons/*.png`。
 - `_private/_private_fileAssets/v1/public` 僅保留為原始參考素材位置，不再作為正式 build 的公開來源。
-- `vite.config.ts` 使用 Vite 標準 `public/` 目錄與 PWA 設定輸出 favicon、manifest 與安裝圖示。
+- `vite.config.ts` 使用 Vite 標準 `public/` 目錄與 PWA 設定輸出 favicon、manifest 與安裝圖示，並以 `define.__APP_VERSION__` 注入 `package.json` 的 version。
 - `src/shared/config/publicAssets.ts` 是 favicon 與 PWA icon 檔名的單一來源，供 Vite 設定與測試共用。
-- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`vite.ico` 與 `icons/*.png` 都真的進入可發布產物。
+- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`vite.ico`、`icons/*.png` 與應用版本字串都真的進入可發布產物。
+
+## PWA 更新與版本顯示責任
+
+- `src/app/main.ts` 在 Vue app mount 後呼叫一次 `triggerLaunchUpdateCheck()`，讓已安裝 PWA App 每次啟動都會主動要求 service worker registration 更新檢查。
+- `src/modules/pwa/composables/usePwaLifecycle.ts` 持有單一 PWA lifecycle service，避免 AppShell toast 狀態與 main.ts 啟動檢查各自建立不同 service。
+- `src/modules/pwa/services/pwaLifecycleService.ts` 保存 Workbox 回傳的 `ServiceWorkerRegistration`，呼叫 `registration.update()`；若 registration 尚未到位會保留一次 launch check request，待 `onRegisteredSW` 回來後補跑。
+- `src/shared/version/appVersion.ts` 是前端版本號單一來源；正式 build 讀取 `__APP_VERSION__`，測試或未注入時 fallback 為 `0.0.0-dev`。
+- `src/shared/components/AppVersionLabel.vue` 只渲染版本字串，不包含更新檢查、副作用或互動 UI。
+- `PracticeView.vue` 將 `AppVersionLabel` 放在 Practice 頁面所有非 overlay 內容之後的全寬版號列，靠右對齊整個頁面內容寬度；它不屬於右欄 `practice-reference-sections`，也不是 fixed viewport 元素。
+
+## N5 文法學習分區責任
+
+- `N5GrammarView.vue` 以既有 `completedSectionIds` 為唯一狀態來源，透過 `unfinishedSections` 與 `finishedSections` computed 將 section 分成未學習與已學習 zone；已學習 zone 只有在 `finishedSections.length > 0` 時才 render，避免空區塊造成額外高度。
+- 已 render 的 zone 只負責分區與間距，不改變 `N5GrammarSectionCard` 的 checkbox 語意、內容 renderer、storage 格式或原始資料排序。
+- section 在 checkbox 切換後會立即於兩個 zone 間移動；每個 zone 內仍依 `sortedN5GrammarSections` 的原始順序呈現。
 
 ## 一句話總結
 

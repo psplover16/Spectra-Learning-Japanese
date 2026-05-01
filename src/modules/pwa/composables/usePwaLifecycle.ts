@@ -1,12 +1,16 @@
 import { onMounted } from 'vue';
 import { createPwaLifecycleService } from '@/modules/pwa/services/pwaLifecycleService';
 
-export function usePwaLifecycle() {
-  const service = createPwaLifecycleService();
+const pwaLifecycleService = createPwaLifecycleService();
 
+export function usePwaLifecycle() {
   onMounted(() => {
-    service.register();
+    pwaLifecycleService.register();
   });
 
-  return service;
+  return pwaLifecycleService;
+}
+
+export function triggerLaunchUpdateCheck(): Promise<void> {
+  return pwaLifecycleService.triggerLaunchUpdateCheck();
 }

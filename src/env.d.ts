@@ -11,10 +11,13 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+declare const __APP_VERSION__: string | undefined;
+
 declare module 'virtual:pwa-register' {
   export function registerSW(options?: {
     immediate?: boolean;
     onNeedRefresh?: () => void;
     onOfflineReady?: () => void;
+    onRegisteredSW?: (swUrl: string, registration: ServiceWorkerRegistration | undefined) => void;
   }): (reloadPage?: boolean) => Promise<void>;
 }

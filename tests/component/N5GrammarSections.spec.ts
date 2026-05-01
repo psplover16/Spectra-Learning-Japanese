@@ -163,10 +163,14 @@ describe('N5GrammarSections', () => {
 
     await checkbox.trigger('click');
 
-    expect((checkbox.element as HTMLInputElement).checked).toBe(true);
-    expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(toggle.attributes('aria-disabled')).toBe('true');
-    expect(body.attributes('style')).toContain('display: none;');
+    const completedToggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
+    const completedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
+    const completedBody = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
+
+    expect((completedCheckbox.element as HTMLInputElement).checked).toBe(true);
+    expect(completedToggle.attributes('aria-expanded')).toBe('false');
+    expect(completedToggle.attributes('aria-disabled')).toBe('true');
+    expect(completedBody.attributes('style')).toContain('display: none;');
   });
 
   it('會從 localStorage 還原完成狀態，並在變更後寫回 snapshot', async () => {
@@ -195,10 +199,80 @@ describe('N5GrammarSections', () => {
     const snapshot = JSON.parse(window.localStorage.getItem(n5GrammarCompletionStorageKey) ?? 'null') as {
       completedSectionIds: string[];
     } | null;
+    const restoredCheckbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
+    const restoredToggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
 
     expect(snapshot?.completedSectionIds).toEqual([]);
-    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
-    expect(toggle.attributes('aria-disabled')).toBeUndefined();
+    expect((restoredCheckbox.element as HTMLInputElement).checked).toBe(false);
+    expect(restoredToggle.attributes('aria-disabled')).toBeUndefined();
+  });
+
+  it('依完成 checkbox 狀態分成未學習與已學習區，並維持各區原始順序', async () => {
+    window.localStorage.setItem(
+      n5GrammarCompletionStorageKey,
+      JSON.stringify({
+        version: 1,
+        completedSectionIds: ['polite-overview', 'past-and-state'],
+        updatedAt: '2026-04-30T00:00:00.000Z'
+      })
+    );
+
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    await nextTick();
+
+    const unfinishedZone = wrapper.get('[data-testid="n5-grammar-unfinished-zone"]');
+    const finishedZone = wrapper.get('[data-testid="n5-grammar-finished-zone"]');
+    const unfinishedIds = unfinishedZone
+      .findAll('[data-testid^="n5-grammar-section-"]')
+      .map((section) => section.attributes('data-testid')?.replace('n5-grammar-section-', ''));
+    const finishedIds = finishedZone
+      .findAll('[data-testid^="n5-grammar-section-"]')
+      .map((section) => section.attributes('data-testid')?.replace('n5-grammar-section-', ''));
+
+    expect(unfinishedIds.slice(0, 3)).toEqual(['core-term-usage-overview', 'sentence-basics', 'invitation-comparison']);
+    expect(unfinishedIds).not.toContain('polite-overview');
+    expect(unfinishedIds).not.toContain('past-and-state');
+    expect(finishedIds).toEqual(['polite-overview', 'past-and-state']);
+  });
+
+  it('沒有已學習 section 時不 render 已學習區', () => {
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+
+    expect(wrapper.find('[data-testid="n5-grammar-unfinished-zone"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="n5-grammar-finished-zone"]').exists()).toBe(false);
+  });
+
+  it('分區容器不加 padding，兩區之間維持 1rem 間距', async () => {
+    window.localStorage.setItem(
+      n5GrammarCompletionStorageKey,
+      JSON.stringify({
+        version: 1,
+        completedSectionIds: ['sentence-basics'],
+        updatedAt: '2026-04-30T00:00:00.000Z'
+      })
+    );
+
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    await nextTick();
+    const view = wrapper.get('[data-testid="n5-grammar-view"]');
+
+    expect(view.classes()).toContain('space-y-4');
+    expect(wrapper.get('[data-testid="n5-grammar-unfinished-zone"]').classes()).toContain('p-0');
+    expect(wrapper.get('[data-testid="n5-grammar-finished-zone"]').classes()).toContain('p-0');
+  });
+
+  it('勾選完成 checkbox 後 section 會立即移到已學習區', async () => {
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const unfinishedZone = wrapper.get('[data-testid="n5-grammar-unfinished-zone"]');
+
+    expect(unfinishedZone.find('[data-testid="n5-grammar-section-sentence-basics"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="n5-grammar-finished-zone"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]').trigger('click');
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="n5-grammar-unfinished-zone"]').find('[data-testid="n5-grammar-section-sentence-basics"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="n5-grammar-finished-zone"]').find('[data-testid="n5-grammar-section-sentence-basics"]').exists()).toBe(true);
   });
 
   it('完成後會立即收合並鎖定，取消完成後不會自動展開', async () => {
@@ -216,21 +290,30 @@ describe('N5GrammarSections', () => {
 
     await checkbox.trigger('click');
 
-    expect((checkbox.element as HTMLInputElement).checked).toBe(true);
-    expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(toggle.attributes('aria-disabled')).toBe('true');
-    expect(header.classes()).toContain('is-completed');
-    expect(header.classes()).not.toContain('is-expanded');
-    expect(body.attributes('style')).toContain('display: none;');
+    const completedHeader = wrapper.get('[data-testid="n5-grammar-header-polite-overview"]');
+    const completedToggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
+    const completedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
+    const completedBody = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
 
-    await toggle.trigger('click');
-    expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(body.attributes('style')).toContain('display: none;');
+    expect((completedCheckbox.element as HTMLInputElement).checked).toBe(true);
+    expect(completedToggle.attributes('aria-expanded')).toBe('false');
+    expect(completedToggle.attributes('aria-disabled')).toBe('true');
+    expect(completedHeader.classes()).toContain('is-completed');
+    expect(completedHeader.classes()).not.toContain('is-expanded');
+    expect(completedBody.attributes('style')).toContain('display: none;');
 
-    await checkbox.trigger('click');
-    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
-    expect(toggle.attributes('aria-disabled')).toBeUndefined();
-    expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(body.attributes('style')).toContain('display: none;');
+    await completedToggle.trigger('click');
+    expect(completedToggle.attributes('aria-expanded')).toBe('false');
+    expect(completedBody.attributes('style')).toContain('display: none;');
+
+    await completedCheckbox.trigger('click');
+    const unfinishedToggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
+    const unfinishedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
+    const unfinishedBody = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
+
+    expect((unfinishedCheckbox.element as HTMLInputElement).checked).toBe(false);
+    expect(unfinishedToggle.attributes('aria-disabled')).toBeUndefined();
+    expect(unfinishedToggle.attributes('aria-expanded')).toBe('false');
+    expect(unfinishedBody.attributes('style')).toContain('display: none;');
   });
 });

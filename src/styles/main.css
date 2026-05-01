@@ -445,10 +445,6 @@ textarea {
     @apply !bg-red-700 text-white;
   }
 
-  .n5-grammar-view {
-    @apply space-y-1 py-1;
-  }
-
   .n5-grammar-section-card {
     @apply rounded border border-gray-200 bg-white;
   }

@@ -12,6 +12,9 @@ describe('pwaLifecycleService', () => {
     vi.useFakeTimers();
     window.localStorage.clear();
     pwaRegisterMock.updateServiceWorker.mockClear();
+    pwaRegisterMock.deferRegistration = false;
+    pwaRegisterMock.registration.update.mockClear();
+    pwaRegisterMock.registration.update.mockResolvedValue(undefined);
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 375 });
     window.matchMedia = vi.fn().mockReturnValue({ matches: true });
     Object.defineProperty(window, 'caches', {
@@ -54,5 +57,39 @@ describe('pwaLifecycleService', () => {
 
     expect(window.localStorage.getItem(pwaDeferredUpdateStorageKey)).toBeNull();
     expect(pwaRegisterMock.updateServiceWorker).toHaveBeenCalledWith(true);
+  });
+
+  it('啟動更新檢查會呼叫 service worker registration update 一次', async () => {
+    const service = createPwaLifecycleService();
+    service.register();
+
+    await service.triggerLaunchUpdateCheck();
+
+    expect(pwaRegisterMock.registration.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('啟動更新檢查早於 registration 完成時，會等 registration 到位後補跑一次', async () => {
+    pwaRegisterMock.deferRegistration = true;
+    const service = createPwaLifecycleService();
+    service.register();
+
+    await service.triggerLaunchUpdateCheck();
+    expect(pwaRegisterMock.registration.update).not.toHaveBeenCalled();
+
+    pwaRegisterMock.callbacks.onRegisteredSW?.('/sw.js', pwaRegisterMock.registration);
+    await Promise.resolve();
+
+    expect(pwaRegisterMock.registration.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('啟動更新檢查失敗時只警告且不中斷流程', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    pwaRegisterMock.registration.update.mockRejectedValueOnce(new Error('offline'));
+    const service = createPwaLifecycleService();
+    service.register();
+
+    await expect(service.triggerLaunchUpdateCheck()).resolves.toBeUndefined();
+
+    expect(warnSpy).toHaveBeenCalledWith('PWA launch update check failed.', expect.any(Error));
   });
 });
