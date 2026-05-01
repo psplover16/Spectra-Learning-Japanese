@@ -104,7 +104,7 @@ src/
 │  │  │  ├─ N5GrammarBulletBlock.vue (條列式文法說明 renderer；適合規則重點與例句混合閱讀的群組，支援例句重點字標記)
 │  │  │  ├─ N5GrammarCompareTable.vue (差異對照表 renderer；先顯示比較表，再補充每個儲存格例句群組與必要的主題說明/例句，支援例句重點字標記)
 │  │  │  ├─ N5GrammarInfoBlock.vue (說明後接例句的 renderer；適合連續閱讀型內容，支援例句重點字標記)
-│  │  │  └─ N5GrammarSectionCard.vue (N5 文法群組容器；提供 section 標題 toggle、右側完成 checkbox、完成後鎖定收合、背景色展開狀態與 sticky header)
+│  │  │  └─ N5GrammarSectionCard.vue (N5 文法群組容器；提供 section 標題 toggle、右側完成 checkbox 放大 hit area、完成後鎖定收合、背景色展開狀態與 sticky header)
 │  │  ├─ data/
 │  │  │  └─ grammarNotes.ts (N5 文法結構化靜態資料；整理 v11~v16 筆記、排序規則、來源覆蓋、共通註記、圖片轉表格資料與敬體總覽儲存格例句)
 │  │  ├─ storage/
@@ -202,7 +202,7 @@ tests/
 │  ├─ GrammarChangeRulesTables.spec.ts (文法頁複雜表格 renderer 測試；驗證五段動詞、活用表、サ變例句與詞性變化內容)
 │  ├─ GrammarViewSmoke.spec.ts (文法頁 11 個規則容器、標題/說明分離與 accordion 初始狀態 smoke test)
 │  ├─ LoanwordSection.spec.ts (外來語矩陣的標頭、內容格與假名/羅馬音呈現測試)
-│  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證未學習/已學習分區、in-zone order、敬體總覽與 v16 新 section 收合/展開、完成 checkbox 不冒泡、完成後鎖定收合、storage 還原、背景 class、ARIA 與不同內容模式 renderer)
+│  ├─ N5GrammarSections.spec.ts (N5 文法群組測試；驗證未學習/已學習分區、in-zone order、敬體總覽與 v16 新 section 收合/展開、完成 checkbox 放大 hit area 不冒泡、展開控制不切換 checkbox、完成後鎖定收合、storage 還原、背景 class、ARIA 與不同內容模式 renderer)
 │  ├─ N5GrammarViewSmoke.spec.ts (N5 文法正式頁 smoke test；驗證核心詞類、敬體與 v16 區塊標題、render-safe 初始渲染與無非預期外溢內容)
 │  ├─ PracticeViewSmoke.spec.ts (PracticeView 的基本渲染、整頁內容流底部右側版本號位置樣式、指定假名表字級 class、下半部區塊首屏存在與最近結果清除/捲動測試)
 │  ├─ RouteSubMenu.spec.ts (共用路由子列表元件測試；驗證 config-driven options、select emit、overlay 關閉與 Escape 關閉)
@@ -294,6 +294,7 @@ index.html
 
 - `N5GrammarView.vue` 以既有 `completedSectionIds` 為唯一狀態來源，透過 `unfinishedSections` 與 `finishedSections` computed 將 section 分成未學習與已學習 zone；已學習 zone 只有在 `finishedSections.length > 0` 時才 render，避免空區塊造成額外高度。
 - 已 render 的 zone 只負責分區與間距，不改變 `N5GrammarSectionCard` 的 checkbox 語意、內容 renderer、storage 格式或原始資料排序。
+- `N5GrammarSectionCard.vue` 的完成 checkbox 以外層 hit area wrapper 放大手機點擊/觸控範圍；checkbox input 視覺尺寸、樣式與「是否已學習」語意維持不變，且 hit area 的互動不會觸發 section 展開/收合。
 - section 在 checkbox 切換後會立即於兩個 zone 間移動；每個 zone 內仍依 `sortedN5GrammarSections` 的原始順序呈現。
 
 ## 一句話總結
