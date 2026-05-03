@@ -1,178 +1,235 @@
-# vocabulary-overhaul （討論結果，待拆分為多個 Spectra changes）
+# vocabulary-quiz-feature
 
-## 討論來源
+## 摘要
 
-- 僅使用 `_private/discuss.txt` 的內容作為輸入。
-- 偵察過的程式碼證據：
-  - `src/modules/vocabulary/data/jpWords.ts`（7611 行、約 1086 筆 entries）
-  - `src/modules/vocabulary/types/vocabulary.ts`（`RawVocabularyEntry` / `VocabularyEntry` 結構）
-  - `src/modules/vocabulary/utils/vocabularyFilters.ts`（`normalizeVocabularyEntries` 以 `index + 1` 產生 id）
-  - `src/modules/vocabulary/storage/vocabularyMarksStorage.ts`（`VocabularyMarkSnapshot.markedIds: number[]`）
-  - `src/modules/vocabulary/composables/useVocabularySession.ts`
-- CSV 規模（`_private/`）：N1 = 2698、N2 = 1747、N3 = 2138、N4 = 667、N5 = 717（含表頭，扣掉約 7962 筆）。
+子路由「單字練習」新增測驗功能，並補強多義單字的資料規則。整體拆成 2 個 Spectra changes 依序執行：
+
+1. **`add-multi-meaning-vocabulary-rule`**：定義多義單字資料規則、新增 `から` entry、修正既有違規條目
+2. **`add-vocabulary-quiz-feature`**：新增「開始測驗」按鈕、測驗 Modal、結算寫回 draftMarkedKeys
+
+來源：`_private/discuss.txt`。
 
 ---
 
-## 我的假設（assumptions mode，請逐條確認）
+## 程式碼上下文（既有實作）
 
-> 規則：列出我目前依現況做出的判斷與證據；若有錯誤，請於回覆中標出，我會逐條跟進、再進入 Convergence。
+| 檔案 | 角色 |
+|------|------|
+| `src/modules/exam/components/ExamModal.vue` | 既有測驗 modal（下一步 / 我不清楚 / 關閉確認流程，已驗證） |
+| `src/modules/exam/composables/useExamSession.ts` | 字母練習 session（`createExamSession()` / `settle()` / `buildLoopedDeck`） |
+| `src/modules/exam/types/exam.ts` | `ExamQuestionCard`（kana 欄位寫死：`hiragana / katakana / romaji`） |
+| `src/modules/vocabulary/types/vocabulary.ts` | `VocabularyEntry.markKey: string`、`VocabularyMarkSnapshot.version: 2`（natural-key 重構已完成） |
+| `src/modules/vocabulary/composables/useVocabularySession.ts` | `draftMarkedKeys` / `persistedMarkedKeys: Set<string>`、`saveMarks()` 寫 v2 snapshot |
+| `src/modules/vocabulary/components/VocabularyControlBar.vue` | 控制列（左 checkbox 群、右「儲存註記」按鈕） |
+| `src/modules/vocabulary/components/VocabularyStageTable.vue` | 每列右側 checkbox（綁 `entry.markKey`） |
+| `src/modules/vocabulary/data/jpWords.ts` | 字典檔（多義單字目前以 `\n` 分段） |
+| `src/modules/practice/components/PracticeToolbar.vue` | 字母練習「送出」按鈕（`BaseButton variant="primary" :disabled`） — 配色參考 |
 
-1. **CSV 翻譯與詞性標註必須分批送審，不能一次直接覆寫。**
-   - 證據：`discuss.txt` 第 7、21 行強調「教材，不允許錯誤或瑕疵」；目前五份 CSV 合計約 7962 筆英文翻譯需轉中文，且需精準辨識辭書形 / 形容詞分類。
-   - 若錯：若採一次性自動翻譯後直接覆寫原檔，會在無法復原的情況下混入錯誤翻譯與錯誤詞性標註，違反大前提。
-   - 推論：必須採「以 chunk（每次 50–100 筆）逐批處理 + 每批比對 + commit」，原檔需先複製成 working copy 或在 git 上以可回溯的方式變更。
-   - 結論：必須採「以 chunk（每次 50–100 筆）逐批處理 + 每批比對 + commit」，原檔會以後續git 可以回朔的方式變更。
-2. **跨 CSV 去重的 key 是 `expression + reading`（即同時匹配漢字寫法與假名讀音），而不是只比對 `expression`。**
-   - 證據：N5 CSV 中已存在 `あつい` 的三個不同 entry（`暑い` / `熱い` / `厚い`），單看讀音會誤刪不同義字；單看漢字又會錯過同字異讀。
-   - 若錯：誤刪同形異義詞或同音異字會造成教材內容缺失。
-   - 結論：對，是 `expression + reading`（即同時匹配漢字寫法與假名讀音），而不是只比對 `expression`。
-
-3. **跨 CSV 衝突時，「保留難度低（N5 端）刪除難度高（N1 端）」表示 stage 由低決定。**
-   - 證據：`discuss.txt` 第 9 行「n5.csv 與 n1.csv有重複單字，則刪除 n1.csv 的單字」。
-   - 若錯：若反過來保留高難度，會讓初學階段缺字、且現有 jpWords.ts 的 N5 entries 會無對應來源。
-   - 結論：沒錯
-
-4. **`jpword_N*.ts` 拆檔後仍以陣列 export `RawVocabularyEntry[]`，並由聚合層 `jpWords.ts` 依 N5→N4→N3→N2→N1 串接。**
-   - 證據：現有 `useVocabularySession` 透過 `import { vocabularyEntries } from '@/modules/vocabulary/data/jpWords'` 使用，並在 `normalizeVocabularyEntries` 用陣列順序產生 id；保留聚合層可降低呼叫端改動成本。
-   - 若錯：若預期改成 lazy import（按需載入單一 stage），則 `useVocabularySession`、`filterVocabularyEntries`、`buildVisibleStageGroups` 都要改寫。
-   - 結論：拆檔結構維持「`jpword_N*.ts` 各自 export `RawVocabularyEntry[]` + 聚合層 `jpWords.ts` 串接」。同時在合併 CSV 之後，為每筆單字補一個 `displayId`（格式 `N5_1`、`N4_100`），用於人類可讀的展示／log，但**不作為儲存 key**（見假設 #5 結論）。
-
-5. **註記儲存（`vocabularyMarksStorage`）必須改用 stable natural key，而不是繼續用 `index + 1`。**
-   - 證據：`normalizeVocabularyEntries` 的 id 是陣列 index + 1；只要拆檔、刪重複、或合併 CSV，所有 id 會重新編號 → 既有使用者的 `markedIds` 會指到錯誤單字。
-   - 若錯：若選擇「不保留既有註記、直接清空」，則只需要在發版時主動 `clearVocabularyMarksSnapshot`，不需要 schema migration。
-   - 結論：採「儲存 key 與 displayId 分離」雙軌制：
-     - **儲存 key（用於 `vocabularyMarksStorage`）**：使用內容 natural key `${text}|${kanji}`（不含 stage，避免未來重新分級導致註記失效；空 `kanji` 以空字串保留，例：`おい|`）。對應的型別由 `markedIds: number[]` 改成 `markedKeys: string[]`，schema bump 到 `version: 2`。
-     - **displayId（用於 UI / log / debug）**：採 `N5_1`、`N4_100` 格式，於最後一步合併 CSV 之後一次發配，並遵守 **append-only、不回收已刪除號碼** 的紀律；不參與儲存／不參與比對相等性判斷。
-     - **migration / 校驗策略（統一規則：對不上就直接刪掉那筆 localStorage 資料，無通知）**：
-       - **時機 A（v1 → v2 schema 升級當下）**：讀 v1 `markedIds`，逐筆以「當下字典順序」反查 `text + kanji` 換成新 key；查不到的那筆直接捨棄，最後寫回 v2。
-       - **時機 B（每次 app 啟動載入 v2 時）**：把 `markedKeys` 與當下字典的 natural-key 索引比對；不存在的 key 直接從 `markedKeys` 移除並寫回 localStorage。
-       - 兩個時機共用同一個 helper：`pruneMarkedKeysAgainstDictionary(keys, dictionaryKeySet) → keys'`，純函式、易測。
-       - **不彈 alert、不寫 log 給使用者看**（使用者不需要知道某筆失效）。
-
-> **這 5 條哪些是錯的？** 若全部成立，我就以這個假設集進入 Convergence。
+> **前提**：上一輪 propose 的「natural-key 重構」（`refactor-vocabulary-marks-storage-key`）已實作完成。本次新需求直接基於現有 `markKey` / `markedKeys` 架構設計，不再動 storage 層。
 
 ---
 
-## 三大議題的關鍵風險與相依性
+## 設計總則 A：多義單字資料模型
 
-```
-┌─────────────────────────┐    ┌──────────────────────────────┐    ┌──────────────────────────────┐
-│  ① CSV 整理（外部資料）  │ ─▶ │  ② 拆檔 + 與 CSV 合併（內部） │ ─▶ │  ③ 註記儲存重構              │
-│  - 英文 → 中文           │    │  - jpword.ts → jpword_N*.ts  │    │  - markedIds 改成 stable key │
-│  - 詞性標註              │    │  - 跨檔去重                  │    │  - schema migration          │
-│  - 動詞辭書形            │    │  - CSV 與字典檔合併          │    │                              │
-└─────────────────────────┘    └──────────────────────────────┘    └──────────────────────────────┘
+### A.1 `kanji` 與 `meaning` 欄位的分段規則
+
+兩欄都視為「以 `\n` 分段的列表」：
+
+- **`kanji` 欄**：只列出**有漢字**的義，按順序，不放 placeholder。例：`殻\n空`
+- **`meaning` 欄**：列出**所有**義（有漢字 + 無漢字），無漢字的義一律放尾端。例：`外殼\n空(無內容)\n從～、因為～；助詞`
+- **對齊規則**：第 k 段 meaning 對應第 k 個 kanji；超出 kanji 段數的 meaning 段一律是「無漢字義」、放最後
+- **約束**：`meaning.split('\n').length >= kanji.split('\n').length`，無漢字段一定在尾端
+- **單義單字**：`kanji` 與 `meaning` 都是單一字串、無 `\n`（與既有絕大多數 entries 行為一致）
+
+### A.2 新增 entry 的處理規則
+
+- **去重 key**：`text + kanji`（完整字串，含 `\n`）
+  - 完全相同（兩欄都同）→ 拒絕加入
+  - 同音異字（text 同、kanji 不同，例 `あつい / 暑い` vs `あつい / 熱い`）→ 允許加入
+- **位置**：不特別排序，直接 append 到該 stage 區段尾端
+- **入庫前檢查**：spec / lint 規則中明文：新增前先比對 `text + kanji`，已存在則拒絕加入
+
+### A.3 `から` 新增 entry（N5 區段尾端）
+
+```ts
+{
+  text: "から",
+  romanization: "ka-ra",
+  kanji: "殻\n空",
+  meaning: "外殼\n空(無內容)\n從～、因為～；助詞",
+  stage: "N5",
+}
 ```
 
-### 風險清單
+### A.4 既有違規條目處理
+
+寫一支 audit 腳本掃描 `jpWords.ts`，找出違反 A.1 規則的條目（無漢字義不在尾端、或 meaning 段數 < kanji 段數）。違規條目逐筆修正：搬到尾端、meaning 段順序也跟著調整。
+
+---
+
+## 設計總則 B：測驗功能
+
+### B.1 「開始測驗」按鈕（VocabularyControlBar）
+
+- **位置**：放在「儲存註記」按鈕**左側**；那一行右半邊變成 `[開始測驗] [儲存註記]`
+- **間距**：兩按鈕之間的間距 = 左半邊 checkbox 群內部 checkbox 間距
+- **enabled 條件**：`visibleEntries.value.some(e => draftMarkedKeys.value.has(e.markKey))` ≥ 1
+- **disabled 樣式**：`BaseButton variant="primary" :disabled="!canStartVocabularyExam"`，配色參考字母練習「送出」按鈕
+
+### B.2 題目展開（測驗開始時 snapshot）
+
+對「測驗開始時 `visibleEntries ∩ draftMarkedKeys` 快照」中每筆 entry，依 `meaning` 段數展開 `N` 題：
+
+| 段 index | 對應 kanji 段 | promptText | answerText | question id |
+|----------|--------------|-----------|-----------|-------------|
+| 0 | `殻` | `から／殻` | `外殼` | `${markKey}__seg0` |
+| 1 | `空` | `から／空` | `空(無內容)` | `${markKey}__seg1` |
+| 2 | （無）| `から` | `從～、因為～；助詞` | `${markKey}__seg2` |
+
+- prompt 中的分隔符用全形「／」（與 discuss.txt 行 32–33 一致）
+- 同一個原始 entry 的多題共享同一個 `markKey`（沿用 `entry.markKey`，由 `vocabularyFilters` 既有規則生成）
+- 每張題卡的 unique id 為 `${markKey}__seg${index}`，結算時用 `markKey` 聚合同 entry 的所有題卡
+- **題目總數**：`sum(snapshot 中每個 entry 的 meaning.split('\n').length)`，**無題數上限**
+- **題目排序**：所有題卡展開後做**全題完全洗牌**，同 entry 的多題會散在隨機位置
+- **題目集合 snapshot**：測驗開始時固定，之後使用者切換 stage filter / 改 checkbox 都不影響進行中的題庫
+
+### B.3 結算規則（per-entry 匯總）
+
+統一原則：
+
+> **只有「全部段都已答 + 全部都是『下一步』」才解除打勾；任何「我不知道」或「未答」都視為打勾。**
+
+| 該 entry 的答題狀態 | 結算動作 |
+|---------------------|---------|
+| 至少一段點過「我不知道」 | 加入 `draftMarkedKeys`（打勾） |
+| 至少一段**未答**（即使其他段都點「下一步」）| 加入 `draftMarkedKeys`（打勾） |
+| 完全沒答任何段（中途關閉、該 entry 都還沒輪到） | 加入 `draftMarkedKeys`（打勾） |
+| **全部段都已答 + 全部都是「下一步」** | 從 `draftMarkedKeys` 移除（取消打勾） |
+
+**結算寫入路徑**：
+
+- **只更新 `draftMarkedKeys`**（純畫面狀態 = table 上各列右側的 checkbox 勾選狀態）
+- **不**寫 `persistedMarkedKeys`、**不**寫 localStorage、**不**走 `saveMarks()` 路徑
+- 使用者要持久化必須再點「儲存註記」按鈕（與一般打勾改動的路徑相同）
+- 因為測驗開始時題庫 = `visibleEntries ∩ draftMarkedKeys`（每個受測 entry 原本就是打勾），所以結算只有「保留打勾」或「移除打勾」兩種終態，不會出現「測驗中新增打勾」
+
+**與字母練習結算完全分開**：
+
+- 字母練習結算：寫 `latestUnknownResults` localStorage，顯示 `UnknownResultPanel`
+- 單字練習結算：只動 `draftMarkedKeys`，**不**寫 `latestUnknownResults`、**不**顯示任何 result panel、**不**產生「我不清楚的單字」清單
+
+### B.4 Modal 行為（複用 ExamModal）
+
+- **保留** `ExamModal.vue` 結構與 `next / unknown / confirmClose` 事件介面
+- **擴充點**：
+  - 新增 prop `promptSize?: 'lg' | 'md'`，預設 `'lg'`（字母練習用），單字練習傳 `'md'`（≈ 1.5rem）
+  - 答案區加 `word-break: break-word; overflow-wrap: anywhere;` 防破版
+- **中途關閉**：使用者按 X 鈕 → `window.confirm('確定要結束練習嗎？')` → 確認後**也走 settle()**，套用 B.3 結算規則（已答的算數，未答的視為打勾）
+
+### B.5 Session 結構（兩支並列）
+
+新增 `useVocabularyExamSession` composable，與既有 `createExamSession` 並列：
+
+- 字母練習：用既有 `createExamSession`，邏輯不動
+- 單字練習：用新的 `useVocabularyExamSession`，負責：
+  - 從 `visibleEntries ∩ draftMarkedKeys` 快照展開題目（B.2）
+  - 結算時跑 B.3 規則回寫 `draftMarkedKeys`
+- 題目型別：`exam.ts` 加一個 `VocabularyExamQuestionCard`，與既有 `ExamQuestionCard` 並列（不需要 generic 化）
+
+### B.6 結算後 UX 提示
+
+結算結束時 modal 顯示一段提示：「測驗結算已更新畫面上的勾選，記得按『儲存註記』才能保存」。或者讓「儲存註記」按鈕在 `hasUnsavedMarkChanges` 為 true 時視覺強調（如 highlight）。具體交給設計階段定。
+
+---
+
+## 風險與因應
 
 | # | 風險 | 影響 | 因應 |
 |---|------|------|------|
-| R1 | LLM 翻譯約 7962 筆英文 → 中文，極可能出現幻覺 / 錯詞性 | 違反大前提「精準、不允許錯誤」 | 分批 + 對照 + 抽樣校對；保留原 CSV 為唯一真相，不要直接覆寫 |
-| R2 | 跨 CSV 去重時把同形異義詞誤判為重複 | 教材缺字 | 用 `expression + reading + meaning shape` 做去重判定 |
-| R3 | 拆檔後 `vocabularyEntries` 順序變動 → `index + 1` id 全部重編 | 既有使用者本機儲存的註記指到錯字 | 在「拆檔合併 CSV」前先重構 `vocabularyMarksStorage`，把 key 改成 natural key `${text}\|${kanji}`（不含 stage） |
-| R4 | jpWords.ts 既有資料的詞性標註可能與規則不一致（範例 `かく` 是有標的，但全檔不確定覆蓋率） | 教材一致性 | 在拆檔前先做一輪「標註審計」，列出未符合規則的條目 |
-| R5 | 動詞辭書形偵測：CSV 含可能不是辭書形（例：`開ける` 是辭書形、但網路抓的條目可能混入「ます形」「て形」） | 教材正確性 | 對動詞 entries 跑規則化器（後綴白名單）+ 人工抽查 |
-| R6 | 一次塞 ~5000–8000 筆進 `RawVocabularyEntry[]` | 啟動效能 / bundle 大小 | 先測量 baseline；必要時改 per-stage lazy import |
-| R7 | CSV 屬於 `_private/`，不確定是否該進 repo | 機敏 / 智財 / 與專案教材定位的衝突 | 待使用者確認；建議只把「整理過後」的字典檔放 `src/`，原始 CSV 保留 `_private/` |
-| R8 | `displayId`（`N5_1`、`N4_100`）若被當成 key 使用會復現原本的位置依賴問題 | 註記再次失效 | 明確規定 displayId **僅供顯示**；儲存層只認 natural key；加 lint / code review checklist 防止誤用 |
-| R9 | 同一個 stage 內若有兩筆 `text + kanji` 完全相同（理論上應已被 #2 去重判定刪掉一個） | natural key 撞號、註記混淆 | `clean-private-csv` 與 `split-and-merge-jpwords` 的最後驗收必須跑 uniqueness assertion，撞號即 fail |
-| R10 | 同一個 `text + kanji` 出現在不同 stage（例：N5 與 N3 都有「あう／会う」） | natural key 因不含 stage 會衝突 | 假設 #3 已規定「保留低 stage、刪高 stage」，所以合併後不會發生；同樣需要 uniqueness assertion 把關 |
+| R1 | 結算後 `draftMarkedKeys` ≠ `persistedMarkedKeys`，使用者可能誤以為已自動保存，關頁面 → 結果丟失 | UX | B.6 的提示 + 「儲存註記」按鈕視覺強調 |
+| R2 | 既有資料若違反 A.1 規則（無漢字義在中間） | 規則套用後資料不一致 | A.4 的 audit 腳本掃描 + 逐筆修正 |
+| R3 | ExamModal 改動可能影響字母練習測驗 | 既有功能回歸 | `promptSize` 預設 `'lg'` 保持字母練習零變動；新測試覆蓋兩條路徑 |
+| R4 | 多義 entry 的 kanji + meaning 段數不一致 → 題目展開錯亂 | 題目顯示錯誤 | dev mode assert；上線版以 meaning 段數為準、kanji 段不足補空字串 |
+| R5 | 全題完全洗牌後，使用者中途關閉時某 entry 可能只答到部分段 | 結算需處理「部分已答」 | B.3 的 4 列規則已涵蓋（任一未答 → 打勾） |
+| R6 | 字母練習與單字練習結算行為不一致，未來可能被誤改成共用 | 行為退化 | `useVocabularyExamSession.settle()` 加註解明確說明「不寫 localStorage / 不顯示 unknown panel」；spec 中明文寫出兩者差異 |
 
 ---
 
-## 建議的拆分（建議切成 4 個 Spectra changes，依序進行）
+## Spectra Changes 拆分
 
-1. **`audit-jpwords-pos-tagging`**（前置作業，無資料動）
-   - 跑掃描，列出 `jpWords.ts` 中所有未符合「(い形容詞 / な形容詞 / 五段動詞 / 一段動詞)」標註規則的條目。
-   - 純報告、不改檔，作為後續變更的範圍依據。
+### A. `add-multi-meaning-vocabulary-rule`
 
-2. **`refactor-vocabulary-marks-storage-key`**（必須先做）
-   - 把 `VocabularyMarkSnapshot.markedIds: number[]` 改成 `markedKeys: string[]`，元素為 natural key `${text}|${kanji}`（**不含 stage**，避免未來重新分級失效）。
-   - schema 升到 `version: 2`。實作 `pruneMarkedKeysAgainstDictionary(keys, dictionaryKeySet)` 純函式。
-   - v1 → v2 升級：用當下字典反查 `text + kanji` 換成新 key；對不上的直接丟棄、不通知。
-   - 每次啟動載入 v2：用同一個 prune helper 對當下字典再校驗一次，找不到的 key 直接從 localStorage 移除。
-   - 連帶調整：`VocabularyEntry.id` 仍可保留為 number 不影響此變更，但 `useVocabularySession` 中所有依賴 `markedIds`（含 `toggleMarked`、`saveMarks`、`clearAll...`、`showMarkedOnly` 過濾）都要改為以 key 比對。
-   - 不更動字典檔內容，純粹替後續變更解除耦合。
+獨立可驗收，不依賴其他 change。
 
-3. **`clean-private-csv`**（與字典檔解耦的第一步）
-   - 五份 CSV 的：英文→中文翻譯、詞性標註、動詞辭書形轉換、跨檔去重。
-   - 分批 PR / commit，每批含對照表與抽樣審查紀錄。
-   - 不動 `src/`。
+**Tasks**：
 
-4. **`split-and-merge-jpwords`**（最後一步，吃 #1、#2、#3 的成果）
-   - 把 `jpWords.ts` 拆成 `jpword_N1..N5.ts`，聚合層維持 N5→N4→N3→N2→N1 的串接順序。
-   - 與整理過後的 CSV 合併（按假設 #2 的 key 做去重 / 合併 / 翻譯整併）。
-   - **合併完成後一次性發配 `displayId`**：每個 stage 內依排序給流水號 `N5_1`、`N5_2` ... `N4_1`、`N4_100` ...；同時在 `RawVocabularyEntry` / `VocabularyEntry` 加 `displayId: string` 欄位。
-   - 加上 lint / 自動化檢查：禁止手動修改 `displayId`，新單字一律 `append` 到該 stage 的尾端取下一號，刪除的單字其號碼不得回收。
-   - 切換 `useVocabularySession` 的 import 來源；驗證註記功能仍正確（已被 #2 解耦，註記是綁 natural key、不是 displayId）。
+- 在 spec 中明文規定 A.1（多義單字資料分段規則）與 A.2（新增 entry 的去重 key + append-only 規則）
+- 新增 `から` entry（A.3）到 jpWords.ts 中 N5 區段尾端
+- 寫 audit 腳本掃描 jpWords.ts 違規條目（A.4）
+- 違規條目逐筆修正：搬尾端、meaning 段順序對齊
+- 加 lint / build-time 檢查：每筆 entry 都符合 A.1 約束（meaning 段數 ≥ kanji 段數）
 
----
+**驗收**：
 
-## 仍待使用者裁示的點（Open Questions）
+- 新增的 `から` entry 可被 `useVocabularySession` 正確載入並顯示三段 meaning
+- audit 腳本對全檔執行 0 violation
+- 嘗試新增完全重複（同 text + kanji）的 entry 會被 lint 擋下
 
-> 這幾題會直接影響 propose 的範圍與技術決策，建議在啟動 `/spectra-propose` 之前先回答。
+### B. `add-vocabulary-quiz-feature`
 
-1. ~~**去重 key 定義**~~：已於假設 #2 結論中確認 — 用 `expression + reading`。
-2. ~~**註記遷移策略**~~：已於假設 #5 結論中確認 — 採「對不上就刪掉那筆 localStorage 資料、不通知」的統一規則，v1→v2 升級與每次啟動的 key 校驗共用同一個 prune helper。
-3. **是否導入 lazy import**：把 `jpword_N*.ts` 改成按需載入（依使用者勾選的 stage）？還是維持目前一次 import 全部？
-- 要導入lazy import
-4. **CSV 的 commit 策略**：原始 CSV 是否進 repo 作為教材來源？還是僅留 `_private/` 作為私有來源、最終只 commit 整理過的 `jpword_N*.ts`？
-- 原始 CSV 僅留 `_private/` 作為私有來源、最終只 commit 整理過的 `jpword_N*.ts`？
-5. ~~**動詞 / 形容詞詞性的權威來源**~~：採 **JMdict 為主、規則化器為輔、人工只審差異** 的三層 pipeline。原則：正確性極高、能不人工就不人工。
-   - **第 1 層 — JMdict lookup（自動）**：以 JMdict POS code 直接 mapping 到專案標籤
-     | JMdict code | 專案標籤 |
-     |-------------|---------|
-     | `adj-i` | い形容詞 |
-     | `adj-na` | な形容詞 |
-     | `v5k` / `v5s` / `v5r` / `v5g` / `v5b` / `v5m` / `v5n` / `v5t` / `v5u` … | 五段動詞 |
-     | `v1` | 一段動詞 |
-   - **第 2 層 — 規則化器 sanity check（自動）**：依字尾規則做 cross-check，與 JMdict 結果一致 → 直接通過；不一致 → 進第 3 層。
-   - **第 3 層 — Wiktionary 或次要字典 fallback（自動）**：JMdict 未命中時嘗試 Wiktionary API；仍未命中或多 POS 衝突 → 進第 4 層。
-   - **第 4 層 — 人工裁示（僅針對前三層全部失敗的 ⚠️ 條目）**：預期 < 5%。
-   - 落地：寫一支 Node script，吃整理過後的 CSV → 跑 4 層 pipeline → 輸出「自動完成 / 待人工裁示」兩份報表。JMdict 資料放 `_private/_tools/jmdict/`，不進 repo。
+依賴 A 完成（題目展開規則需要 A.1 的資料模型）。
 
-6. ~~**翻譯品質驗收標準**~~：採 **100% 人工逐筆審核** 為最終驗收門檻；「抽樣」只用於 pipeline 內部品控與事後審計，不是驗收標準。詳細條件：
-   - **每批（50–100 筆）完成條件**（全部打勾才算過）：
-     - [ ] 規則化器掃描 0 violation
-     - [ ] JMdict 詞性對照 0 unresolved（⚠️ 標記都已人工裁示）
-     - [ ] 100% 逐筆人工 review，每筆確認「翻譯正確 / 詞性正確 / 辭書形正確」
-     - [ ] 任何一筆有疑義 → 整批退回重做，不部分過
-   - **5 份 CSV 全部完成後的最終驗收**：
-     - [ ] uniqueness assertion 通過（跨檔無 `expression + reading` 重複）
-     - [ ] 詞性標註覆蓋率 100%
-     - [ ] 從 5 份 CSV 隨機抽 100 筆做事後 second-pass audit，0 error
-   - 注意：「最終驗收」中的隨機抽 100 筆是 audit（事後檢驗），不是接受門檻。接受門檻一律 100% 人工。
+**Tasks**：
+
+- `VocabularyControlBar` 新增「開始測驗」按鈕（B.1）
+- 新增 `useVocabularyExamSession` composable（B.2 + B.3 + B.5）
+- `ExamModal.vue` 加 `promptSize` prop + 答案斷行樣式（B.4）
+- `exam.ts` 擴充 `VocabularyExamQuestionCard` 型別
+- `VocabularyView.vue` 引入 ExamModal 與新 session
+- 結算後提示使用者要按「儲存註記」才會持久化（B.6）
+
+**測試**：
+
+- 題目展開（から 三題、單義單字一題、kanji + meaning 段數對齊）
+- 結算 4 種狀態（全下一步 / 任一不知道 / 任一未答 / 完全沒答）
+- 「開始測驗」 enabled / disabled 條件（visibleEntries ∩ draftMarkedKeys 為空時 disabled）
+- 結算後 `draftMarkedKeys` 變動但 `persistedMarkedKeys` 不變（不寫 localStorage）
+- 結算後不影響 `latestUnknownResults`（與字母練習結算解耦）
+- 中途關閉測驗也跑 settle（confirmClose 路徑）
+- 測驗中切換 stage filter 不影響已 snapshot 的題庫
 
 ---
 
-## Conclusion
+## 已收斂的決策（速查）
 
-- **Decision：** 三大議題彼此有強相依，拆成 **4 個 Spectra changes** 依序執行：`audit-jpwords-pos-tagging` → `refactor-vocabulary-marks-storage-key` → `clean-private-csv` → `split-and-merge-jpwords`。
-- **Rationale：** 註記儲存目前以 `index + 1` 為 key，任何拆檔／去重／合併動作都會破壞既有使用者的本地註記；因此「儲存重構」必須**先於**字典檔結構變動。同時 ~7962 筆翻譯與詞性標註的工作量遠大於一次 PR 可承受，必須分批 + 解耦。
-- **已收斂的關鍵設計**：
-  - 儲存層 key：`${text}|${kanji}` natural key（不含 stage）
-  - displayId：`N5_1`、`N4_100`，append-only、僅供顯示
-  - 校驗策略：對不上就直接從 localStorage 移除、不通知
-  - 字典檔載入：lazy import，依使用者勾選的 stage 按需載入
-  - 原始 CSV：留 `_private/`、不進 repo；只 commit 整理過的 `jpword_N*.ts`
-  - 詞性標註：JMdict → 規則化器 → Wiktionary fallback → 人工（< 5%）四層 pipeline
-  - 驗收：100% 人工逐筆審核為最終門檻；抽樣只用於 pipeline 品控與事後 audit
-- **Capture to：** 本檔（`_private/propose.md`）。後續每個 change 由 `/spectra-propose <change-name>` 各自展開為 proposal / design / spec / tasks。
+| 主題 | 決策 |
+|------|------|
+| 多義 entry 分段 | `\n` 分段、無漢字義一律放尾端、`meaning` 段數 ≥ `kanji` 段數 |
+| 新增 entry 去重 key | `text + kanji`（同音異字允許、完全相同拒絕） |
+| 新增 entry 位置 | append 到該 stage 區段尾端，不特別排序 |
+| `から` 的 stage | N5 |
+| 「開始測驗」題目來源 | `visibleEntries ∩ draftMarkedKeys`（畫面上 + 已勾選） |
+| 「開始測驗」disabled 條件 | 上述交集為空時 disable，配色參考字母練習「送出」按鈕 |
+| 題目展開 | 每段 meaning 一題；prompt = `text／kanji`（無漢字段只有 text）；題卡 id = `${markKey}__seg${index}` |
+| 題目排序 | 全題完全洗牌 |
+| 題目集合 | 測驗開始時 snapshot、之後固定 |
+| 題數限制 | 無上限 |
+| Modal | 複用 ExamModal + `promptSize='md'` + 答案斷行 |
+| Session 結構 | 兩支並列（字母用 `createExamSession`、單字用新增 `useVocabularyExamSession`） |
+| 結算寫入 | 只動 `draftMarkedKeys`；**不**寫 localStorage、**不**走 saveMarks |
+| 結算 per-entry 規則 | 全段已答 + 全「下一步」→ 移除打勾；任一「我不知道」或「未答」→ 打勾 |
+| 中途關閉 | 也跑 settle（已答算數、未答視為打勾） |
+| 字母 vs 單字結算 | 完全分開：字母寫 `latestUnknownResults` 並顯示 panel；單字不寫、不顯示 |
 
 ---
 
-## 建議下一步
+## 建議下一步（交由 Codex / `/spectra-propose` 處理）
 
-所有假設與 Open Questions 都已收斂，可以直接啟動第一個 change：
+依序啟動：
 
 ```
-/spectra-propose refactor-vocabulary-marks-storage-key
+/spectra-propose add-multi-meaning-vocabulary-rule
+/spectra-propose add-vocabulary-quiz-feature
 ```
 
-依序執行：
-
-1. `/spectra-propose refactor-vocabulary-marks-storage-key`（儲存層解耦，必須最先做）
-2. `/spectra-propose audit-jpwords-pos-tagging`（純報告，掃描既有 jpWords.ts 標註不合規條目）
-3. `/spectra-propose clean-private-csv`（五份 CSV 翻譯／詞性／辭書形／去重，跑 JMdict 四層 pipeline）
-4. `/spectra-propose split-and-merge-jpwords`（拆檔、與 CSV 合併、發配 displayId、切換 lazy import）
+第一支必須先完成並驗收，第二支才能展開（因為題目展開規則依賴 A.1 的資料模型）。
