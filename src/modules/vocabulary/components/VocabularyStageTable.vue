@@ -8,8 +8,8 @@ const props = defineProps<{
   showKanji: boolean;
   practiceMode: boolean;
   columnVisibility: VocabularyColumnVisibility;
-  savedMarkedIds: number[];
-  draftMarkedIds: number[];
+  savedMarkedKeys: ReadonlySet<string>;
+  draftMarkedKeys: ReadonlySet<string>;
   revealedEntryId: number | null;
 }>();
 
@@ -17,7 +17,7 @@ const emit = defineEmits<{
   'update:wordColumnVisible': [value: boolean];
   'update:combinedColumnVisible': [value: boolean];
   'update:meaningColumnVisible': [value: boolean];
-  'toggle-marked': [id: number, value: boolean];
+  'toggle-marked': [key: string, value: boolean];
   'clear-marks': [];
   'begin-reveal': [id: number];
   'end-reveal': [id?: number];
@@ -27,12 +27,12 @@ const clearMarksChecked = ref(false);
 const pressedAtMap = new Map<number, number>();
 const suppressRowClickId = ref<number | null>(null);
 
-function isDraftMarked(id: number) {
-  return props.draftMarkedIds.includes(id);
+function isDraftMarked(key: string) {
+  return props.draftMarkedKeys.has(key);
 }
 
-function isSavedMarked(id: number) {
-  return props.savedMarkedIds.includes(id);
+function isSavedMarked(key: string) {
+  return props.savedMarkedKeys.has(key);
 }
 
 function isContentVisible(column: 'word' | 'combined' | 'meaning', entryId: number) {
@@ -84,13 +84,13 @@ function handlePointerEnd(id: number) {
   emit('end-reveal', id);
 }
 
-function handleRowClick(id: number) {
-  if (suppressRowClickId.value === id) {
+function handleRowClick(entry: VocabularyEntry) {
+  if (suppressRowClickId.value === entry.id) {
     suppressRowClickId.value = null;
     return;
   }
 
-  emit('toggle-marked', id, !isDraftMarked(id));
+  emit('toggle-marked', entry.markKey, !isDraftMarked(entry.markKey));
 }
 </script>
 
@@ -147,8 +147,8 @@ function handleRowClick(id: number) {
           v-for="entry in props.entries"
           :key="entry.id"
           :data-testid="`vocabulary-row-${entry.id}`"
-          :class="{ 'vocabulary-marked-row': isSavedMarked(entry.id) }"
-          @click="handleRowClick(entry.id)"
+          :class="{ 'vocabulary-marked-row': isSavedMarked(entry.markKey) }"
+          @click="handleRowClick(entry)"
           @contextmenu.prevent
           @pointerdown="handlePointerDown(entry.id)"
           @pointerup="handlePointerEnd(entry.id)"
@@ -195,10 +195,10 @@ function handleRowClick(id: number) {
               <input
                 :data-testid="`vocabulary-mark-checkbox-${entry.id}`"
                 type="checkbox"
-                :checked="isDraftMarked(entry.id)"
+                :checked="isDraftMarked(entry.markKey)"
                 @pointerdown.stop
                 @click.stop
-                @change="emit('toggle-marked', entry.id, ($event.target as HTMLInputElement).checked)"
+                @change="emit('toggle-marked', entry.markKey, ($event.target as HTMLInputElement).checked)"
               />
             </div>
           </td>

@@ -22,8 +22,8 @@ export function useVocabularySession() {
   const revealedEntryId = ref<number | null>(null);
   const selectedJlptLevels = ref<Set<VocabularyJlptLevel>>(new Set(vocabularyJlptLevels));
 
-  const persistedMarkedIds = ref(readVocabularyMarksSnapshot()?.markedIds ?? []);
-  const draftMarkedIds = ref([...persistedMarkedIds.value]);
+  const persistedMarkedKeys = ref(new Set(readVocabularyMarksSnapshot(vocabularyEntries)?.markedKeys ?? []));
+  const draftMarkedKeys = ref(new Set(persistedMarkedKeys.value));
   let revealTimer: number | null = null;
 
   const columnVisibility = computed(() => ({
@@ -54,7 +54,7 @@ export function useVocabularySession() {
       filterState.value,
       practiceSession.includeHiragana.value,
       practiceSession.includeKatakana.value,
-      persistedMarkedIds.value
+      persistedMarkedKeys.value
     )
   );
 
@@ -64,26 +64,26 @@ export function useVocabularySession() {
     vocabularyJlptLevels.every((level) => selectedJlptLevels.value.has(level))
   );
   const hasUnsavedMarkChanges = computed(() => {
-    const next = [...draftMarkedIds.value].sort((a, b) => a - b);
-    const current = [...persistedMarkedIds.value].sort((a, b) => a - b);
+    const next = [...draftMarkedKeys.value].sort();
+    const current = [...persistedMarkedKeys.value].sort();
 
     return JSON.stringify(next) !== JSON.stringify(current);
   });
 
-  function updateMarkedIds(target: typeof draftMarkedIds, id: number, value: boolean) {
+  function updateMarkedKeys(target: typeof draftMarkedKeys, key: string, value: boolean) {
     const next = new Set(target.value);
 
     if (value) {
-      next.add(id);
+      next.add(key);
     } else {
-      next.delete(id);
+      next.delete(key);
     }
 
-    target.value = [...next].sort((a, b) => a - b);
+    target.value = next;
   }
 
-  function toggleMarked(id: number, value: boolean) {
-    updateMarkedIds(draftMarkedIds, id, value);
+  function toggleMarked(key: string, value: boolean) {
+    updateMarkedKeys(draftMarkedKeys, key, value);
   }
 
   function setSelectedJlptLevels(levels: Iterable<VocabularyJlptLevel>) {
@@ -112,8 +112,8 @@ export function useVocabularySession() {
     }
 
     const snapshot = {
-      version: 1 as const,
-      markedIds: [...new Set(draftMarkedIds.value)].sort((a, b) => a - b),
+      version: 2 as const,
+      markedKeys: [...draftMarkedKeys.value].sort(),
       updatedAt: new Date().toISOString()
     };
 
@@ -122,8 +122,8 @@ export function useVocabularySession() {
       return false;
     }
 
-    persistedMarkedIds.value = [...snapshot.markedIds];
-    draftMarkedIds.value = [...snapshot.markedIds];
+    persistedMarkedKeys.value = new Set(snapshot.markedKeys);
+    draftMarkedKeys.value = new Set(snapshot.markedKeys);
     return true;
   }
 
@@ -137,8 +137,8 @@ export function useVocabularySession() {
     }
 
     clearVocabularyMarksSnapshot();
-    persistedMarkedIds.value = [];
-    draftMarkedIds.value = [];
+    persistedMarkedKeys.value = new Set();
+    draftMarkedKeys.value = new Set();
   }
 
   function clearRevealTimer() {
@@ -180,8 +180,8 @@ export function useVocabularySession() {
     meaningColumnVisible,
     selectedJlptLevels,
     columnVisibility,
-    persistedMarkedIds,
-    draftMarkedIds,
+    persistedMarkedKeys,
+    draftMarkedKeys,
     visibleEntries,
     visibleEntryCount,
     hasAnyVisibleEntries,

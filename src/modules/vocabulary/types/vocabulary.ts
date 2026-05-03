@@ -12,6 +12,7 @@ export interface RawVocabularyEntry {
 
 export interface VocabularyEntry {
   id: number;
+  markKey: string;
   text: string;
   romanization: string;
   kanji: string;
@@ -47,8 +48,8 @@ export interface VocabularyFilterState {
 }
 
 export interface VocabularyMarkSnapshot {
-  version: 1;
-  markedIds: number[];
+  version: 2;
+  markedKeys: string[];
   updatedAt: string;
 }
 

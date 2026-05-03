@@ -142,7 +142,7 @@ describe('vocabulary filters', () => {
       createFilterState({ showMarkedOnly: true, selectedJlptLevels: selectLevels('N5') }),
       true,
       true,
-      [1, 2]
+      [entries[0]!.markKey, entries[1]!.markKey]
     );
 
     expect(result.map((entry) => entry.text)).toEqual(['あさ']);
@@ -164,7 +164,7 @@ describe('vocabulary filters', () => {
       }),
       true,
       true,
-      [1, 2, 4]
+      [entries[0]!.markKey, entries[1]!.markKey, entries[3]!.markKey]
     );
     const visibleStageGroups = buildVisibleStageGroups(groupVocabularyEntriesByStage(entries), visibleEntries);
 

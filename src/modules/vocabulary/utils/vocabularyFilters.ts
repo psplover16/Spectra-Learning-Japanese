@@ -41,9 +41,14 @@ export function extractKanaUnits(text: string) {
   return Array.from(text).filter((char) => !punctuationSet.has(char));
 }
 
+export function createVocabularyMarkKey(entry: Pick<RawVocabularyEntry, 'text' | 'kanji'>) {
+  return `${entry.text}|${entry.kanji}`;
+}
+
 export function normalizeVocabularyEntries(entries: RawVocabularyEntry[]): VocabularyEntry[] {
   return entries.map((entry, index) => ({
     id: index + 1,
+    markKey: createVocabularyMarkKey(entry),
     text: entry.text,
     romanization: entry.romanization,
     kanji: entry.kanji,
@@ -139,9 +144,9 @@ export function filterVocabularyEntries(
   filterState: VocabularyFilterState,
   includeHiragana: boolean,
   includeKatakana: boolean,
-  markedIds: number[]
+  markedKeys: Iterable<string>
 ) {
-  const markedIdSet = new Set(markedIds);
+  const markedKeySet = new Set(markedKeys);
 
   return entries.filter((entry) => {
     if (!matchesJlptLevel(entry, filterState.selectedJlptLevels)) {
@@ -156,7 +161,7 @@ export function filterVocabularyEntries(
       return false;
     }
 
-    if (filterState.showMarkedOnly && !markedIdSet.has(entry.id)) {
+    if (filterState.showMarkedOnly && !markedKeySet.has(entry.markKey)) {
       return false;
     }
 
