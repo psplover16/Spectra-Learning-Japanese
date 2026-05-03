@@ -517,7 +517,7 @@ export const rawVocabularyEntries: RawVocabularyEntry[] = [
     text: "なま",
     romanization: "na-ma",
     kanji: "生",
-    meaning: "生的／未煮熟的／新鮮的",
+    meaning: "生的／未煮熟的／新鮮的（の形容詞）",
     stage: "N5",
   },
   {
@@ -1020,8 +1020,8 @@ export const rawVocabularyEntries: RawVocabularyEntry[] = [
   {
     text: "あげる",
     romanization: "a-ge-ru",
-    kanji: "上げる\n挙げる",
-    meaning: "給（一段動詞）\n舉起（一段動詞）\n提出（一段動詞）",
+    kanji: "上げる\n上げる\n挙げる\n揚げる",
+    meaning: "給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）",
     stage: "N5",
   },
   {
@@ -2491,7 +2491,7 @@ export const rawVocabularyEntries: RawVocabularyEntry[] = [
   {
     text: "はたらく",
     romanization: "ha-ta-ra-ku",
-    kanji: "働く",
+    kanji: "働く\n働く",
     meaning: "工作（五段動詞）\n起作用（五段動詞）",
     stage: "N4",
   },

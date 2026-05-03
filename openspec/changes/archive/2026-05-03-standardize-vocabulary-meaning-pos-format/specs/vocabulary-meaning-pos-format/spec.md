@@ -14,7 +14,7 @@ Vocabulary dictionary entries SHALL format multiple meanings as separate lines i
 
 | Entry text | Entry kanji | Expected meaning |
 | ---------- | ----------- | ---------------- |
-| `はたらく` | `働く` | `工作（五段動詞）\n起作用（五段動詞）` |
+| `はたらく` | `働く\n働く` | `工作（五段動詞）\n起作用（五段動詞）` |
 
 #### Scenario: Mixed multi-line meanings keep part-of-speech markers on every verb sense
 
@@ -26,6 +26,50 @@ Vocabulary dictionary entries SHALL format multiple meanings as separate lines i
 | Entry text | Entry kanji | Expected meaning |
 | ---------- | ----------- | ---------------- |
 | `かえる` | `帰る\n変える` | `回家（五段動詞）\n改變（一段動詞）` |
+
+### Requirement: Vocabulary kanji lines align with meaning lines
+
+Vocabulary dictionary entries SHALL keep `kanji` and `meaning` line positions aligned. When `meaning` contains multiple lines, `kanji` MUST contain the same number of lines. If a sense reuses an existing kanji spelling, that kanji spelling MUST be repeated on the corresponding `kanji` line. If a sense truly has no kanji spelling, the corresponding `kanji` line MUST be empty.
+
+#### Scenario: Reused kanji is repeated for aligned senses
+
+- **WHEN** a vocabulary entry has multiple meaning lines and two senses use the same kanji spelling
+- **THEN** the `kanji` value contains one line for each `meaning` line
+- **AND** the repeated kanji spelling appears on each corresponding `kanji` line
+
+##### Example: aligned ageru senses
+
+| Entry text | Expected kanji | Expected meaning |
+| ---------- | -------------- | ---------------- |
+| `あげる` | `上げる\n上げる\n挙げる\n揚げる` | `給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）` |
+
+#### Scenario: Missing kanji is represented by an empty aligned line
+
+- **WHEN** a meaning line truly has no kanji spelling
+- **THEN** the corresponding `kanji` line is empty
+- **AND** other `kanji` lines remain in their original positions
+
+##### Example: intentional empty kanji line
+
+| Entry text | Expected kanji | Expected meaning |
+| ---------- | -------------- | ---------------- |
+| `example` | `例一\n\n例三` | `第一義\n第二義\n第三義` |
+
+### Requirement: Vocabulary meaning labels are concise and learner-readable
+
+Vocabulary meaning lines SHALL use concise Traditional Chinese labels that identify the sense without requiring hidden context. A meaning label MUST avoid standalone ambiguous verbs when a short contextual label can distinguish the sense more clearly.
+
+#### Scenario: Ambiguous standalone label is replaced with contextual wording
+
+- **WHEN** a vocabulary sense label would be ambiguous as a standalone Traditional Chinese verb
+- **THEN** the `meaning` line uses a short contextual label that clarifies the sense
+- **AND** the line keeps its required part-of-speech marker
+
+##### Example: ageru listing sense
+
+| Entry text | Entry kanji | Invalid meaning | Expected meaning |
+| ---------- | ----------- | --------------- | ---------------- |
+| `あげる` | `挙げる` | `提出（一段動詞）` | `列舉／舉例（一段動詞）` |
 
 ### Requirement: Vocabulary part-of-speech markers use full-width parentheses
 
@@ -55,7 +99,7 @@ Confirmed vocabulary entries that are verbs or adjectives SHALL include a part-o
 
 | Entry text | Entry kanji | Expected meaning |
 | ---------- | ----------- | ---------------- |
-| `あげる` | `上げる\n挙げる` | `給（一段動詞）\n舉起（一段動詞）\n提出（一段動詞）` |
+| `あげる` | `上げる\n上げる\n挙げる\n揚げる` | `給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）` |
 
 #### Scenario: Transitivity annotation does not replace verb class
 
@@ -67,6 +111,17 @@ Confirmed vocabulary entries that are verbs or adjectives SHALL include a part-o
 | Entry text | Entry kanji | Expected meaning |
 | ---------- | ----------- | ---------------- |
 | `あげる` | `上げる` | `提高（一段動詞；他動詞）` |
+
+#### Scenario: No-adjective meanings are marked
+
+- **WHEN** JMdict maps an entry to `adj-no`
+- **THEN** every adjective meaning line for that entry contains `（の形容詞）`
+
+##### Example: nama no-adjective
+
+| Entry text | Entry kanji | Expected meaning |
+| ---------- | ----------- | ---------------- |
+| `なま` | `生` | `生的／未煮熟的／新鮮的（の形容詞）` |
 
 ### Requirement: JMdict is the primary part-of-speech source
 
@@ -86,6 +141,7 @@ The vocabulary meaning format checker SHALL use JMdict lookup as the primary sou
 | `v5k` | `五段動詞` |
 | `adj-i` | `い形容詞` |
 | `adj-na` | `な形容詞` |
+| `adj-no` | `の形容詞` |
 
 #### Scenario: Ambiguous JMdict result is reported as unresolved
 
@@ -113,7 +169,7 @@ The vocabulary meaning format checker SHALL use JMdict lookup as the primary sou
 
 ### Requirement: Vocabulary meaning format is automatically checked
 
-The vocabulary test suite SHALL fail when current vocabulary data contains trailing shared part-of-speech markers, half-width part-of-speech markers, JMdict-classified verb/adjective entries without required markers, or unresolved JMdict lookup results without explicit allowlist reasons.
+The vocabulary test suite SHALL fail when current vocabulary data contains trailing shared part-of-speech markers, half-width part-of-speech markers, JMdict-classified verb/adjective entries without required markers, unresolved JMdict lookup results without explicit allowlist reasons, or `kanji` and `meaning` values with mismatched line counts.
 
 #### Scenario: Invalid format is rejected by tests
 

@@ -1,11 +1,11 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
-export const PROJECT_POS_MARKERS = ['五段動詞', '一段動詞', 'い形容詞', 'な形容詞'];
+export const PROJECT_POS_MARKERS = ['五段動詞', '一段動詞', 'い形容詞', 'な形容詞', 'の形容詞'];
 
-const FULL_WIDTH_MARKER_PATTERN = /（(五段動詞|一段動詞|い形容詞|な形容詞)）/;
-const HALF_WIDTH_MARKER_PATTERN = /\((五段動詞|一段動詞|い形容詞|な形容詞)\)/;
-const SHARED_MARKER_PATTERN = /；.+[（(](五段動詞|一段動詞|い形容詞|な形容詞)[）)]$/;
+const FULL_WIDTH_MARKER_PATTERN = /（(五段動詞|一段動詞|い形容詞|な形容詞|の形容詞)）/;
+const HALF_WIDTH_MARKER_PATTERN = /\((五段動詞|一段動詞|い形容詞|な形容詞|の形容詞)\)/;
+const SHARED_MARKER_PATTERN = /；.+[（(](五段動詞|一段動詞|い形容詞|な形容詞|の形容詞)[）)]$/;
 
 function toArray(value) {
   if (Array.isArray(value)) {
@@ -19,15 +19,30 @@ function toArray(value) {
   return [String(value)];
 }
 
+function toLineArray(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(toLineArray);
+  }
+
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  return [String(value)];
+}
+
 function unique(values) {
   return [...new Set(values)];
 }
 
-function splitLines(value) {
-  return toArray(value)
+function splitPreservedLines(value) {
+  return toLineArray(value)
     .flatMap((item) => item.split('\n'))
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .map((item) => item.trim());
+}
+
+function splitNonEmptyLines(value) {
+  return splitPreservedLines(value).filter(Boolean);
 }
 
 function normalizeComparable(value) {
@@ -40,6 +55,14 @@ function entryDiagnosticBase(entry, meaning, kanji = entry.kanji) {
     kanji,
     stage: entry.stage,
     meaning,
+  };
+}
+
+function createMisalignedDiagnostic(entry, meaningLines, kanjiLines) {
+  return {
+    ...entryDiagnosticBase(entry, entry.meaning),
+    kanjiLineCount: kanjiLines.length,
+    meaningLineCount: meaningLines.length,
   };
 }
 
@@ -96,6 +119,10 @@ export function mapJmdictPosToProjectMarker(posCode) {
     return 'な形容詞';
   }
 
+  if (posCode === 'adj-no') {
+    return 'の形容詞';
+  }
+
   if (posCode === 'v1') {
     return '一段動詞';
   }
@@ -109,7 +136,7 @@ export function mapJmdictPosToProjectMarker(posCode) {
 
 function findCompatibleJmdictEntries(vocabularyEntry, jmdictEntries, kanjiLines) {
   const reading = normalizeComparable(vocabularyEntry.text);
-  const expectedKanjiLines = splitLines(kanjiLines);
+  const expectedKanjiLines = splitNonEmptyLines(kanjiLines);
 
   return jmdictEntries.filter((entry) => {
     const readingMatches = entry.readings.includes(reading);
@@ -201,8 +228,8 @@ function analyzeClassifiedLine(entry, meaningLine, classification, kanjiLine, di
 }
 
 function analyzeJmdictMarkers(entry, jmdictEntries, diagnostics, allowlist) {
-  const meaningLines = splitLines(entry.meaning);
-  const kanjiLines = splitLines(entry.kanji);
+  const meaningLines = splitNonEmptyLines(entry.meaning);
+  const kanjiLines = splitPreservedLines(entry.kanji);
 
   if (meaningLines.length === 0) {
     return;
@@ -225,6 +252,19 @@ function analyzeJmdictMarkers(entry, jmdictEntries, diagnostics, allowlist) {
   }
 }
 
+function analyzeLineAlignment(entry, diagnostics) {
+  const meaningLines = splitPreservedLines(entry.meaning);
+  const kanjiLines = splitPreservedLines(entry.kanji);
+
+  if (meaningLines.every((meaningLine) => meaningLine === '')) {
+    return;
+  }
+
+  if (kanjiLines.length !== meaningLines.length) {
+    diagnostics.misalignedMeaningEntries.push(createMisalignedDiagnostic(entry, meaningLines, kanjiLines));
+  }
+}
+
 export function analyzeVocabularyMeaningFormat(rawVocabularyEntries, rawJmdictEntries, options = {}) {
   if (!Array.isArray(rawVocabularyEntries)) {
     throw new TypeError('rawVocabularyEntries must be an array');
@@ -239,6 +279,7 @@ export function analyzeVocabularyMeaningFormat(rawVocabularyEntries, rawJmdictEn
   const diagnostics = {
     halfWidthMarkerEntries: [],
     sharedMarkerEntries: [],
+    misalignedMeaningEntries: [],
     missingPosMarkers: [],
     unresolvedJmdictEntries: [],
     allowlistedUnresolvedEntries: [],
@@ -249,10 +290,11 @@ export function analyzeVocabularyMeaningFormat(rawVocabularyEntries, rawJmdictEn
       diagnostics.halfWidthMarkerEntries.push(entryDiagnosticBase(entry, entry.meaning));
     }
 
-    if (splitLines(entry.meaning).some((meaningLine) => SHARED_MARKER_PATTERN.test(meaningLine))) {
+    if (splitNonEmptyLines(entry.meaning).some((meaningLine) => SHARED_MARKER_PATTERN.test(meaningLine))) {
       diagnostics.sharedMarkerEntries.push(entryDiagnosticBase(entry, entry.meaning));
     }
 
+    analyzeLineAlignment(entry, diagnostics);
     analyzeJmdictMarkers(entry, jmdictEntries, diagnostics, unresolvedAllowlist);
   }
 

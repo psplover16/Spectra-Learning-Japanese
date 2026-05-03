@@ -1,4 +1,4 @@
-export type ProjectPosMarker = '五段動詞' | '一段動詞' | 'い形容詞' | 'な形容詞';
+export type ProjectPosMarker = '五段動詞' | '一段動詞' | 'い形容詞' | 'な形容詞' | 'の形容詞';
 
 export interface RawVocabularyEntryLike {
   text: string;
@@ -46,9 +46,15 @@ export interface UnresolvedJmdictDiagnostic extends VocabularyMeaningDiagnostic 
   reason?: string;
 }
 
+export interface MisalignedMeaningDiagnostic extends VocabularyMeaningDiagnostic {
+  kanjiLineCount: number;
+  meaningLineCount: number;
+}
+
 export interface VocabularyMeaningDiagnostics {
   halfWidthMarkerEntries: VocabularyMeaningDiagnostic[];
   sharedMarkerEntries: VocabularyMeaningDiagnostic[];
+  misalignedMeaningEntries: MisalignedMeaningDiagnostic[];
   missingPosMarkers: MissingPosMarkerDiagnostic[];
   unresolvedJmdictEntries: UnresolvedJmdictDiagnostic[];
   allowlistedUnresolvedEntries: UnresolvedJmdictDiagnostic[];

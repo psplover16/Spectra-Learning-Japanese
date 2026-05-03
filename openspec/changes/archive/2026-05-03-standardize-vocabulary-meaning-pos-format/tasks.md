@@ -15,3 +15,15 @@
 - [x] 3.1 執行 vocabularyMeaningFormat 與 vocabularyData 相關 Vitest，確認 Vocabulary meaning format is automatically checked 的全量掃描通過；完成定義：新增測試與既有 vocabularyData 測試全數通過。
 - [x] 3.2 執行 npm run typecheck 與 npm run build，確認字典資料格式變更不造成 TypeScript 或 bundle regression；完成定義：typecheck 成功，build 成功且無新增依賴。
 - [x] 3.3 檢查 openspec/changes/standardize-vocabulary-meaning-pos-format 的 proposal、design、specs、tasks 與實作結果一致；完成定義：spectra analyze 無 Critical/Warning，spectra validate 通過。
+
+## 4. kanji/meaning 對齊與可讀性追加
+
+- [x] 4.1 在 tests/unit/vocabularyMeaningFormat.spec.ts 補失敗測試，覆蓋 Vocabulary kanji lines align with meaning lines、Vocabulary meaning labels are concise and learner-readable、「kanji 與 meaning 逐行對齊」與「中文 meaning 採短句語境化」：以 あげる expected kanji/meaning 作為 fixture，並要求全量資料的 kanji 行數與 meaning 行數一致；完成定義：舊資料會因 あげる 行數不一致、缺少 揚げる／油炸 或保留 提出（一段動詞）而失敗。
+- [x] 4.2 更新 scripts/vocabulary/checkVocabularyMeaningFormat.mjs 與 src/modules/vocabulary/data/jpWords.ts，落實 Vocabulary kanji lines align with meaning lines 與 Vocabulary meaning labels are concise and learner-readable：checker 保留空白 kanji 行但禁止行數錯位，あげる 改成 上げる／給、上げる／舉起、挙げる／列舉／舉例、揚げる／油炸，並修正全量資料中所有 kanji/meaning 行數不一致項目；完成定義：全量掃描沒有 alignment diagnostics。
+- [x] 4.3 執行 vocabularyMeaningFormat、vocabularyData、vocabularyGodanVerbMarkers、vocabularyNaAdjectiveMarkers 相關 Vitest，並執行 npm run typecheck、npm run build、spectra analyze、spectra validate；完成定義：所有驗證通過，Spectra apply 顯示 all_done。
+
+## 5. adj-no／の形容詞追加
+
+- [x] 5.1 在 tests/unit/vocabularyMeaningFormat.spec.ts 補失敗測試，覆蓋 Confirmed verbs and adjectives include part-of-speech markers、JMdict is the primary part-of-speech source 與「JMdict adj-no 標為 の形容詞」：fixture 加入 生／なま 的 `adj-no`，並要求 なま meaning 為 生的／未煮熟的／新鮮的（の形容詞）；完成定義：現有資料會因 なま 漏標 の形容詞而失敗。
+- [x] 5.2 更新 scripts/vocabulary/checkVocabularyMeaningFormat.mjs、型別宣告與 src/modules/vocabulary/data/jpWords.ts，落實 `adj-no` → の形容詞：checker 自動映射 JMdict `adj-no`，半形/全形 marker 檢查納入 の形容詞，なま 補上 の形容詞；完成定義：vocabularyMeaningFormat 對 なま 不再回報 missing marker。
+- [x] 5.3 執行 vocabularyMeaningFormat 與 vocabularyData 相關 Vitest，並執行 npm run typecheck、npm run build、spectra analyze、spectra validate；完成定義：所有驗證通過，Spectra apply 顯示 all_done。
