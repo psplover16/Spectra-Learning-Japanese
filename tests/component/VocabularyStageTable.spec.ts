@@ -6,6 +6,7 @@ import type { VocabularyEntry } from '@/modules/vocabulary/types/vocabulary';
 const entries: VocabularyEntry[] = [
   {
     id: 1,
+    markKey: 'あさ|朝',
     text: 'あさ',
     romanization: 'a-sa',
     kanji: '朝',
@@ -24,8 +25,8 @@ describe('VocabularyStageTable', () => {
         showKanji: true,
         practiceMode: false,
         columnVisibility: { word: false, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedIds: [],
-        draftMarkedIds: [],
+        savedMarkedKeys: new Set<string>(),
+        draftMarkedKeys: new Set<string>(),
         revealedEntryId: null
       }
     });
@@ -48,17 +49,17 @@ describe('VocabularyStageTable', () => {
         showKanji: true,
         practiceMode: false,
         columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedIds: [1],
-        draftMarkedIds: [1],
+        savedMarkedKeys: new Set(['あさ|朝']),
+        draftMarkedKeys: new Set(['あさ|朝']),
         revealedEntryId: null
       }
     });
 
     await wrapper.get('[data-testid="vocabulary-mark-checkbox-1"]').setValue(false);
-    expect(wrapper.emitted('toggle-marked')?.[0]).toEqual([1, false]);
+    expect(wrapper.emitted('toggle-marked')?.[0]).toEqual(['あさ|朝', false]);
 
     await wrapper.get('[data-testid="vocabulary-row-1"]').trigger('click');
-    expect(wrapper.emitted('toggle-marked')?.[1]).toEqual([1, false]);
+    expect(wrapper.emitted('toggle-marked')?.[1]).toEqual(['あさ|朝', false]);
 
     await wrapper.get('[data-testid="vocabulary-clear-marks-checkbox"]').setValue(true);
     expect(wrapper.emitted('clear-marks')).toHaveLength(1);
@@ -71,8 +72,8 @@ describe('VocabularyStageTable', () => {
         showKanji: true,
         practiceMode: false,
         columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedIds: [],
-        draftMarkedIds: [],
+        savedMarkedKeys: new Set<string>(),
+        draftMarkedKeys: new Set<string>(),
         revealedEntryId: null
       }
     });
@@ -91,8 +92,8 @@ describe('VocabularyStageTable', () => {
         showKanji: true,
         practiceMode: false,
         columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedIds: [],
-        draftMarkedIds: [],
+        savedMarkedKeys: new Set<string>(),
+        draftMarkedKeys: new Set<string>(),
         revealedEntryId: null
       }
     });

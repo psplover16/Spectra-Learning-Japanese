@@ -37,7 +37,7 @@ vocabularyMarksStorage 負責讀寫 version 2 快照、讀取舊版資料、將 
 
 ### 暴露純函式 pruneMarkedKeysAgainstDictionary
 
-pruneMarkedKeysAgainstDictionary(keys, dictionaryKeySet) 回傳仍存在於字典的 key 陣列，並保留輸入順序。它同時服務 v1 到 v2 遷移後的清理，以及每次 v2 載入時的校驗，讓測試能直接覆蓋邊界情境。
+pruneMarkedKeysAgainstDictionary(keys, dictionaryKeySet) 回傳仍存在於字典的 key 陣列，保留第一次出現的輸入順序，並移除不存在或重複的 key。它同時服務 v1 到 v2 遷移後的清理，以及每次 v2 載入時的校驗，讓測試能直接覆蓋邊界情境。
 
 替代方案：在每個讀取點各自 filter。淘汰原因是規則容易分裂，且後續字典整理時較難確認所有入口都有一致清理。
 
@@ -47,7 +47,7 @@ VocabularyEntry 保留既有 number id 以降低此 change 的呼叫端衝擊，
 
 ## Risks / Trade-offs
 
-- [Risk] 同一批字典內存在相同 text + kanji 會造成 key collision → Mitigation：本 change 不修改字典，但實作時須建立 dictionary key set，並在測試中覆蓋 duplicate key 的可觀測行為；後續 split-and-merge-jpwords 必須以 uniqueness assertion 防止 collision。
+- [Risk] 同一批字典內存在相同 text + kanji 會造成 key collision → Mitigation：本 change 不修改字典，但 duplicate key 在儲存層只保留第一個 key 標記；後續 split-and-merge-jpwords 必須以 uniqueness assertion 防止 collision。
 - [Risk] v1 markedIds 是舊順序，若使用者已更新到排序不同版本才遷移，仍可能轉成錯誤 key → Mitigation：此 change 必須先於字典拆分與合併發布，讓遷移發生在當下字典順序仍可對應時。
 - [Risk] 靜默 pruning 會讓使用者少量註記消失 → Mitigation：依 propose.md 結論不通知使用者；只刪除當下字典不存在的 key，避免錯誤保留。
 

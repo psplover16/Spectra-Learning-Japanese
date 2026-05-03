@@ -23,6 +23,12 @@ The vocabulary mark persistence system SHALL store marked vocabulary entries as 
 - **THEN** the persisted natural key for that entry remains based on text and kanji only
 - **AND** the mark still matches the entry if text and kanji are unchanged
 
+##### Example: stage-independent key
+
+- **GIVEN** a marked entry with text `会う`, kanji `あう`, and stage `N5`
+- **WHEN** a later dictionary assigns the same text and kanji to stage `N3`
+- **THEN** the stored key remains `会う|あう`
+
 ### Requirement: Version 1 mark snapshots migrate to version 2
 
 The vocabulary mark persistence system MUST migrate version 1 snapshots from `markedIds: number[]` to version 2 snapshots with `markedKeys: string[]` by resolving each numeric id against the current normalized vocabulary order at migration time.
@@ -70,6 +76,25 @@ The vocabulary mark persistence system SHALL validate stored version 2 `markedKe
 - **THEN** loading marks preserves those keys
 - **AND** the mark-only filter can match those entries by key
 
+##### Example: valid keys remain available
+
+| Stored key | Current dictionary contains key | Expected loaded result |
+| ---------- | ------------------------------- | ---------------------- |
+| `おい|` | yes | kept |
+| `会う|あう` | yes | kept |
+
+#### Scenario: Duplicate stored keys are collapsed
+
+- **WHEN** localStorage contains the same version 2 key more than once
+- **THEN** loading marks preserves the first occurrence of that key
+- **AND** localStorage is rewritten with only one copy of that key
+
+##### Example: duplicate key pruning
+
+| Stored keys | Expected loaded result |
+| ----------- | ---------------------- |
+| `おい|`, `会う|あう`, `おい|` | `おい|`, `会う|あう` |
+
 ### Requirement: Vocabulary mark interactions compare by stable key
 
 The vocabulary session SHALL use stable natural keys for mark toggling, saving, clearing, and mark-only filtering. Numeric vocabulary ids remain available for non-persistence concerns, but mark behavior MUST NOT depend on numeric ids.
@@ -79,6 +104,12 @@ The vocabulary session SHALL use stable natural keys for mark toggling, saving, 
 - **WHEN** a user toggles the mark state for a vocabulary entry
 - **THEN** the session adds or removes that entry natural key from the in-memory marked key set
 - **AND** saving marks persists the same key set to localStorage
+
+##### Example: toggling one key
+
+- **GIVEN** the in-memory marked key set is empty
+- **WHEN** the user marks an entry with key `おい|`
+- **THEN** the in-memory marked key set contains `おい|`
 
 #### Scenario: Mark-only filter uses keys
 
