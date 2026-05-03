@@ -15,7 +15,7 @@ const expectedTailEntries = [
     text: 'なめらか',
     romanization: 'na-me-ra-ka',
     kanji: '滑らか',
-    meaning: '光滑(な形容詞)',
+    meaning: '光滑（な形容詞）',
     stage: 'N4'
   },
   {
@@ -98,7 +98,7 @@ describe('vocabulary data', () => {
       id: 1076,
       text: 'がいねんてき',
       kanji: '概念的',
-      meaning: '概念性的(な形容詞)',
+      meaning: '概念性的（な形容詞）',
       stage: 'N1'
     });
     expect(vocabularyEntries.at(-1)?.id).toBe(1086);
@@ -112,7 +112,7 @@ describe('vocabulary data', () => {
       text: 'がいねんてき',
       romanization: 'ga-i-nen-te-ki',
       kanji: '概念的',
-      meaning: '概念性的(な形容詞)',
+      meaning: '概念性的（な形容詞）',
       stage: 'N1'
     });
     expect(rawVocabularyEntries.slice(-10, -6)).toEqual(expectedTailEntries);
@@ -133,27 +133,27 @@ describe('vocabulary data', () => {
     ]);
   });
 
-  it('沿用既有 話す -> 說話(五段動詞) 覆蓋，且不為說話新增重複詞條', () => {
-    const speakingEntries = rawVocabularyEntries.filter((entry) => entry.meaning === '說話(五段動詞)');
+  it('沿用既有 話す -> 說話（五段動詞） 覆蓋，且不為說話新增重複詞條', () => {
+    const speakingEntries = rawVocabularyEntries.filter((entry) => entry.meaning === '說話（五段動詞）');
 
     expect(speakingEntries).toHaveLength(1);
     expect(speakingEntries[0]).toMatchObject({
       text: 'はなす',
       kanji: '話す',
-      meaning: '說話(五段動詞)',
+      meaning: '說話（五段動詞）',
       stage: 'N5'
     });
     expect(rawVocabularyEntries.filter((entry) => entry.kanji === '肌' && entry.meaning === '皮膚')).toHaveLength(1);
-    expect(rawVocabularyEntries.filter((entry) => entry.kanji === '滑らか' && entry.meaning === '光滑(な形容詞)')).toHaveLength(1);
+    expect(rawVocabularyEntries.filter((entry) => entry.kanji === '滑らか' && entry.meaning === '光滑（な形容詞）')).toHaveLength(1);
     expect(rawVocabularyEntries.filter((entry) => entry.kanji === '動き' && entry.meaning === '動作')).toHaveLength(1);
     expect(rawVocabularyEntries.filter((entry) => entry.kanji === '居酒屋' && entry.meaning === '居酒屋')).toHaveLength(1);
   });
 
   it('新增詞條若屬動詞或形容詞，meaning 必須附上既有格式的詞性標記', () => {
     const appendedEntries = rawVocabularyEntries.slice(-10);
-    const partOfSpeechMarkerPattern = /\((五段動詞|一段動詞|な形容詞|い形容詞)\)$/;
+    const partOfSpeechMarkerPattern = /（(五段動詞|一段動詞|な形容詞|い形容詞)）$/;
 
-    expect(appendedEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toBe('光滑(な形容詞)');
+    expect(appendedEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toBe('光滑（な形容詞）');
     expect(appendedEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toMatch(partOfSpeechMarkerPattern);
     expect(appendedEntries.find((entry) => entry.kanji === '肌')?.meaning).toBe('皮膚');
     expect(appendedEntries.find((entry) => entry.kanji === '動き')?.meaning).toBe('動作');
