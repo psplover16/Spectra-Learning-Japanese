@@ -1,19 +1,44 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue';
+import { computed, onBeforeUnmount, watch } from 'vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import BaseButton from '@/shared/components/BaseButton.vue';
-import type { ExamQuestionCard } from '@/modules/exam/types/exam';
+import type { ExamModalQuestionCard } from '@/modules/exam/types/exam';
 import { lockBodyScroll, unlockBodyScroll } from '@/shared/utils/bodyScrollLock';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   open: boolean;
-  question: ExamQuestionCard | null;
+  question: ExamModalQuestionCard | null;
   currentIndex: number;
   totalQuestions: number;
-}>();
+  promptSize?: 'lg' | 'md';
+  showHint?: boolean;
+  answerMultiline?: boolean;
+  manageBodyScroll?: boolean;
+}>(), {
+  promptSize: 'lg',
+  showHint: true,
+  answerMultiline: false,
+  manageBodyScroll: true
+});
 
 const emit = defineEmits<{ next: []; unknown: []; confirmClose: [] }>();
+
+const promptClasses = computed(() => [
+  'exam-modal-prompt',
+  `exam-modal-prompt-${props.promptSize}`
+]);
+
+const answerClasses = computed(() => [
+  'exam-modal-answer',
+  { 'exam-modal-answer-multiline': props.answerMultiline }
+]);
+
+const hintText = computed(() =>
+  props.question?.answerRevealed
+    ? '已顯示答案，請決定是否標記為我不清楚'
+    : '請先自行作答，再決定是否按下我不清楚'
+);
 
 function requestClose(): void {
   if (window.confirm('確定要結束練習嗎？')) {
@@ -24,6 +49,10 @@ function requestClose(): void {
 watch(
   () => props.open,
   (isOpen) => {
+    if (!props.manageBodyScroll) {
+      return;
+    }
+
     if (isOpen) {
       lockBodyScroll();
       return;
@@ -35,7 +64,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  if (props.open) {
+  if (props.open && props.manageBodyScroll) {
     unlockBodyScroll();
   }
 });
@@ -69,16 +98,12 @@ onBeforeUnmount(() => {
 
         <div class="flex-1 border-b border-clay/10 px-4 py-3 sm:px-5 sm:py-4">
           <div class="exam-modal-body">
-            <p data-testid="exam-prompt" class="exam-modal-prompt">{{ props.question?.promptText ?? '-' }}</p>
-            <p class="min-h-[28px] text-lg font-semibold text-ink">
+            <p data-testid="exam-prompt" :class="promptClasses">{{ props.question?.promptText ?? '-' }}</p>
+            <p data-testid="exam-answer" :class="answerClasses">
               {{ props.question?.answerRevealed ? props.question.answerText : '' }}
             </p>
-            <p class="text-sm text-ink/65">
-              {{
-                props.question?.answerRevealed
-                  ? '已顯示答案，請決定是否標記為我不清楚'
-                  : '請先自行作答，再決定是否按下我不清楚'
-              }}
+            <p v-if="props.showHint" data-testid="exam-hint" class="text-sm text-ink/65">
+              {{ hintText }}
             </p>
           </div>
         </div>

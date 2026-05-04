@@ -1,11 +1,35 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
+import ExamModal from '@/modules/exam/components/ExamModal.vue';
 import VocabularyControlBar from '@/modules/vocabulary/components/VocabularyControlBar.vue';
 import VocabularyStageTable from '@/modules/vocabulary/components/VocabularyStageTable.vue';
+import { useVocabularyExamSession } from '@/modules/vocabulary/composables/useVocabularyExamSession';
 import { useVocabularySession } from '@/modules/vocabulary/composables/useVocabularySession';
 import { lockBodyScroll, unlockBodyScroll } from '@/shared/utils/bodyScrollLock';
 
 const session = useVocabularySession();
+const vocabularyExamSession = useVocabularyExamSession(session.draftMarkedKeys);
+
+const hasVisibleMarkedEntries = computed(() =>
+  session.visibleEntries.value.some((entry) =>
+    session.draftMarkedKeys.value.has(entry.markKey) || session.persistedMarkedKeys.value.has(entry.markKey)
+  )
+);
+
+const canStartVocabularyQuiz = computed(() =>
+  hasVisibleMarkedEntries.value && !session.isLoadingVocabulary.value && !session.hasVocabularyLoadError.value
+);
+
+function startVocabularyQuiz(): void {
+  if (!canStartVocabularyQuiz.value) {
+    return;
+  }
+
+  vocabularyExamSession.start({
+    visibleEntries: session.visibleEntries.value,
+    persistedMarkedKeys: session.persistedMarkedKeys.value
+  });
+}
 
 onMounted(() => {
   lockBodyScroll();
@@ -26,7 +50,10 @@ onBeforeUnmount(() => {
       v-model:practice-mode="session.practiceMode.value"
       v-model:selected-jlpt-levels="session.selectedJlptLevels.value"
       :can-save-marks="session.hasAnyVisibleEntries.value"
+      :can-start-quiz="canStartVocabularyQuiz"
+      :has-unsaved-mark-changes="session.hasUnsavedMarkChanges.value"
       @save-marks="session.saveMarks"
+      @start-quiz="startVocabularyQuiz"
     />
 
     <VocabularyStageTable
@@ -44,6 +71,20 @@ onBeforeUnmount(() => {
       @clear-marks="session.clearAllMarksWithConfirmation"
       @begin-reveal="session.beginReveal"
       @end-reveal="session.endReveal"
+    />
+
+    <ExamModal
+      :open="vocabularyExamSession.isOpen.value"
+      :question="vocabularyExamSession.currentQuestion.value"
+      :current-index="vocabularyExamSession.currentIndex.value"
+      :total-questions="vocabularyExamSession.totalQuestions.value"
+      prompt-size="md"
+      :show-hint="false"
+      :answer-multiline="true"
+      :manage-body-scroll="false"
+      @next="vocabularyExamSession.nextStep"
+      @unknown="vocabularyExamSession.markUnknown"
+      @confirm-close="vocabularyExamSession.confirmClose"
     />
   </div>
 </template>

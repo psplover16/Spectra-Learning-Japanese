@@ -21,6 +21,19 @@ export interface ExamQuestionCard {
   romaji: string;
 }
 
+export interface VocabularyExamQuestionCard {
+  id: string;
+  markKey: string;
+  promptText: string;
+  answerText: string;
+  answerRevealed: boolean;
+  unknownMarked: boolean;
+  completed: boolean;
+  result: 'next' | 'unknown' | null;
+}
+
+export type ExamModalQuestionCard = ExamQuestionCard | VocabularyExamQuestionCard;
+
 export interface LatestUnknownResultEntry {
   kanaId: string;
   hiragana: string;

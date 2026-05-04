@@ -46,7 +46,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -100,7 +100,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -142,7 +142,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -183,7 +183,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -246,7 +246,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -316,7 +316,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -355,7 +355,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts

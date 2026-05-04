@@ -1,19 +1,19 @@
 import { defineComponent, nextTick } from 'vue';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPracticeSession, providePracticeSession } from '@/modules/practice/composables/usePracticeSession';
-import { useVocabularySession } from '@/modules/vocabulary/composables/useVocabularySession';
-import { vocabularyEntries } from '@/modules/vocabulary/data/jpWords';
+import { useVocabularySession, type UseVocabularySessionOptions } from '@/modules/vocabulary/composables/useVocabularySession';
+import { vocabularyJlptLevels } from '@/modules/vocabulary/types/vocabulary';
 import { vocabularyMarksStorageKey } from '@/shared/config/storageKeys';
 
 type VocabularySession = ReturnType<typeof useVocabularySession>;
 
-function mountVocabularySession() {
+function mountVocabularySession(options?: UseVocabularySessionOptions) {
   let session: VocabularySession | undefined;
 
   const SessionConsumer = defineComponent({
     setup() {
-      session = useVocabularySession();
+      session = useVocabularySession(options);
 
       return () => null;
     }
@@ -50,9 +50,12 @@ describe('useVocabularySession', () => {
   it('以 stable key 切換、儲存、清除註記並驅動只顯示註記過濾', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    const markedEntry = vocabularyEntries[0]!;
-    const unmarkedEntry = vocabularyEntries[1]!;
     const { session, wrapper } = mountVocabularySession();
+    await session.loadVocabularyStages(vocabularyJlptLevels);
+    await flushPromises();
+
+    const markedEntry = session.vocabularyEntries.value[0]!;
+    const unmarkedEntry = session.vocabularyEntries.value[1]!;
 
     session.toggleMarked(markedEntry.markKey, true);
 
@@ -76,6 +79,46 @@ describe('useVocabularySession', () => {
     expect(session.persistedMarkedKeys.value.size).toBe(0);
     expect(session.draftMarkedKeys.value.size).toBe(0);
     expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it('依 selectedJlptLevels lazy load stage data，且取消已載入 stage 不會顯示 stale entries', async () => {
+    const { session, wrapper } = mountVocabularySession();
+    await session.loadVocabularyStages(vocabularyJlptLevels);
+    await flushPromises();
+
+    expect(session.isLoadingVocabulary.value).toBe(false);
+    expect(Object.keys(session.loadedStageEntries.value).sort()).toEqual([...vocabularyJlptLevels].sort());
+
+    session.setSelectedJlptLevels(['N5']);
+    await nextTick();
+
+    expect(new Set(session.visibleEntries.value.map((entry) => entry.stage))).toEqual(new Set(['N5']));
+
+    session.setSelectedJlptLevels([]);
+    await nextTick();
+
+    expect(session.visibleEntries.value).toEqual([]);
+    expect(session.hasAnyVisibleEntries.value).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it('暴露 stage lazy import 失敗狀態，避免依賴 unavailable entries', async () => {
+    const { session, wrapper } = mountVocabularySession({
+      stageLoaders: {
+        N5: () => Promise.reject(new Error('boom'))
+      }
+    });
+
+    session.setSelectedJlptLevels(['N5']);
+    await flushPromises();
+
+    expect(session.isLoadingVocabulary.value).toBe(false);
+    expect(session.hasVocabularyLoadError.value).toBe(true);
+    expect(session.vocabularyLoadError.value).toBe('單字資料載入失敗：N5');
+    expect(session.visibleEntries.value).toEqual([]);
 
     wrapper.unmount();
   });

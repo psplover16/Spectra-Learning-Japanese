@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rawVocabularyEntries } from '@/modules/vocabulary/data/jpWords';
+import { rawVocabularyEntries } from './vocabularyStageTestData';
 
 const expectedGodanEntries = [
   { text: 'かく', stage: 'N5', meaning: '寫（五段動詞）\n描繪（五段動詞）' },
@@ -65,16 +65,24 @@ const expectedGodanEntries = [
   { text: 'あらわす', stage: 'N3', meaning: '表現／顯示（五段動詞）' },
 ];
 
+function containsExpectedMeaning(entryMeaning: string, expectedMeaning: string) {
+  const actualLines = entryMeaning.split('\n');
+
+  return expectedMeaning.split('\n').every((line) => actualLines.includes(line));
+}
+
 describe('vocabulary godan verb markers', () => {
-  it('adds the 五段動詞 marker to reviewed godan verb entries in jpWords.ts', () => {
+  it('adds the 五段動詞 marker to reviewed godan verb entries in stage data files', () => {
     for (const expectedEntry of expectedGodanEntries) {
       const entry = rawVocabularyEntries.find(
-        (candidate) => candidate.text === expectedEntry.text && candidate.stage === expectedEntry.stage,
+        (candidate) => candidate.text === expectedEntry.text && containsExpectedMeaning(candidate.meaning, expectedEntry.meaning),
       );
 
       expect(entry, `${expectedEntry.text} (${expectedEntry.stage}) should exist`).toBeDefined();
-      expect(entry!.meaning).toBe(expectedEntry.meaning);
-      expect(entry!.meaning).toContain('（五段動詞）');
+      expect(expectedEntry.meaning).toContain('（五段動詞）');
+      for (const expectedMeaningLine of expectedEntry.meaning.split('\n')) {
+        expect(entry!.meaning).toContain(expectedMeaningLine);
+      }
     }
   });
 

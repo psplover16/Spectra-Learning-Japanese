@@ -1,15 +1,37 @@
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { usePracticeSession } from '@/modules/practice/composables/usePracticeSession';
-import { vocabularyEntries } from '@/modules/vocabulary/data/jpWords';
 import { deriveAllowedKanaSet, filterVocabularyEntries } from '@/modules/vocabulary/utils/vocabularyFilters';
-import { vocabularyJlptLevels, type VocabularyJlptLevel } from '@/modules/vocabulary/types/vocabulary';
+import {
+  vocabularyJlptLevels,
+  type RawVocabularyEntry,
+  type VocabularyJlptLevel
+} from '@/modules/vocabulary/types/vocabulary';
 import {
   clearVocabularyMarksSnapshot,
   readVocabularyMarksSnapshot,
   writeVocabularyMarksSnapshot
 } from '@/modules/vocabulary/storage/vocabularyMarksStorage';
+import { normalizeVocabularyEntries } from '@/modules/vocabulary/utils/vocabularyFilters';
 
-export function useVocabularySession() {
+type VocabularyStageLoader = () => Promise<{ default: RawVocabularyEntry[] }>;
+
+const vocabularyStageLoaders: Record<VocabularyJlptLevel, VocabularyStageLoader> = {
+  N1: () => import('@/modules/vocabulary/data/jpWords_N1'),
+  N2: () => import('@/modules/vocabulary/data/jpWords_N2'),
+  N3: () => import('@/modules/vocabulary/data/jpWords_N3'),
+  N4: () => import('@/modules/vocabulary/data/jpWords_N4'),
+  N5: () => import('@/modules/vocabulary/data/jpWords_N5')
+};
+
+export interface UseVocabularySessionOptions {
+  stageLoaders?: Partial<Record<VocabularyJlptLevel, VocabularyStageLoader>>;
+}
+
+export function useVocabularySession(options: UseVocabularySessionOptions = {}) {
+  const stageLoaders = {
+    ...vocabularyStageLoaders,
+    ...options.stageLoaders
+  };
   const practiceSession = usePracticeSession();
   const searchText = ref('');
   const showAllSounds = ref(true);
@@ -21,8 +43,13 @@ export function useVocabularySession() {
   const meaningColumnVisible = ref(false);
   const revealedEntryId = ref<number | null>(null);
   const selectedJlptLevels = ref<Set<VocabularyJlptLevel>>(new Set(vocabularyJlptLevels));
+  const loadedStageEntries = ref<Partial<Record<VocabularyJlptLevel, RawVocabularyEntry[]>>>({});
+  const loadingJlptLevels = ref<Set<VocabularyJlptLevel>>(new Set());
+  const vocabularyLoadError = ref<string | null>(null);
+  const marksHydrated = ref(false);
+  const stageLoadPromises = new Map<VocabularyJlptLevel, Promise<void>>();
 
-  const persistedMarkedKeys = ref(new Set(readVocabularyMarksSnapshot(vocabularyEntries)?.markedKeys ?? []));
+  const persistedMarkedKeys = ref(new Set<string>());
   const draftMarkedKeys = ref(new Set(persistedMarkedKeys.value));
   let revealTimer: number | null = null;
 
@@ -48,9 +75,18 @@ export function useVocabularySession() {
     selectedJlptLevels: selectedJlptLevels.value
   }));
 
+  const vocabularyEntries = computed(() => {
+    const rawEntries = vocabularyJlptLevels.flatMap((level) => loadedStageEntries.value[level] ?? []);
+
+    return normalizeVocabularyEntries(rawEntries);
+  });
+
+  const isLoadingVocabulary = computed(() => loadingJlptLevels.value.size > 0);
+  const hasVocabularyLoadError = computed(() => vocabularyLoadError.value !== null);
+
   const visibleEntries = computed(() =>
     filterVocabularyEntries(
-      vocabularyEntries,
+      vocabularyEntries.value,
       filterState.value,
       practiceSession.includeHiragana.value,
       practiceSession.includeKatakana.value,
@@ -69,6 +105,75 @@ export function useVocabularySession() {
 
     return JSON.stringify(next) !== JSON.stringify(current);
   });
+
+  function replaceLoadingJlptLevels(updater: (next: Set<VocabularyJlptLevel>) => void) {
+    const next = new Set(loadingJlptLevels.value);
+    updater(next);
+    loadingJlptLevels.value = next;
+  }
+
+  function hydrateMarksWhenAllStagesLoaded() {
+    if (marksHydrated.value) {
+      return;
+    }
+
+    if (!vocabularyJlptLevels.every((level) => loadedStageEntries.value[level] !== undefined)) {
+      return;
+    }
+
+    const snapshot = readVocabularyMarksSnapshot(vocabularyEntries.value);
+    persistedMarkedKeys.value = new Set(snapshot?.markedKeys ?? []);
+    draftMarkedKeys.value = new Set(persistedMarkedKeys.value);
+    marksHydrated.value = true;
+  }
+
+  async function loadVocabularyStages(levels: Iterable<VocabularyJlptLevel>) {
+    const requestedLevels = [...levels];
+    const levelsToLoad = requestedLevels.filter(
+      (level) => loadedStageEntries.value[level] === undefined && !stageLoadPromises.has(level)
+    );
+
+    if (levelsToLoad.length === 0) {
+      await Promise.all(requestedLevels.map((level) => stageLoadPromises.get(level)).filter(Boolean));
+      hydrateMarksWhenAllStagesLoaded();
+      return;
+    }
+
+    replaceLoadingJlptLevels((next) => {
+      for (const level of levelsToLoad) {
+        next.add(level);
+      }
+    });
+
+    for (const level of levelsToLoad) {
+      const loadPromise = (async () => {
+        try {
+          const module = await stageLoaders[level]();
+          loadedStageEntries.value = {
+            ...loadedStageEntries.value,
+            [level]: module.default
+          };
+
+          if (vocabularyLoadError.value?.includes(level)) {
+            vocabularyLoadError.value = null;
+          }
+        } catch {
+          vocabularyLoadError.value = `單字資料載入失敗：${level}`;
+        } finally {
+          replaceLoadingJlptLevels((next) => {
+            next.delete(level);
+          });
+          stageLoadPromises.delete(level);
+        }
+      })();
+
+      stageLoadPromises.set(level, loadPromise);
+    }
+
+    await Promise.all(requestedLevels.map((level) => stageLoadPromises.get(level)).filter(Boolean));
+
+    hydrateMarksWhenAllStagesLoaded();
+  }
 
   function updateMarkedKeys(target: typeof draftMarkedKeys, key: string, value: boolean) {
     const next = new Set(target.value);
@@ -169,6 +274,14 @@ export function useVocabularySession() {
     clearRevealTimer();
   });
 
+  watch(
+    selectedJlptLevels,
+    (levels) => {
+      void loadVocabularyStages(levels);
+    },
+    { immediate: true }
+  );
+
   return {
     searchText,
     showAllSounds,
@@ -182,6 +295,12 @@ export function useVocabularySession() {
     columnVisibility,
     persistedMarkedKeys,
     draftMarkedKeys,
+    loadedStageEntries,
+    loadingJlptLevels,
+    vocabularyLoadError,
+    vocabularyEntries,
+    isLoadingVocabulary,
+    hasVocabularyLoadError,
     visibleEntries,
     visibleEntryCount,
     hasAnyVisibleEntries,
@@ -192,6 +311,7 @@ export function useVocabularySession() {
     toggleJlptLevel,
     toggleAllJlptLevels,
     toggleMarked,
+    loadVocabularyStages,
     saveMarks,
     clearAllMarksWithConfirmation,
     beginReveal,

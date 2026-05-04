@@ -15,8 +15,12 @@ const props = withDefaults(defineProps<{
   practiceMode: boolean;
   selectedJlptLevels: Set<VocabularyJlptLevel>;
   canSaveMarks?: boolean;
+  canStartQuiz?: boolean;
+  hasUnsavedMarkChanges?: boolean;
 }>(), {
-  canSaveMarks: true
+  canSaveMarks: true,
+  canStartQuiz: false,
+  hasUnsavedMarkChanges: false
 });
 
 const emit = defineEmits<{
@@ -27,6 +31,7 @@ const emit = defineEmits<{
   'update:practiceMode': [value: boolean];
   'update:selectedJlptLevels': [value: Set<VocabularyJlptLevel>];
   saveMarks: [];
+  startQuiz: [];
 }>();
 
 const allJlptLevelsSelected = computed(() =>
@@ -125,14 +130,31 @@ function jlptLevelWrapperTestId(level: VocabularyJlptLevel) {
           @update:model-value="emit('update:showMarkedOnly', $event)"
         />
       </div>
-      <BaseButton
-        data-testid="vocabulary-save-marks-button"
-        variant="secondary"
-        :class="{ invisible: !props.canSaveMarks }"
-        @click="emit('saveMarks')"
-      >
-        儲存註記
-      </BaseButton>
+      <div class="vocabulary-action-controls-right" data-testid="vocabulary-action-controls-right">
+        <p
+          v-if="props.hasUnsavedMarkChanges"
+          data-testid="vocabulary-unsaved-marks-hint"
+          class="vocabulary-unsaved-marks-hint"
+        >
+          尚未儲存
+        </p>
+        <BaseButton
+          data-testid="vocabulary-start-quiz-button"
+          variant="primary"
+          :disabled="!props.canStartQuiz"
+          @click="emit('startQuiz')"
+        >
+          開始測驗
+        </BaseButton>
+        <BaseButton
+          data-testid="vocabulary-save-marks-button"
+          variant="secondary"
+          :class="{ invisible: !props.canSaveMarks }"
+          @click="emit('saveMarks')"
+        >
+          儲存註記
+        </BaseButton>
+      </div>
     </div>
   </section>
 </template>

@@ -4,7 +4,7 @@ import {
   assertJmdictSourceAvailable,
   mapJmdictPosToProjectMarker,
 } from '../../scripts/vocabulary/checkVocabularyMeaningFormat.mjs';
-import { rawVocabularyEntries } from '@/modules/vocabulary/data/jpWords';
+import { rawVocabularyEntries } from './vocabularyStageTestData';
 
 function findVocabularyEntry(text: string, stage: string) {
   return rawVocabularyEntries.find((entry) => entry.text === text && entry.stage === stage);
@@ -41,9 +41,140 @@ describe('vocabulary meaning format', () => {
     const entry = findVocabularyEntry('あげる', 'N5');
 
     expect(entry).toBeDefined();
-    expect(entry!.kanji).toBe('上げる\n上げる\n挙げる\n揚げる');
-    expect(entry!.meaning).toBe('給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）');
+    expect(entry!.kanji).toBe('上げる\n上げる\n上げる\n挙げる\n揚げる');
+    expect(entry!.meaning).toBe('提高（一段動詞；他動詞）\n給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）');
     expect(entry!.meaning).not.toContain('提出（一段動詞）');
+  });
+
+  it('allows a final kanji-less sense without a trailing kanji placeholder', () => {
+    const diagnostics = analyzeVocabularyMeaningFormat(
+      [
+        {
+          text: 'から',
+          romanization: 'ka-ra',
+          kanji: '殻\n空',
+          meaning: '外殼\n空(無內容)\n從～、因為～；助詞',
+          stage: 'N5',
+        },
+      ],
+      jmdictFixture,
+    );
+
+    expect(diagnostics.misalignedMeaningEntries).toEqual([]);
+    expect(diagnostics.misorderedKanjiEntries).toEqual([]);
+    expect(diagnostics.missingKanjiPlaceholderEntries).toEqual([]);
+  });
+
+  it('allows repeated kanji lines and required placeholders for non-final kanji-less tail senses', () => {
+    const diagnostics = analyzeVocabularyMeaningFormat(
+      [
+        {
+          text: 'example',
+          romanization: 'example',
+          kanji: '例一\n例一\n',
+          meaning: '第一義\n第二義\n第三義無漢字\n第四義無漢字',
+          stage: 'N5',
+        },
+      ],
+      jmdictFixture,
+    );
+
+    expect(diagnostics.misalignedMeaningEntries).toEqual([]);
+    expect(diagnostics.misorderedKanjiEntries).toEqual([]);
+    expect(diagnostics.missingKanjiPlaceholderEntries).toEqual([]);
+  });
+
+  it('rejects kanji-bearing senses after kanji-less placeholder lines', () => {
+    const diagnostics = analyzeVocabularyMeaningFormat(
+      [
+        {
+          text: 'example',
+          romanization: 'example',
+          kanji: '例一\n\n例三',
+          meaning: '第一義\n第二義無漢字\n第三義',
+          stage: 'N5',
+        },
+      ],
+      jmdictFixture,
+    );
+
+    expect(diagnostics.misorderedKanjiEntries).toEqual([
+      {
+        text: 'example',
+        kanji: '例一\n\n例三',
+        stage: 'N5',
+        meaning: '第一義\n第二義無漢字\n第三義',
+        firstKanjiLessLine: 1,
+        laterKanjiLine: 2,
+      },
+    ]);
+  });
+
+  it('rejects missing placeholders for non-final kanji-less tail senses', () => {
+    const diagnostics = analyzeVocabularyMeaningFormat(
+      [
+        {
+          text: 'example',
+          romanization: 'example',
+          kanji: '例一',
+          meaning: '第一義\n第二義無漢字\n第三義無漢字',
+          stage: 'N5',
+        },
+      ],
+      jmdictFixture,
+    );
+
+    expect(diagnostics.missingKanjiPlaceholderEntries).toEqual([
+      {
+        text: 'example',
+        kanji: '例一',
+        stage: 'N5',
+        meaning: '第一義\n第二義無漢字\n第三義無漢字',
+        kanjiLineCount: 1,
+        meaningLineCount: 3,
+        requiredKanjiLineCount: 2,
+      },
+    ]);
+  });
+
+  it('reports unconsolidated duplicate text and kanji combinations', () => {
+    const diagnostics = analyzeVocabularyMeaningFormat(
+      [
+        {
+          text: 'あげる',
+          romanization: 'a-ge-ru',
+          kanji: '上げる',
+          meaning: '給（一段動詞）',
+          stage: 'N5',
+        },
+        {
+          text: 'あげる',
+          romanization: 'a-ge-ru',
+          kanji: '上げる',
+          meaning: '舉起（一段動詞）',
+          stage: 'N3',
+        },
+        {
+          text: 'あげる',
+          romanization: 'a-ge-ru',
+          kanji: '挙げる',
+          meaning: '列舉／舉例（一段動詞）',
+          stage: 'N3',
+        },
+      ],
+      jmdictFixture,
+    );
+
+    expect(diagnostics.duplicateTextKanjiEntries).toEqual([
+      {
+        text: 'あげる',
+        kanji: '上げる',
+        entries: [
+          { stage: 'N5', meaning: '給（一段動詞）' },
+          { stage: 'N3', meaning: '舉起（一段動詞）' },
+        ],
+      },
+    ]);
   });
 
   it('marks nama as a JMdict no-adjective', () => {
@@ -54,21 +185,14 @@ describe('vocabulary meaning format', () => {
     expect(entry!.meaning).toBe('生的／未煮熟的／新鮮的（の形容詞）');
   });
 
-  it('reports mismatched kanji and meaning line counts while preserving intentional blank kanji lines', () => {
+  it('reports kanji line counts that exceed the available meaning lines', () => {
     const diagnostics = analyzeVocabularyMeaningFormat(
       [
         {
-          text: 'あげる',
-          romanization: 'a-ge-ru',
-          kanji: '上げる\n挙げる',
-          meaning: '給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）',
-          stage: 'N5',
-        },
-        {
           text: 'example',
           romanization: 'example',
-          kanji: '例一\n\n例三',
-          meaning: '第一義\n第二義\n第三義',
+          kanji: '例一\n例二',
+          meaning: '第一義',
           stage: 'N5',
         },
       ],
@@ -77,12 +201,12 @@ describe('vocabulary meaning format', () => {
 
     expect(diagnostics.misalignedMeaningEntries).toEqual([
       {
-        text: 'あげる',
-        kanji: '上げる\n挙げる',
+        text: 'example',
+        kanji: '例一\n例二',
         stage: 'N5',
-        meaning: '給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）',
+        meaning: '第一義',
         kanjiLineCount: 2,
-        meaningLineCount: 3,
+        meaningLineCount: 1,
       },
     ]);
   });
@@ -208,6 +332,9 @@ describe('vocabulary meaning format', () => {
     expect(diagnostics.misalignedMeaningEntries).toEqual([]);
     expect(diagnostics.missingPosMarkers).toEqual([]);
     expect(diagnostics.unresolvedJmdictEntries).toEqual([]);
+    expect(diagnostics.misorderedKanjiEntries).toEqual([]);
+    expect(diagnostics.missingKanjiPlaceholderEntries).toEqual([]);
+    expect(diagnostics.duplicateTextKanjiEntries).toEqual([]);
     expect(
       diagnostics.allowlistedUnresolvedEntries.every((entry) => Boolean(entry.reason?.trim())),
     ).toBe(true);

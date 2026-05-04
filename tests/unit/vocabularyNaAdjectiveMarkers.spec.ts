@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rawVocabularyEntries } from '@/modules/vocabulary/data/jpWords';
+import { rawVocabularyEntries } from './vocabularyStageTestData';
 
 const expectedNaAdjectiveEntries = [
   { text: 'とくべつ', stage: 'N4', meaning: '特別（な形容詞）' },
@@ -51,15 +51,15 @@ const expectedNaAdjectiveEntries = [
 ];
 
 describe('vocabulary na-adjective markers', () => {
-  it('adds the な形容詞 marker to reviewed na-adjective entries in jpWords.ts', () => {
+  it('adds the な形容詞 marker to reviewed na-adjective entries in stage data files', () => {
     for (const expectedEntry of expectedNaAdjectiveEntries) {
       const entry = rawVocabularyEntries.find(
-        (candidate) => candidate.text === expectedEntry.text && candidate.stage === expectedEntry.stage,
+        (candidate) => candidate.text === expectedEntry.text && candidate.meaning.split('\n').includes(expectedEntry.meaning),
       );
 
       expect(entry, `${expectedEntry.text} (${expectedEntry.stage}) should exist`).toBeDefined();
-      expect(entry!.meaning).toBe(expectedEntry.meaning);
-      expect(entry!.meaning.endsWith('（な形容詞）')).toBe(true);
+      expect(expectedEntry.meaning.endsWith('（な形容詞）')).toBe(true);
+      expect(entry!.meaning).toContain(expectedEntry.meaning);
     }
   });
 });

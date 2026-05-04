@@ -48,7 +48,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -105,7 +105,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -182,7 +182,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -244,7 +244,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs

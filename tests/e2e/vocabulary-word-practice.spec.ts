@@ -3,14 +3,14 @@ import { expectNoHorizontalOverflow, expectPrimaryTabs, gotoApp } from './testUt
 
 const jlptLevels = ['N1', 'N2', 'N3', 'N4', 'N5'] as const;
 const existingSearchExamples = [
-  { query: '皮膚', rowId: 1077, expectedTexts: ['はだ', '肌', '皮膚'] },
-  { query: '光滑', rowId: 1078, expectedTexts: ['なめらか', '滑らか', '光滑(な形容詞)'] },
-  { query: '動作', rowId: 1079, expectedTexts: ['うごき', '動き', '動作'] },
-  { query: '居酒屋', rowId: 1080, expectedTexts: ['いざかや', '居酒屋'] },
-  { query: '東口', rowId: 1083, expectedTexts: ['ひがしぐち', '東口'] },
-  { query: '西口', rowId: 1084, expectedTexts: ['にしぐち', '西口'] },
-  { query: '北口', rowId: 1085, expectedTexts: ['きたぐち', '北口'] },
-  { query: '南口', rowId: 1086, expectedTexts: ['みなみぐち', '南口'] }
+  { query: '皮膚', expectedTexts: ['はだ', '肌', '皮膚'] },
+  { query: '光滑', expectedTexts: ['なめらか', '滑らか', '光滑（な形容詞）'] },
+  { query: '動作', expectedTexts: ['うごき', '動き', '動作'] },
+  { query: '居酒屋', expectedTexts: ['いざかや', '居酒屋'] },
+  { query: '東口', expectedTexts: ['ひがしぐち', '東口'] },
+  { query: '西口', expectedTexts: ['にしぐち', '西口'] },
+  { query: '北口', expectedTexts: ['きたぐち', '北口'] },
+  { query: '南口', expectedTexts: ['みなみぐち', '南口'] }
 ] as const;
 
 type JlptLevel = (typeof jlptLevels)[number];
@@ -60,8 +60,8 @@ async function selectOnlyJlptLevel(page: Page, level: JlptLevel) {
   await expectSelectedJlptLevels(page, [level]);
 }
 
-async function expectOnlyRow(page: Page, rowId: number, expectedTexts: readonly string[]) {
-  const row = page.getByTestId(`vocabulary-row-${rowId}`);
+async function expectOnlyRow(page: Page, expectedTexts: readonly string[]) {
+  const row = vocabularyRows(page).first();
 
   await expect(vocabularyRows(page)).toHaveCount(1);
   await expect(row).toBeVisible();
@@ -69,6 +69,10 @@ async function expectOnlyRow(page: Page, rowId: number, expectedTexts: readonly 
   for (const text of expectedTexts) {
     await expect(row).toContainText(text);
   }
+}
+
+function firstVisibleMarkCheckbox(page: Page) {
+  return vocabularyRows(page).first().locator('input[type="checkbox"]');
 }
 
 async function expectOnlyRowContaining(page: Page, expectedTexts: readonly string[]) {
@@ -107,9 +111,9 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await expect(selectAllJlptCheckbox(page)).toBeChecked();
   await expectSelectedJlptLevels(page, jlptLevels);
 
-  for (const { query, rowId, expectedTexts } of existingSearchExamples) {
+  for (const { query, expectedTexts } of existingSearchExamples) {
     await page.getByTestId('vocabulary-search-input').fill(query);
-    await expectOnlyRow(page, rowId, expectedTexts);
+    await expectOnlyRow(page, expectedTexts);
     await expectCountSummaryAbsent(page);
   }
 
@@ -136,30 +140,44 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
 
   await selectOnlyJlptLevel(page, 'N5');
   await page.getByTestId('vocabulary-search-input').fill('早上');
-  await expectOnlyRow(page, 1, ['あさ', '朝', '早上']);
+  await expectOnlyRow(page, ['あさ', '朝', '早上']);
   await expectCountSummaryAbsent(page);
 
-  await page.getByTestId('vocabulary-mark-checkbox-1').check();
+  await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeDisabled();
+  await firstVisibleMarkCheckbox(page).check();
+  await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeEnabled();
+
+  await page.getByTestId('vocabulary-start-quiz-button').click();
+  await expect(page.getByTestId('exam-modal')).toBeVisible();
+  await expect(page.getByTestId('exam-prompt')).toHaveClass(/exam-modal-prompt-md/);
+  await expect(page.getByTestId('exam-hint')).toHaveCount(0);
+  await page.getByTestId('exam-unknown-button').click();
+  await page.getByTestId('exam-next-button').click();
+  await expect(page.getByTestId('exam-modal')).toHaveCount(0);
+  await expect(page.getByTestId('vocabulary-unsaved-marks-hint')).toBeVisible();
+
   await page.getByTestId('vocabulary-save-marks-button').click();
 
   await page.reload();
   await expectCountSummaryAbsent(page);
   await selectOnlyJlptLevel(page, 'N5');
   await page.getByTestId('vocabulary-search-input').fill('早上');
-  await expectOnlyRow(page, 1, ['あさ', '朝', '早上']);
-  await expect(page.getByTestId('vocabulary-mark-checkbox-1')).toBeChecked();
+  await expectOnlyRow(page, ['あさ', '朝', '早上']);
+  await expect(firstVisibleMarkCheckbox(page)).toBeChecked();
 
   await checkboxInput(page, 'vocabulary-filter-show-marked-only').check();
-  await expectOnlyRow(page, 1, ['あさ', '朝', '早上']);
+  await expectOnlyRow(page, ['あさ', '朝', '早上']);
 
-  const combinedContent = page.getByTestId('vocabulary-combined-content-1');
+  const onlyRowTestId = await vocabularyRows(page).first().getAttribute('data-testid');
+  const onlyRowId = onlyRowTestId?.replace('vocabulary-row-', '');
+  const combinedContent = page.getByTestId(`vocabulary-combined-content-${onlyRowId}`);
   await expect(combinedContent).toHaveClass(/vocabulary-hidden-content/);
 
-  await page.getByTestId('vocabulary-row-1').dispatchEvent('pointerdown');
+  await vocabularyRows(page).first().dispatchEvent('pointerdown');
   await page.waitForTimeout(450);
   await expect(combinedContent).not.toHaveClass(/vocabulary-hidden-content/);
 
-  await page.getByTestId('vocabulary-row-1').dispatchEvent('pointerup');
+  await vocabularyRows(page).first().dispatchEvent('pointerup');
   await expect(combinedContent).toHaveClass(/vocabulary-hidden-content/);
   expect(consoleErrors).toEqual([]);
 });
@@ -198,6 +216,15 @@ test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ conte
     await expect(checkboxInput(page, 'vocabulary-filter-show-marked-only')).toBeChecked();
     await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
     await expectNoHorizontalOverflow(page);
+
+    await checkboxInput(page, 'vocabulary-filter-show-marked-only').uncheck();
+    await firstVisibleMarkCheckbox(page).check();
+    await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeEnabled();
+    await page.getByTestId('vocabulary-start-quiz-button').click();
+    await expect(page.getByTestId('exam-modal')).toBeVisible();
+    await page.getByTestId('exam-next-button').click();
+    await page.getByTestId('exam-next-button').click();
+    await expect(page.getByTestId('exam-modal')).toHaveCount(0);
   } finally {
     await context.setOffline(false);
   }

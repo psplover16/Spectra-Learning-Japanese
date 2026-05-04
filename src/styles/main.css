@@ -204,7 +204,25 @@ textarea {
   }
 
   .exam-modal-prompt {
-    @apply whitespace-nowrap text-[5.5rem] font-bold leading-none text-clay sm:text-[6rem];
+    @apply font-bold text-clay;
+  }
+
+  .exam-modal-prompt-lg {
+    @apply whitespace-nowrap text-[5.5rem] leading-none sm:text-[6rem];
+  }
+
+  .exam-modal-prompt-md {
+    @apply max-w-full whitespace-normal text-[2.25rem] leading-tight sm:text-[2.75rem];
+    overflow-wrap: anywhere;
+  }
+
+  .exam-modal-answer {
+    @apply min-h-[28px] text-lg font-semibold text-ink;
+  }
+
+  .exam-modal-answer-multiline {
+    @apply max-h-[8rem] min-h-[5.5rem] w-full overflow-y-auto whitespace-pre-line px-1 text-base leading-relaxed;
+    overflow-wrap: anywhere;
   }
 
   .grammar-section-card {
@@ -682,6 +700,14 @@ textarea {
     @apply flex min-w-0 flex-wrap items-center gap-3;
   }
 
+  .vocabulary-action-controls-right {
+    @apply flex shrink-0 flex-wrap items-center justify-end gap-2;
+  }
+
+  .vocabulary-unsaved-marks-hint {
+    @apply text-xs font-semibold text-rose-700;
+  }
+
   .vocabulary-search-input {
     @apply h-10 w-full rounded-md border border-gray-300 bg-white px-2 py-1 outline-none transition focus:border-gray-500;
   }
@@ -769,8 +795,12 @@ textarea {
     max-width: 21rem;
   }
 
-  .exam-modal-prompt {
+  .exam-modal-prompt-lg {
     font-size: 5rem;
+  }
+
+  .exam-modal-prompt-md {
+    font-size: 2.125rem;
   }
 
   .grammar-header-cell,
@@ -857,8 +887,12 @@ textarea {
     height: 20.5rem;
   }
 
-  .exam-modal-prompt {
+  .exam-modal-prompt-lg {
     font-size: 4.75rem;
+  }
+
+  .exam-modal-prompt-md {
+    font-size: 1.9375rem;
   }
 
   .grammar-title-copy {

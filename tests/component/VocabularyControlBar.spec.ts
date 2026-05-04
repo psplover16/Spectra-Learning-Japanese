@@ -29,6 +29,20 @@ function mountControlBar(selectedJlptLevels: Iterable<JlptLevel> = jlptLevels) {
   return mount(VocabularyControlBar, { props });
 }
 
+function mountControlBarWithProps(props: Partial<InstanceType<typeof VocabularyControlBar>['$props']>) {
+  return mount(VocabularyControlBar, {
+    props: {
+      searchText: '',
+      showAllSounds: true,
+      showKanji: true,
+      showMarkedOnly: false,
+      practiceMode: false,
+      selectedJlptLevels: new Set(jlptLevels),
+      ...props
+    }
+  });
+}
+
 function getFilterInput(wrapper: VueWrapper, testId: string) {
   return wrapper.get(`[data-testid="${testId}"] input`);
 }
@@ -173,10 +187,28 @@ describe('VocabularyControlBar', () => {
     const css = readMainCss();
     const controlBarCss = cssBodyForSelector(css, '.vocabulary-control-bar');
     const actionControlsLeftCss = cssBodyForSelector(css, '.vocabulary-action-controls-left');
+    const actionControlsRightCss = cssBodyForSelector(css, '.vocabulary-action-controls-right');
 
     expect(controlBarCss).toContain('gap-2');
     expect(controlBarCss).not.toContain('gap-0');
     expect(controlBarCss).not.toMatch(/\bspace-y-/);
     expect(actionControlsLeftCss).toContain('gap-3');
+    expect(actionControlsRightCss).toContain('gap-2');
+  });
+
+  it('顯示開始測驗按鈕，依 props 停用並在可開始時送出事件', async () => {
+    const wrapper = mountControlBarWithProps({
+      canStartQuiz: false,
+      hasUnsavedMarkChanges: true
+    });
+    const startQuizButton = wrapper.get('[data-testid="vocabulary-start-quiz-button"]');
+
+    expect(startQuizButton.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-testid="vocabulary-unsaved-marks-hint"]').text()).toBe('尚未儲存');
+
+    await wrapper.setProps({ canStartQuiz: true });
+    await startQuizButton.trigger('click');
+
+    expect(wrapper.emitted('startQuiz')).toHaveLength(1);
   });
 });
