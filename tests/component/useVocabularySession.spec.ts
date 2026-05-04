@@ -3,10 +3,54 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPracticeSession, providePracticeSession } from '@/modules/practice/composables/usePracticeSession';
 import { useVocabularySession, type UseVocabularySessionOptions } from '@/modules/vocabulary/composables/useVocabularySession';
-import { vocabularyJlptLevels } from '@/modules/vocabulary/types/vocabulary';
+import {
+  vocabularyJlptLevels,
+  type RawVocabularyEntry,
+  type VocabularyJlptLevel
+} from '@/modules/vocabulary/types/vocabulary';
 import { vocabularyMarksStorageKey } from '@/shared/config/storageKeys';
 
 type VocabularySession = ReturnType<typeof useVocabularySession>;
+
+const emptyStageEntries: Record<VocabularyJlptLevel, RawVocabularyEntry[]> = {
+  N1: [],
+  N2: [],
+  N3: [],
+  N4: [],
+  N5: []
+};
+
+function createStageLoaders(entriesByStage: Partial<Record<VocabularyJlptLevel, RawVocabularyEntry[]>>) {
+  const stageEntries = {
+    ...emptyStageEntries,
+    ...entriesByStage
+  };
+
+  return Object.fromEntries(
+    vocabularyJlptLevels.map((level) => [
+      level,
+      () => Promise.resolve({ default: stageEntries[level] })
+    ])
+  ) as Record<VocabularyJlptLevel, () => Promise<{ default: RawVocabularyEntry[] }>>;
+}
+
+function rawVocabularyEntry(
+  text: string,
+  stage: VocabularyJlptLevel,
+  meaning = text
+): RawVocabularyEntry {
+  return {
+    text,
+    romanization: text,
+    kanji: text.toUpperCase(),
+    meaning,
+    stage
+  };
+}
+
+function storedMarkedKeys() {
+  return JSON.parse(window.localStorage.getItem(vocabularyMarksStorageKey) ?? '{}').markedKeys as string[] | undefined;
+}
 
 function mountVocabularySession(options?: UseVocabularySessionOptions) {
   let session: VocabularySession | undefined;
@@ -119,6 +163,97 @@ describe('useVocabularySession', () => {
     expect(session.hasVocabularyLoadError.value).toBe(true);
     expect(session.vocabularyLoadError.value).toBe('單字資料載入失敗：N5');
     expect(session.visibleEntries.value).toEqual([]);
+
+    wrapper.unmount();
+  });
+
+  it('儲存註記只合併目前可見單字，並保留不可見 persisted marks', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const visibleEntry = rawVocabularyEntry('alpha', 'N1');
+    const hiddenEntry = rawVocabularyEntry('beta', 'N5');
+    const { session, wrapper } = mountVocabularySession({
+      stageLoaders: createStageLoaders({
+        N1: [visibleEntry],
+        N5: [hiddenEntry]
+      })
+    });
+    await session.loadVocabularyStages(vocabularyJlptLevels);
+    await flushPromises();
+
+    const visibleKey = 'alpha|ALPHA';
+    const hiddenKey = 'beta|BETA';
+    session.persistedMarkedKeys.value = new Set([visibleKey, hiddenKey]);
+    session.draftMarkedKeys.value = new Set([visibleKey]);
+    session.searchText.value = 'alpha';
+    await nextTick();
+
+    expect(session.visibleEntries.value.map((entry) => entry.markKey)).toEqual([visibleKey]);
+    expect(session.saveMarks()).toBe(true);
+    expect(storedMarkedKeys()?.sort()).toEqual([hiddenKey, visibleKey].sort());
+
+    session.persistedMarkedKeys.value = new Set([visibleKey, hiddenKey]);
+    session.draftMarkedKeys.value = new Set<string>();
+    expect(session.saveMarks()).toBe(true);
+    expect(storedMarkedKeys()).toEqual([hiddenKey]);
+
+    wrapper.unmount();
+  });
+
+  it('清除 header 註記只移除目前可見單字，並保留不可見 persisted marks', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const visibleEntry = rawVocabularyEntry('alpha', 'N1');
+    const hiddenEntry = rawVocabularyEntry('beta', 'N5');
+    const { session, wrapper } = mountVocabularySession({
+      stageLoaders: createStageLoaders({
+        N1: [visibleEntry],
+        N5: [hiddenEntry]
+      })
+    });
+    await session.loadVocabularyStages(vocabularyJlptLevels);
+    await flushPromises();
+
+    const visibleKey = 'alpha|ALPHA';
+    const hiddenKey = 'beta|BETA';
+    session.persistedMarkedKeys.value = new Set([visibleKey, hiddenKey]);
+    session.draftMarkedKeys.value = new Set([visibleKey, hiddenKey]);
+    session.searchText.value = 'alpha';
+    await nextTick();
+
+    session.clearAllMarksWithConfirmation();
+
+    expect(session.persistedMarkedKeys.value.has(visibleKey)).toBe(false);
+    expect(session.draftMarkedKeys.value.has(visibleKey)).toBe(false);
+    expect(session.persistedMarkedKeys.value.has(hiddenKey)).toBe(true);
+    expect(session.draftMarkedKeys.value.has(hiddenKey)).toBe(true);
+    expect(storedMarkedKeys()).toEqual([hiddenKey]);
+    expect(window.confirm).toHaveBeenCalledWith('確定要清除目前顯示單字的註記嗎？');
+    expect(window.confirm).not.toHaveBeenCalledWith('確定要刪除全部註記嗎？');
+
+    wrapper.unmount();
+  });
+
+  it('可見單字依 N5、N4、N3、N2、N1 排序，且不受 lazy load 完成順序影響', async () => {
+    const { session, wrapper } = mountVocabularySession({
+      stageLoaders: createStageLoaders({
+        N1: [rawVocabularyEntry('alpha', 'N1')],
+        N2: [rawVocabularyEntry('epsilon', 'N2')],
+        N3: [rawVocabularyEntry('gamma', 'N3')],
+        N4: [rawVocabularyEntry('delta', 'N4')],
+        N5: [rawVocabularyEntry('beta', 'N5')]
+      })
+    });
+    await session.loadVocabularyStages(vocabularyJlptLevels);
+    await flushPromises();
+
+    expect(session.visibleEntries.value.map((entry) => entry.stage)).toEqual(['N5', 'N4', 'N3', 'N2', 'N1']);
+    expect(session.visibleEntries.value.map((entry) => entry.text)).toEqual(['beta', 'delta', 'gamma', 'epsilon', 'alpha']);
+
+    session.setSelectedJlptLevels(['N4', 'N2', 'N1']);
+    await nextTick();
+
+    expect(session.visibleEntries.value.map((entry) => entry.stage)).toEqual(['N4', 'N2', 'N1']);
 
     wrapper.unmount();
   });

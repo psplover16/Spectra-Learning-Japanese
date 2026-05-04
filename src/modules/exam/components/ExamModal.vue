@@ -34,6 +34,11 @@ const answerClasses = computed(() => [
   { 'exam-modal-answer-multiline': props.answerMultiline }
 ]);
 
+const bodyClasses = computed(() => [
+  'exam-modal-body',
+  { 'exam-modal-body-compact': props.answerMultiline }
+]);
+
 const hintText = computed(() =>
   props.question?.answerRevealed
     ? '已顯示答案，請決定是否標記為我不清楚'
@@ -97,7 +102,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex-1 border-b border-clay/10 px-4 py-3 sm:px-5 sm:py-4">
-          <div class="exam-modal-body">
+          <div data-testid="exam-modal-body" :class="bodyClasses">
             <p data-testid="exam-prompt" :class="promptClasses">{{ props.question?.promptText ?? '-' }}</p>
             <p data-testid="exam-answer" :class="answerClasses">
               {{ props.question?.answerRevealed ? props.question.answerText : '' }}

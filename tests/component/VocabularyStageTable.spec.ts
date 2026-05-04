@@ -42,7 +42,7 @@ describe('VocabularyStageTable', () => {
     expect(wrapper.findAll('tbody td')).toHaveLength(4);
   });
 
-  it('列內註記 checkbox、row click 與清除全部註記 checkbox 會發出事件', async () => {
+  it('列內註記 checkbox、row click 與清除目前顯示註記 checkbox 會發出事件', async () => {
     const wrapper = mount(VocabularyStageTable, {
       props: {
         entries,
@@ -61,7 +61,11 @@ describe('VocabularyStageTable', () => {
     await wrapper.get('[data-testid="vocabulary-row-1"]').trigger('click');
     expect(wrapper.emitted('toggle-marked')?.[1]).toEqual(['あさ|朝', false]);
 
-    await wrapper.get('[data-testid="vocabulary-clear-marks-checkbox"]').setValue(true);
+    const clearMarksCheckbox = wrapper.get('[data-testid="vocabulary-clear-marks-checkbox"]');
+
+    expect(clearMarksCheckbox.attributes('title')).toBe('清除目前顯示單字的註記');
+
+    await clearMarksCheckbox.setValue(true);
     expect(wrapper.emitted('clear-marks')).toHaveLength(1);
   });
 

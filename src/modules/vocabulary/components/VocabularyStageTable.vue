@@ -134,7 +134,7 @@ function handleRowClick(entry: VocabularyEntry) {
               <input
                 data-testid="vocabulary-clear-marks-checkbox"
                 type="checkbox"
-                title="刪除全部註記"
+                title="清除目前顯示單字的註記"
                 :checked="clearMarksChecked"
                 @change="handleClearMarksChange"
               />

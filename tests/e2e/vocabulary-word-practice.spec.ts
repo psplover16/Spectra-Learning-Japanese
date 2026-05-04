@@ -110,6 +110,7 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
 
   await expect(selectAllJlptCheckbox(page)).toBeChecked();
   await expectSelectedJlptLevels(page, jlptLevels);
+  await expect(vocabularyRows(page).first()).toContainText('早上');
 
   for (const { query, expectedTexts } of existingSearchExamples) {
     await page.getByTestId('vocabulary-search-input').fill(query);
@@ -154,7 +155,8 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await page.getByTestId('exam-unknown-button').click();
   await page.getByTestId('exam-next-button').click();
   await expect(page.getByTestId('exam-modal')).toHaveCount(0);
-  await expect(page.getByTestId('vocabulary-unsaved-marks-hint')).toBeVisible();
+  await expect(page.getByTestId('vocabulary-unsaved-marks-hint')).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem('vocabulary-mark-snapshot'))).toBeNull();
 
   await page.getByTestId('vocabulary-save-marks-button').click();
 

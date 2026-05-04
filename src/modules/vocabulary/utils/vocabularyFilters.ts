@@ -10,6 +10,13 @@ import type {
 
 const smallKanaSet = new Set(['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ゎ', 'っ', 'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ヮ', 'ッ', 'ー']);
 const punctuationSet = new Set([' ', '\n', '\r', '\t', '・', '／', '/', '〜', '～', '(', ')', '（', '）', '　']);
+const vocabularyJlptLearningOrder: Record<VocabularyJlptLevel, number> = {
+  N5: 0,
+  N4: 1,
+  N3: 2,
+  N2: 3,
+  N1: 4
+};
 
 function convertKanaByCodePoint(text: string, offset: number, start: number, end: number) {
   return Array.from(text)
@@ -148,25 +155,35 @@ export function filterVocabularyEntries(
 ) {
   const markedKeySet = new Set(markedKeys);
 
-  return entries.filter((entry) => {
-    if (!matchesJlptLevel(entry, filterState.selectedJlptLevels)) {
-      return false;
-    }
+  return entries
+    .filter((entry) => {
+      if (!matchesJlptLevel(entry, filterState.selectedJlptLevels)) {
+        return false;
+      }
 
-    if (!matchesPracticeSelection(entry, filterState.allowedKanaSet, includeHiragana, includeKatakana, filterState.showAllSounds)) {
-      return false;
-    }
+      if (!matchesPracticeSelection(entry, filterState.allowedKanaSet, includeHiragana, includeKatakana, filterState.showAllSounds)) {
+        return false;
+      }
 
-    if (!matchesSearch(entry, filterState.searchText)) {
-      return false;
-    }
+      if (!matchesSearch(entry, filterState.searchText)) {
+        return false;
+      }
 
-    if (filterState.showMarkedOnly && !markedKeySet.has(entry.markKey)) {
-      return false;
-    }
+      if (filterState.showMarkedOnly && !markedKeySet.has(entry.markKey)) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .sort((left, right) => {
+      const stageOrder = vocabularyJlptLearningOrder[left.stage] - vocabularyJlptLearningOrder[right.stage];
+
+      if (stageOrder !== 0) {
+        return stageOrder;
+      }
+
+      return left.id - right.id;
+    });
 }
 
 export function buildVisibleStageGroups(

@@ -16,11 +16,9 @@ const props = withDefaults(defineProps<{
   selectedJlptLevels: Set<VocabularyJlptLevel>;
   canSaveMarks?: boolean;
   canStartQuiz?: boolean;
-  hasUnsavedMarkChanges?: boolean;
 }>(), {
   canSaveMarks: true,
-  canStartQuiz: false,
-  hasUnsavedMarkChanges: false
+  canStartQuiz: false
 });
 
 const emit = defineEmits<{
@@ -131,13 +129,6 @@ function jlptLevelWrapperTestId(level: VocabularyJlptLevel) {
         />
       </div>
       <div class="vocabulary-action-controls-right" data-testid="vocabulary-action-controls-right">
-        <p
-          v-if="props.hasUnsavedMarkChanges"
-          data-testid="vocabulary-unsaved-marks-hint"
-          class="vocabulary-unsaved-marks-hint"
-        >
-          尚未儲存
-        </p>
         <BaseButton
           data-testid="vocabulary-start-quiz-button"
           variant="primary"

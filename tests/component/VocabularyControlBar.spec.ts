@@ -196,15 +196,15 @@ describe('VocabularyControlBar', () => {
     expect(actionControlsRightCss).toContain('gap-2');
   });
 
-  it('顯示開始測驗按鈕，依 props 停用並在可開始時送出事件', async () => {
+  it('顯示開始測驗按鈕，依 props 停用並在可開始時送出事件，且不顯示未儲存提示', async () => {
     const wrapper = mountControlBarWithProps({
-      canStartQuiz: false,
-      hasUnsavedMarkChanges: true
+      canStartQuiz: false
     });
     const startQuizButton = wrapper.get('[data-testid="vocabulary-start-quiz-button"]');
 
     expect(startQuizButton.attributes('disabled')).toBeDefined();
-    expect(wrapper.get('[data-testid="vocabulary-unsaved-marks-hint"]').text()).toBe('尚未儲存');
+    expect(wrapper.find('[data-testid="vocabulary-unsaved-marks-hint"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('尚未儲存');
 
     await wrapper.setProps({ canStartQuiz: true });
     await startQuizButton.trigger('click');

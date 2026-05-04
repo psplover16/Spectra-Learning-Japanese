@@ -128,7 +128,7 @@ describe('VocabularyViewSmoke', () => {
     expect(actionControls.element.lastElementChild).toBe(actionControlsRight.element);
   });
 
-  it('可儲存註記並清除全部註記', async () => {
+  it('可儲存註記並清除目前顯示單字的註記', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const { wrapper } = await mountVocabularyView();
@@ -201,7 +201,7 @@ describe('VocabularyViewSmoke', () => {
     }
   });
 
-  it('可從目前可見且已勾選的單字開始測驗，結算後只留下未儲存 draft 提醒', async () => {
+  it('可從目前可見且已勾選的單字開始測驗，結算後只更新 draft 且不顯示未儲存提示', async () => {
     const { wrapper } = await mountVocabularyView();
     const startQuizButton = wrapper.get('[data-testid="vocabulary-start-quiz-button"]');
 
@@ -223,6 +223,8 @@ describe('VocabularyViewSmoke', () => {
     await wrapper.get('[data-testid="exam-next-button"]').trigger('click');
 
     expect(wrapper.find('[data-testid="exam-modal"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="vocabulary-unsaved-marks-hint"]').text()).toBe('尚未儲存');
+    expect(wrapper.find('[data-testid="vocabulary-unsaved-marks-hint"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('尚未儲存');
+    expect(window.localStorage.getItem('vocabulary-mark-snapshot')).toBeNull();
   });
 });

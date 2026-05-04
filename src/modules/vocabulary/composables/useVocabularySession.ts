@@ -211,14 +211,21 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     setSelectedJlptLevels(value ? vocabularyJlptLevels : []);
   }
 
-  function saveMarks() {
-    if (!window.confirm('確定要註記嗎？')) {
-      return false;
+  function getVisibleMarkKeyScope() {
+    return new Set(visibleEntries.value.map((entry) => entry.markKey));
+  }
+
+  function persistMarkedKeys(markedKeys: Set<string>) {
+    if (markedKeys.size === 0) {
+      clearVocabularyMarksSnapshot();
+      persistedMarkedKeys.value = new Set();
+      draftMarkedKeys.value = new Set();
+      return true;
     }
 
     const snapshot = {
       version: 2 as const,
-      markedKeys: [...draftMarkedKeys.value].sort(),
+      markedKeys: [...markedKeys].sort(),
       updatedAt: new Date().toISOString()
     };
 
@@ -232,18 +239,42 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     return true;
   }
 
+  function saveMarks() {
+    if (!window.confirm('確定要註記嗎？')) {
+      return false;
+    }
+
+    const visibleMarkKeyScope = getVisibleMarkKeyScope();
+    const nextMarkedKeys = new Set(persistedMarkedKeys.value);
+
+    for (const key of visibleMarkKeyScope) {
+      if (draftMarkedKeys.value.has(key)) {
+        nextMarkedKeys.add(key);
+      } else {
+        nextMarkedKeys.delete(key);
+      }
+    }
+
+    return persistMarkedKeys(nextMarkedKeys);
+  }
+
   function clearAllMarksWithConfirmation() {
-    if (!window.confirm('確定要刪除全部註記嗎？')) {
+    if (!window.confirm('確定要清除目前顯示單字的註記嗎？')) {
       return;
     }
 
-    if (!window.confirm('刪除後，無法復原，確定要刪除嗎？')) {
+    if (!window.confirm('清除後，無法復原，確定要清除嗎？')) {
       return;
     }
 
-    clearVocabularyMarksSnapshot();
-    persistedMarkedKeys.value = new Set();
-    draftMarkedKeys.value = new Set();
+    const visibleMarkKeyScope = getVisibleMarkKeyScope();
+    const nextMarkedKeys = new Set(persistedMarkedKeys.value);
+
+    for (const key of visibleMarkKeyScope) {
+      nextMarkedKeys.delete(key);
+    }
+
+    void persistMarkedKeys(nextMarkedKeys);
   }
 
   function clearRevealTimer() {

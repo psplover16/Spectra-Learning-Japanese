@@ -51,7 +51,6 @@ onBeforeUnmount(() => {
       v-model:selected-jlpt-levels="session.selectedJlptLevels.value"
       :can-save-marks="session.hasAnyVisibleEntries.value"
       :can-start-quiz="canStartVocabularyQuiz"
-      :has-unsaved-mark-changes="session.hasUnsavedMarkChanges.value"
       @save-marks="session.saveMarks"
       @start-quiz="startVocabularyQuiz"
     />
