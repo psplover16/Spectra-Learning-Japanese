@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import VocabularyStageTable from '@/modules/vocabulary/components/VocabularyStageTable.vue';
 import type { VocabularyEntry } from '@/modules/vocabulary/types/vocabulary';
@@ -14,21 +14,44 @@ const entries: VocabularyEntry[] = [
     stage: 'N5',
     textKanaUnits: ['あ', 'さ'],
     hasKanji: true
+  },
+  {
+    id: 2,
+    markKey: 'あい|',
+    text: 'あい',
+    romanization: 'a-i',
+    kanji: '',
+    meaning: '愛',
+    stage: 'N5',
+    textKanaUnits: ['あ', 'い'],
+    hasKanji: false
   }
 ];
 
+type StageTableProps = Partial<InstanceType<typeof VocabularyStageTable>['$props']> & {
+  allVisibleDraftMarked?: boolean;
+};
+
+function mountTable(props: StageTableProps = {}) {
+  return mount(VocabularyStageTable, {
+    props: {
+      entries,
+      showKanji: true,
+      practiceMode: false,
+      columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
+      savedMarkedKeys: new Set<string>(),
+      draftMarkedKeys: new Set<string>(),
+      allVisibleDraftMarked: false,
+      revealedEntryId: null,
+      ...props
+    }
+  });
+}
+
 describe('VocabularyStageTable', () => {
   it('標頭 checkbox 會發出欄位顯示事件，且隱藏內容仍保留欄位', async () => {
-    const wrapper = mount(VocabularyStageTable, {
-      props: {
-        entries,
-        showKanji: true,
-        practiceMode: false,
-        columnVisibility: { word: false, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedKeys: new Set<string>(),
-        draftMarkedKeys: new Set<string>(),
-        revealedEntryId: null
-      }
+    const wrapper = mountTable({
+      columnVisibility: { word: false, combined: false, meaning: false, preserveLayoutWhenHidden: true }
     });
 
     const checkboxes = wrapper.findAll('thead input[type="checkbox"]');
@@ -39,20 +62,14 @@ describe('VocabularyStageTable', () => {
     expect(wrapper.emitted('update:combinedColumnVisible')?.[0]).toEqual([true]);
 
     expect(wrapper.find('tbody td .vocabulary-hidden-content').exists()).toBe(true);
-    expect(wrapper.findAll('tbody td')).toHaveLength(4);
+    expect(wrapper.findAll('tbody td')).toHaveLength(8);
   });
 
-  it('列內註記 checkbox、row click 與清除目前顯示註記 checkbox 會發出事件', async () => {
-    const wrapper = mount(VocabularyStageTable, {
-      props: {
-        entries,
-        showKanji: true,
-        practiceMode: false,
-        columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedKeys: new Set(['あさ|朝']),
-        draftMarkedKeys: new Set(['あさ|朝']),
-        revealedEntryId: null
-      }
+  it('列內註記 checkbox、row click 與 header 批次註記 checkbox 會發出 draft mark 事件', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    const wrapper = mountTable({
+      savedMarkedKeys: new Set(['あさ|朝']),
+      draftMarkedKeys: new Set(['あさ|朝'])
     });
 
     await wrapper.get('[data-testid="vocabulary-mark-checkbox-1"]').setValue(false);
@@ -61,26 +78,40 @@ describe('VocabularyStageTable', () => {
     await wrapper.get('[data-testid="vocabulary-row-1"]').trigger('click');
     expect(wrapper.emitted('toggle-marked')?.[1]).toEqual(['あさ|朝', false]);
 
-    const clearMarksCheckbox = wrapper.get('[data-testid="vocabulary-clear-marks-checkbox"]');
+    expect(wrapper.find('[data-testid="vocabulary-clear-marks-checkbox"]').exists()).toBe(false);
 
-    expect(clearMarksCheckbox.attributes('title')).toBe('清除目前顯示單字的註記');
+    const bulkMarkCheckbox = wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]');
 
-    await clearMarksCheckbox.setValue(true);
-    expect(wrapper.emitted('clear-marks')).toHaveLength(1);
+    expect(bulkMarkCheckbox.attributes('title')).toBe('勾選或取消勾選目前顯示單字');
+    expect((bulkMarkCheckbox.element as HTMLInputElement).checked).toBe(false);
+
+    await bulkMarkCheckbox.setValue(true);
+    expect(wrapper.emitted('bulk-toggle-marked')?.[0]).toEqual([true]);
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('header 批次註記 checkbox 會反映全部可見 draft marks，任一列取消後會同步取消 checked', async () => {
+    const wrapper = mountTable({
+      draftMarkedKeys: new Set(['あさ|朝', 'あい|']),
+      allVisibleDraftMarked: true
+    });
+    const bulkMarkCheckbox = wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]');
+
+    expect((bulkMarkCheckbox.element as HTMLInputElement).checked).toBe(true);
+
+    await wrapper.get('[data-testid="vocabulary-mark-checkbox-2"]').setValue(false);
+    expect(wrapper.emitted('toggle-marked')?.[0]).toEqual(['あい|', false]);
+
+    await wrapper.setProps({
+      draftMarkedKeys: new Set(['あさ|朝']),
+      allVisibleDraftMarked: false
+    });
+
+    expect((wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]').element as HTMLInputElement).checked).toBe(false);
   });
 
   it('資料列內容會發出長按揭露相關 pointer 事件', async () => {
-    const wrapper = mount(VocabularyStageTable, {
-      props: {
-        entries,
-        showKanji: true,
-        practiceMode: false,
-        columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedKeys: new Set<string>(),
-        draftMarkedKeys: new Set<string>(),
-        revealedEntryId: null
-      }
-    });
+    const wrapper = mountTable();
 
     await wrapper.get('[data-testid="vocabulary-row-1"]').trigger('pointerdown');
     expect(wrapper.emitted('begin-reveal')?.[0]).toEqual([1]);
@@ -90,17 +121,7 @@ describe('VocabularyStageTable', () => {
   });
 
   it('資料列會攔截 contextmenu，避免跳出右鍵選單', () => {
-    const wrapper = mount(VocabularyStageTable, {
-      props: {
-        entries,
-        showKanji: true,
-        practiceMode: false,
-        columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
-        savedMarkedKeys: new Set<string>(),
-        draftMarkedKeys: new Set<string>(),
-        revealedEntryId: null
-      }
-    });
+    const wrapper = mountTable();
 
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     const dispatchResult = wrapper.get('[data-testid="vocabulary-row-1"]').element.dispatchEvent(event);

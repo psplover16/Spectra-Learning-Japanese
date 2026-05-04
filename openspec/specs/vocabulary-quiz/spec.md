@@ -8,12 +8,19 @@ TBD - created by archiving change 'vocabulary-quiz-feature'. Update Purpose afte
 
 ### Requirement: Vocabulary quiz starts from visible marked vocabulary
 
-The vocabulary practice page SHALL provide a start-quiz control beside the save-marks control. The control SHALL be enabled only when at least one currently visible vocabulary row is marked in either the draft mark set or the persisted mark set. The quiz deck SHALL be created from a snapshot of currently visible marked vocabulary entries at the moment the quiz starts.
+The vocabulary practice page SHALL provide a start-quiz control on the right side of the JLPT level controls row. The control SHALL be hidden when there are no currently visible vocabulary rows. The control SHALL be visible but disabled when at least one vocabulary row is currently visible and no currently visible vocabulary row is marked in either the draft mark set or the persisted mark set. The control SHALL be enabled only when at least one currently visible vocabulary row is marked in either the draft mark set or the persisted mark set. The quiz deck SHALL be created from a snapshot of currently visible marked vocabulary entries at the moment the quiz starts.
 
-#### Scenario: Start quiz is disabled with no visible marked entries
+#### Scenario: Start quiz is hidden with no visible entries
 
-- **WHEN** the vocabulary practice page has no visible row whose mark checkbox is checked
-- **THEN** the start-quiz control is disabled
+- **WHEN** the vocabulary practice page has no visible vocabulary rows
+- **THEN** the start-quiz control is hidden
+
+#### Scenario: Start quiz is disabled with visible entries but no visible marked entries
+
+- **WHEN** the vocabulary practice page has at least one visible vocabulary row
+- **AND** no visible vocabulary row has a checked mark checkbox from draft or persisted marks
+- **THEN** the start-quiz control is visible
+- **AND** the start-quiz control is disabled
 
 #### Scenario: Start quiz uses visible marked entries
 
@@ -32,43 +39,23 @@ The vocabulary practice page SHALL provide a start-quiz control beside the save-
 
 
 <!-- @trace
-source: vocabulary-quiz-feature
+source: vocabulary-control-bar-bulk-mark-adjustments
 updated: 2026-05-04
 code:
   - src/styles/main.css
-  - _private/propose.md
-  - src/modules/exam/components/ExamModal.vue
-  - src/modules/vocabulary/data/jpWords_N4.ts
-  - src/modules/vocabulary/data/jpWords.ts
-  - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
-  - src/modules/vocabulary/data/jpWords_N2.ts
-  - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/exam/types/exam.ts
-  - src/modules/vocabulary/data/jpWords_N5.ts
-  - src/modules/vocabulary/data/jpWords_N1.ts
-  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
-  - _private/discuss.txt
-  - src/modules/vocabulary/composables/useVocabularySession.ts
-  - src/modules/vocabulary/data/jpWords_N3.ts
-  - PROJECT_ARCHITECTURE.md
-  - src/modules/vocabulary/components/VocabularyControlBar.vue
   - src/modules/vocabulary/components/VocabularyStageTable.vue
-  - _private/筆記.md
-  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
-  - tests/unit/vocabularyStageTestData.ts
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/propose.md
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - PROJECT_ARCHITECTURE.md
 tests:
-  - tests/unit/useVocabularyExamSession.spec.ts
-  - tests/unit/vocabularyData.spec.ts
-  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
-  - tests/component/VocabularyControlBar.spec.ts
   - tests/e2e/vocabulary-word-practice.spec.ts
   - tests/component/VocabularyViewSmoke.spec.ts
-  - tests/component/ExamModal.spec.ts
-  - tests/unit/vocabularyMeaningFormat.spec.ts
   - tests/component/VocabularyStageTable.spec.ts
-  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
   - tests/component/useVocabularySession.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
 -->
 
 ---

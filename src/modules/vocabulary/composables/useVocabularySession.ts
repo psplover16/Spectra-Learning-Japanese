@@ -96,14 +96,16 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
 
   const visibleEntryCount = computed(() => visibleEntries.value.length);
   const hasAnyVisibleEntries = computed(() => visibleEntryCount.value > 0);
-  const allJlptLevelsSelected = computed(() =>
-    vocabularyJlptLevels.every((level) => selectedJlptLevels.value.has(level))
-  );
   const hasUnsavedMarkChanges = computed(() => {
     const next = [...draftMarkedKeys.value].sort();
     const current = [...persistedMarkedKeys.value].sort();
 
     return JSON.stringify(next) !== JSON.stringify(current);
+  });
+  const allVisibleDraftMarked = computed(() => {
+    const visibleMarkKeyScope = getVisibleMarkKeyScope();
+
+    return visibleMarkKeyScope.size > 0 && [...visibleMarkKeyScope].every((key) => draftMarkedKeys.value.has(key));
   });
 
   function replaceLoadingJlptLevels(updater: (next: Set<VocabularyJlptLevel>) => void) {
@@ -207,12 +209,23 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     setSelectedJlptLevels(next);
   }
 
-  function toggleAllJlptLevels(value: boolean) {
-    setSelectedJlptLevels(value ? vocabularyJlptLevels : []);
-  }
-
   function getVisibleMarkKeyScope() {
     return new Set(visibleEntries.value.map((entry) => entry.markKey));
+  }
+
+  function bulkToggleVisibleDraftMarks(value: boolean) {
+    const visibleMarkKeyScope = getVisibleMarkKeyScope();
+    const nextMarkedKeys = new Set(draftMarkedKeys.value);
+
+    for (const key of visibleMarkKeyScope) {
+      if (value) {
+        nextMarkedKeys.add(key);
+      } else {
+        nextMarkedKeys.delete(key);
+      }
+    }
+
+    draftMarkedKeys.value = nextMarkedKeys;
   }
 
   function persistMarkedKeys(markedKeys: Set<string>) {
@@ -256,25 +269,6 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     }
 
     return persistMarkedKeys(nextMarkedKeys);
-  }
-
-  function clearAllMarksWithConfirmation() {
-    if (!window.confirm('確定要清除目前顯示單字的註記嗎？')) {
-      return;
-    }
-
-    if (!window.confirm('清除後，無法復原，確定要清除嗎？')) {
-      return;
-    }
-
-    const visibleMarkKeyScope = getVisibleMarkKeyScope();
-    const nextMarkedKeys = new Set(persistedMarkedKeys.value);
-
-    for (const key of visibleMarkKeyScope) {
-      nextMarkedKeys.delete(key);
-    }
-
-    void persistMarkedKeys(nextMarkedKeys);
   }
 
   function clearRevealTimer() {
@@ -335,16 +329,15 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     visibleEntries,
     visibleEntryCount,
     hasAnyVisibleEntries,
-    allJlptLevelsSelected,
     hasUnsavedMarkChanges,
+    allVisibleDraftMarked,
     revealedEntryId,
     setSelectedJlptLevels,
     toggleJlptLevel,
-    toggleAllJlptLevels,
     toggleMarked,
+    bulkToggleVisibleDraftMarks,
     loadVocabularyStages,
     saveMarks,
-    clearAllMarksWithConfirmation,
     beginReveal,
     endReveal
   };

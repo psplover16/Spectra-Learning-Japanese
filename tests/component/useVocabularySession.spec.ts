@@ -91,7 +91,7 @@ describe('useVocabularySession', () => {
     window.localStorage.clear();
   });
 
-  it('以 stable key 切換、儲存、清除註記並驅動只顯示註記過濾', async () => {
+  it('以 stable key 切換、儲存、取消註記並驅動只顯示註記過濾', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const { session, wrapper } = mountVocabularySession();
@@ -118,8 +118,11 @@ describe('useVocabularySession', () => {
     expect(session.visibleEntries.value.map((entry) => entry.markKey)).toContain(markedEntry.markKey);
     expect(session.visibleEntries.value.map((entry) => entry.markKey)).not.toContain(unmarkedEntry.markKey);
 
-    session.clearAllMarksWithConfirmation();
+    session.showMarkedOnly.value = false;
+    await nextTick();
+    session.toggleMarked(markedEntry.markKey, false);
 
+    expect(session.saveMarks()).toBe(true);
     expect(session.persistedMarkedKeys.value.size).toBe(0);
     expect(session.draftMarkedKeys.value.size).toBe(0);
     expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBeNull();
@@ -200,7 +203,8 @@ describe('useVocabularySession', () => {
     wrapper.unmount();
   });
 
-  it('清除 header 註記只移除目前可見單字，並保留不可見 persisted marks', async () => {
+  it('header 批次註記只更新目前可見 draft marks，並保留不可見 draft 與 persisted marks', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const visibleEntry = rawVocabularyEntry('alpha', 'N1');
@@ -216,19 +220,37 @@ describe('useVocabularySession', () => {
 
     const visibleKey = 'alpha|ALPHA';
     const hiddenKey = 'beta|BETA';
-    session.persistedMarkedKeys.value = new Set([visibleKey, hiddenKey]);
-    session.draftMarkedKeys.value = new Set([visibleKey, hiddenKey]);
+    const persistedSnapshot = JSON.stringify({
+      version: 2,
+      markedKeys: [hiddenKey],
+      updatedAt: '2026-05-04T00:00:00.000Z'
+    });
+    window.localStorage.setItem(vocabularyMarksStorageKey, persistedSnapshot);
+    session.persistedMarkedKeys.value = new Set([hiddenKey]);
+    session.draftMarkedKeys.value = new Set([hiddenKey]);
     session.searchText.value = 'alpha';
     await nextTick();
 
-    session.clearAllMarksWithConfirmation();
+    expect(session.visibleEntries.value.map((entry) => entry.markKey)).toEqual([visibleKey]);
+    expect(session.allVisibleDraftMarked.value).toBe(false);
 
-    expect(session.persistedMarkedKeys.value.has(visibleKey)).toBe(false);
-    expect(session.draftMarkedKeys.value.has(visibleKey)).toBe(false);
-    expect(session.persistedMarkedKeys.value.has(hiddenKey)).toBe(true);
+    session.bulkToggleVisibleDraftMarks(true);
+
+    expect(session.draftMarkedKeys.value.has(visibleKey)).toBe(true);
     expect(session.draftMarkedKeys.value.has(hiddenKey)).toBe(true);
-    expect(storedMarkedKeys()).toEqual([hiddenKey]);
-    expect(window.confirm).toHaveBeenCalledWith('確定要清除目前顯示單字的註記嗎？');
+    expect(session.persistedMarkedKeys.value).toEqual(new Set([hiddenKey]));
+    expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBe(persistedSnapshot);
+    expect(session.allVisibleDraftMarked.value).toBe(true);
+
+    session.bulkToggleVisibleDraftMarks(false);
+
+    expect(session.draftMarkedKeys.value.has(visibleKey)).toBe(false);
+    expect(session.draftMarkedKeys.value.has(hiddenKey)).toBe(true);
+    expect(session.persistedMarkedKeys.value).toEqual(new Set([hiddenKey]));
+    expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBe(persistedSnapshot);
+    expect(session.allVisibleDraftMarked.value).toBe(false);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(window.confirm).not.toHaveBeenCalledWith('確定要清除目前顯示單字的註記嗎？');
     expect(window.confirm).not.toHaveBeenCalledWith('確定要刪除全部註記嗎？');
 
     wrapper.unmount();

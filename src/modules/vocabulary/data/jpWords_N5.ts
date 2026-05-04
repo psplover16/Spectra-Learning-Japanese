@@ -152,7 +152,7 @@ const jpWords_N5: RawVocabularyEntry[] = [
     text: "あさい",
     romanization: "a-sa-i",
     kanji: "浅い",
-    meaning: "淺(程度/深度/關係)（い形容詞）",
+    meaning: "淺(程度淺的/深度淺的)（い形容詞）",
     stage: "N5",
   },
   {

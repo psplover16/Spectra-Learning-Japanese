@@ -7,13 +7,16 @@ import VocabularyControlBar from '@/modules/vocabulary/components/VocabularyCont
 const jlptLevels = ['N1', 'N2', 'N3', 'N4', 'N5'] as const;
 type JlptLevel = (typeof jlptLevels)[number];
 
-const jlptLevelTestIds: Record<JlptLevel | 'all', string> = {
-  all: 'vocabulary-filter-jlpt-level-all',
+const jlptLevelTestIds: Record<JlptLevel, string> = {
   N1: 'vocabulary-filter-jlpt-level-n1',
   N2: 'vocabulary-filter-jlpt-level-n2',
   N3: 'vocabulary-filter-jlpt-level-n3',
   N4: 'vocabulary-filter-jlpt-level-n4',
   N5: 'vocabulary-filter-jlpt-level-n5'
+};
+
+type ControlBarProps = Partial<InstanceType<typeof VocabularyControlBar>['$props']> & {
+  canShowStartQuiz?: boolean;
 };
 
 function mountControlBar(selectedJlptLevels: Iterable<JlptLevel> = jlptLevels) {
@@ -29,7 +32,7 @@ function mountControlBar(selectedJlptLevels: Iterable<JlptLevel> = jlptLevels) {
   return mount(VocabularyControlBar, { props });
 }
 
-function mountControlBarWithProps(props: Partial<InstanceType<typeof VocabularyControlBar>['$props']>) {
+function mountControlBarWithProps(props: ControlBarProps) {
   return mount(VocabularyControlBar, {
     props: {
       searchText: '',
@@ -47,11 +50,11 @@ function getFilterInput(wrapper: VueWrapper, testId: string) {
   return wrapper.get(`[data-testid="${testId}"] input`);
 }
 
-function getJlptInput(wrapper: VueWrapper, level: JlptLevel | 'all') {
+function getJlptInput(wrapper: VueWrapper, level: JlptLevel) {
   return getFilterInput(wrapper, jlptLevelTestIds[level]);
 }
 
-function checked(wrapper: VueWrapper, level: JlptLevel | 'all') {
+function checked(wrapper: VueWrapper, level: JlptLevel) {
   return (getJlptInput(wrapper, level).element as HTMLInputElement).checked;
 }
 
@@ -59,8 +62,6 @@ function expectJlptControlsChecked(wrapper: VueWrapper, expected: boolean) {
   for (const level of jlptLevels) {
     expect(checked(wrapper, level)).toBe(expected);
   }
-
-  expect(checked(wrapper, 'all')).toBe(expected);
 }
 
 function expectLastSelectedJlptLevels(wrapper: VueWrapper, expected: Iterable<JlptLevel>) {
@@ -114,10 +115,11 @@ describe('VocabularyControlBar', () => {
     expect(wrapper.emitted('update:showMarkedOnly')?.[0]).toEqual([true]);
   });
 
-  it('預設勾選 N1-N5 與全部勾選，並把 level controls 排在 action controls 上方', () => {
+  it('預設勾選 N1-N5、不顯示全部勾選，並把開始測驗放在 JLPT row 右側', () => {
     const wrapper = mountControlBar();
 
-    expect(wrapper.get(`[data-testid="${jlptLevelTestIds.all}"]`).text()).toContain('全部勾選');
+    expect(wrapper.find('[data-testid="vocabulary-filter-jlpt-level-all"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="vocabulary-filter-jlpt-select-all"]').exists()).toBe(false);
 
     for (const level of jlptLevels) {
       expect(wrapper.get(`[data-testid="${jlptLevelTestIds[level]}"]`).text()).toContain(level);
@@ -126,55 +128,44 @@ describe('VocabularyControlBar', () => {
     expectJlptControlsChecked(wrapper, true);
 
     const levelControls = wrapper.get('[data-testid="vocabulary-level-controls"]');
+    const levelControlsLeft = wrapper.get('[data-testid="vocabulary-level-controls-left"]');
+    const levelControlsRight = wrapper.get('[data-testid="vocabulary-level-controls-right"]');
     const actionControls = wrapper.get('[data-testid="vocabulary-action-controls"]');
+    const startQuiz = levelControlsRight.get('[data-testid="vocabulary-start-quiz-button"]');
 
     expect(appearsBefore(levelControls.element, actionControls.element)).toBe(true);
+    expect(appearsBefore(levelControlsLeft.element, levelControlsRight.element)).toBe(true);
+    expect(levelControls.element.firstElementChild).toBe(levelControlsLeft.element);
+    expect(levelControls.element.lastElementChild).toBe(levelControlsRight.element);
+    expect(startQuiz.element).toBeInstanceOf(HTMLElement);
   });
 
-  it('全部勾選會批次取消與回復 N1-N5，取消任一 level 也會取消全部勾選', async () => {
+  it('individual JLPT checkbox 可以逐一更新選取集合，也可以清空全部 level', async () => {
     const wrapper = mountControlBar();
+    const selected = new Set<JlptLevel>(jlptLevels);
 
     await getJlptInput(wrapper, 'N3').setValue(false);
-    expectLastSelectedJlptLevels(wrapper, ['N1', 'N2', 'N4', 'N5']);
+    selected.delete('N3');
+    expectLastSelectedJlptLevels(wrapper, selected);
 
-    await wrapper.setProps({ selectedJlptLevels: new Set<JlptLevel>(['N1', 'N2', 'N4', 'N5']) });
-    expect(checked(wrapper, 'all')).toBe(false);
+    await wrapper.setProps({ selectedJlptLevels: new Set(selected) });
+    expect(checked(wrapper, 'N3')).toBe(false);
 
-    await wrapper.setProps({ selectedJlptLevels: new Set<JlptLevel>(jlptLevels) });
-    expect(checked(wrapper, 'all')).toBe(true);
-
-    await getJlptInput(wrapper, 'all').setValue(false);
-    expectLastSelectedJlptLevels(wrapper, []);
-
-    await wrapper.setProps({ selectedJlptLevels: new Set<JlptLevel>() });
-    expectJlptControlsChecked(wrapper, false);
-
-    await getJlptInput(wrapper, 'all').setValue(true);
-    expectLastSelectedJlptLevels(wrapper, jlptLevels);
-
-    await wrapper.setProps({ selectedJlptLevels: new Set<JlptLevel>(jlptLevels) });
-    expectJlptControlsChecked(wrapper, true);
-  });
-
-  it('手動把 N1-N5 全部勾回時會回復全部勾選', async () => {
-    const wrapper = mountControlBar([]);
-    const selected = new Set<JlptLevel>();
-
-    expectJlptControlsChecked(wrapper, false);
-
-    for (const level of jlptLevels) {
-      await getJlptInput(wrapper, level).setValue(true);
-      selected.add(level);
-
+    for (const level of ['N1', 'N2', 'N4', 'N5'] as const) {
+      await getJlptInput(wrapper, level).setValue(false);
+      selected.delete(level);
       expectLastSelectedJlptLevels(wrapper, selected);
 
       await wrapper.setProps({ selectedJlptLevels: new Set(selected) });
     }
 
-    expect(checked(wrapper, 'all')).toBe(true);
+    expectJlptControlsChecked(wrapper, false);
+
+    await getJlptInput(wrapper, 'N5').setValue(true);
+    expectLastSelectedJlptLevels(wrapper, ['N5']);
   });
 
-  it('keeps 8px outer gap between upper control blocks while action checkboxes keep a gap', () => {
+  it('keeps 8px outer gap between upper control blocks while action row padding aligns controls', () => {
     const wrapper = mountControlBar();
     const controlBar = wrapper.get('[data-testid="vocabulary-control-bar"]');
     const controlBlocks = Array.from(controlBar.element.children);
@@ -186,28 +177,53 @@ describe('VocabularyControlBar', () => {
 
     const css = readMainCss();
     const controlBarCss = cssBodyForSelector(css, '.vocabulary-control-bar');
+    const levelControlsCss = cssBodyForSelector(css, '.vocabulary-level-controls');
+    const levelControlsLeftCss = cssBodyForSelector(css, '.vocabulary-level-controls-left');
+    const levelControlsRightCss = cssBodyForSelector(css, '.vocabulary-level-controls-right');
+    const actionControlsCss = cssBodyForSelector(css, '.vocabulary-action-controls');
     const actionControlsLeftCss = cssBodyForSelector(css, '.vocabulary-action-controls-left');
     const actionControlsRightCss = cssBodyForSelector(css, '.vocabulary-action-controls-right');
 
     expect(controlBarCss).toContain('gap-2');
     expect(controlBarCss).not.toContain('gap-0');
     expect(controlBarCss).not.toMatch(/\bspace-y-/);
+    expect(levelControlsCss).toContain('justify-between');
+    expect(levelControlsCss).toContain('rounded-md');
+    expect(levelControlsCss).toContain('border');
+    expect(levelControlsCss).toContain('border-gray-200');
+    expect(levelControlsCss).toContain('bg-neutral-50');
+    expect(levelControlsCss).toContain('px-2');
+    expect(levelControlsCss).toContain('py-2');
+    expect(levelControlsLeftCss).toContain('gap-2');
+    expect(levelControlsRightCss).toContain('gap-2');
+    expect(actionControlsCss).toContain('justify-between');
+    expect(actionControlsCss).toContain('rounded-md');
+    expect(actionControlsCss).toContain('border');
+    expect(actionControlsCss).toContain('border-gray-200');
+    expect(actionControlsCss).toContain('bg-neutral-50');
+    expect(actionControlsCss).toContain('px-2');
+    expect(actionControlsCss).toContain('py-2');
     expect(actionControlsLeftCss).toContain('gap-3');
+    expect(actionControlsLeftCss).not.toContain('px-2');
+    expect(actionControlsLeftCss).not.toContain('py-2');
     expect(actionControlsRightCss).toContain('gap-2');
   });
 
-  it('顯示開始測驗按鈕，依 props 停用並在可開始時送出事件，且不顯示未儲存提示', async () => {
+  it('依 props 隱藏開始測驗按鈕，顯示時可停用或送出事件，且不顯示未儲存提示', async () => {
     const wrapper = mountControlBarWithProps({
+      canShowStartQuiz: false,
       canStartQuiz: false
     });
-    const startQuizButton = wrapper.get('[data-testid="vocabulary-start-quiz-button"]');
 
-    expect(startQuizButton.attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[data-testid="vocabulary-start-quiz-button"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="vocabulary-unsaved-marks-hint"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('尚未儲存');
 
+    await wrapper.setProps({ canShowStartQuiz: true });
+    expect(wrapper.get('[data-testid="vocabulary-start-quiz-button"]').attributes('disabled')).toBeDefined();
+
     await wrapper.setProps({ canStartQuiz: true });
-    await startQuizButton.trigger('click');
+    await wrapper.get('[data-testid="vocabulary-start-quiz-button"]').trigger('click');
 
     expect(wrapper.emitted('startQuiz')).toHaveLength(1);
   });

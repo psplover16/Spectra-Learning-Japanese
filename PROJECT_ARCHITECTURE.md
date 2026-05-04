@@ -147,12 +147,12 @@ src/
 │  │
 │  └─ vocabulary/ (單字頁模組)
 │     ├─ components/
-│     │  ├─ VocabularyControlBar.vue (單字頁控制區；提供搜尋、N1～N5/全部勾選、練習/註記篩選、開始測驗與儲存註記 action row，不顯示未儲存提示)
+│     │  ├─ VocabularyControlBar.vue (單字頁控制區；提供搜尋、N1～N5 individual checkbox、JLPT row 右側開始測驗、action row 左側練習/註記篩選與右側儲存註記，不顯示未儲存提示且不提供 JLPT 全部勾選)
 │     │  ├─ VocabularyCountSummary.vue (舊單字數量摘要元件；單字頁目前不再渲染可見筆數文字)
-│     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、共用欄位顯示、目前顯示範圍註記清除與長按揭露事件)
+│     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、共用欄位顯示、目前可見範圍 draft 註記批次勾選/取消與長按揭露事件，header checkbox 不直接寫入 localStorage)
 │     ├─ composables/
 │     │  ├─ useVocabularyExamSession.ts (單字測驗獨立 session；從開始當下的可見且已勾選單字建立 snapshot，依 text/kanji 義項分組出題，結算時只更新 draftMarkedKeys)
-│     │  └─ useVocabularySession.ts (單字頁狀態管理；集中持有 JLPT level、stage lazy import 載入/錯誤狀態、`/practice` 勾選、搜尋條件、註記草稿／持久化、目前可見範圍儲存/清除與長按揭露)
+│     │  └─ useVocabularySession.ts (單字頁狀態管理；集中持有 JLPT level、stage lazy import 載入/錯誤狀態、`/practice` 勾選、搜尋條件、註記草稿／持久化、目前可見範圍儲存、draft-only 批次勾選與長按揭露；localStorage 持久化只由儲存註記動作執行)
 │     ├─ data/
 │     │  └─ jpWords_N1.ts ～ jpWords_N5.ts (依 JLPT stage 拆分的 raw 單字資料；runtime 由 `useVocabularySession` 依 checkbox lazy import 對應檔案，測試也由這五份資料聚合全量檢查)
 │     ├─ storage/
@@ -162,7 +162,7 @@ src/
 │     ├─ utils/
 │     │  └─ vocabularyFilters.ts (單字字種轉換、JLPT/search/註記/練習條件的單一路徑篩選、N5→N1 顯示排序與顯示內容導出)
 │     └─ views/
-│        └─ VocabularyView.vue (單字頁畫面；組裝不含數量摘要的控制列、lazy-loaded 單表格字典、搜尋篩選、註記、長按揭露與單字測驗 ExamModal 串接)
+│        └─ VocabularyView.vue (單字頁畫面；組裝不含數量摘要的控制列、lazy-loaded 單表格字典、搜尋篩選、註記、長按揭露與單字測驗 ExamModal 串接；無可見單字時隱藏開始測驗，有可見單字但無可見註記時保留 disabled)
 │
 ├─ shared/ (跨模組共用的元件與工具)
 │  ├─ components/
@@ -209,9 +209,9 @@ tests/
 │  ├─ RouteSubMenu.spec.ts (共用路由子列表元件測試；驗證 config-driven options、select emit、overlay 關閉與 Escape 關閉)
 │  ├─ RouteOwnership.spec.ts (驗證 `/practice`、`/grammar`、`/vocabulary`、`/n5-grammar` 的 feature ownership 與 negative ownership，並確認 N5 文法內容不外溢)
 │  ├─ SelectionDetailPanel.spec.ts (選取明細面板的顯示邏輯測試)
-│  ├─ VocabularyControlBar.spec.ts (單字頁控制區測試；驗證搜尋、JLPT 全選/單選同步、開始測驗 disabled/emit、不顯示未儲存提示、控制列排序與 checkbox 疊加控制事件)
-│  ├─ VocabularyStageTable.spec.ts (單字表格測試；驗證欄位保留佔位、目前顯示範圍註記清除與長按事件輸出)
-│  ├─ VocabularyViewSmoke.spec.ts (單字頁 smoke test；驗證 lazy-loaded 初始渲染、JLPT 控制列、無數量摘要、目前顯示範圍註記儲存/清除、長按揭露、v16 方位詞搜尋與單字測驗 modal 結算不寫 localStorage)
+│  ├─ VocabularyControlBar.spec.ts (單字頁控制區測試；驗證搜尋、JLPT N1～N5 individual controls、無全部勾選、開始測驗 hidden/disabled/emit、不顯示未儲存提示、控制列排序與 checkbox 疊加控制事件)
+│  ├─ VocabularyStageTable.spec.ts (單字表格測試；驗證欄位保留佔位、目前可見範圍 draft 註記批次勾選/取消、header checked 推導與長按事件輸出)
+│  ├─ VocabularyViewSmoke.spec.ts (單字頁 smoke test；驗證 lazy-loaded 初始渲染、JLPT 控制列、無數量摘要、目前可見範圍註記儲存與 draft-only header 批次勾選、長按揭露、v16 方位詞搜尋與單字測驗 modal 結算不寫 localStorage)
 │  ├─ YoonSections.spec.ts (清音拗音與合拗音矩陣的全表羅馬音測試)
 │  └─ testUtils.ts (元件測試共用 helper；例如先 provide PracticeSession 再 mount，並可傳入額外 mount options)
 ├─ e2e/ (Playwright 端到端測試)
@@ -220,7 +220,7 @@ tests/
 │  ├─ practice-layout.smoke.spec.ts (375px 下 `/practice` 首屏、表格可讀性與無水平捲動 smoke test)
 │  ├─ practice-exam-flow.spec.ts (從選字到開始測驗的完整流程測試，含 modal 題目列存在驗證)
 │  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性、不破版與 N5 section sticky header 接續黏頂驗證)
-│  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證 375px 下 JLPT lazy 篩選、搜尋、註記持久化、單字測驗、長按揭露、離線控制列與窄版穩定性)
+│  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證 375px 下 JLPT lazy individual 篩選、搜尋、draft-only header 批次勾選、註記持久化、單字測驗、長按揭露、離線控制列與窄版穩定性)
 │  └─ testUtils.ts (e2e 共用 helper；含四主路由 controls、動態文法等級 label、nowrap 與無水平捲動斷言)
 ├─ mocks/ (測試替身 / mock 模組)
 │  └─ pwaRegisterMock.ts (mock `virtual:pwa-register`，讓測試不真的註冊 service worker)

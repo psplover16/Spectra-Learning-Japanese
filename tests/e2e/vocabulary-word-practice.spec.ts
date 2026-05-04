@@ -23,12 +23,12 @@ function jlptLevelCheckbox(page: Page, level: JlptLevel) {
   return checkboxInput(page, `vocabulary-filter-jlpt-${level.toLowerCase()}`);
 }
 
-function selectAllJlptCheckbox(page: Page) {
-  return checkboxInput(page, 'vocabulary-filter-jlpt-select-all');
-}
-
 function vocabularyRows(page: Page) {
   return page.locator('[data-testid^="vocabulary-row-"]');
+}
+
+function headerBulkMarkCheckbox(page: Page) {
+  return page.getByTestId('vocabulary-bulk-mark-checkbox');
 }
 
 async function expectCountSummaryAbsent(page: Page) {
@@ -51,12 +51,14 @@ async function expectSelectedJlptLevels(page: Page, selectedLevels: readonly Jlp
 }
 
 async function selectOnlyJlptLevel(page: Page, level: JlptLevel) {
-  await selectAllJlptCheckbox(page).uncheck();
-  await expect(selectAllJlptCheckbox(page)).not.toBeChecked();
+  for (const candidate of jlptLevels) {
+    await jlptLevelCheckbox(page, candidate).uncheck();
+  }
+
+  await expect(page.getByTestId('vocabulary-filter-jlpt-select-all')).toHaveCount(0);
   await expectSelectedJlptLevels(page, []);
 
   await jlptLevelCheckbox(page, level).check();
-  await expect(selectAllJlptCheckbox(page)).not.toBeChecked();
   await expectSelectedJlptLevels(page, [level]);
 }
 
@@ -108,7 +110,8 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await expectCountSummaryAbsent(page);
   await expectNoHorizontalOverflow(page);
 
-  await expect(selectAllJlptCheckbox(page)).toBeChecked();
+  await expect(page.getByTestId('vocabulary-filter-jlpt-select-all')).toHaveCount(0);
+  await expect(page.getByTestId('vocabulary-filter-jlpt-level-all')).toHaveCount(0);
   await expectSelectedJlptLevels(page, jlptLevels);
   await expect(vocabularyRows(page).first()).toContainText('早上');
 
@@ -126,17 +129,18 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   for (const level of jlptLevels) {
     await jlptLevelCheckbox(page, level).uncheck();
     await expect(jlptLevelCheckbox(page, level)).not.toBeChecked();
-    await expect(selectAllJlptCheckbox(page)).not.toBeChecked();
 
     await jlptLevelCheckbox(page, level).check();
     await expect(jlptLevelCheckbox(page, level)).toBeChecked();
   }
 
-  await expect(selectAllJlptCheckbox(page)).toBeChecked();
+  for (const level of jlptLevels) {
+    await jlptLevelCheckbox(page, level).uncheck();
+  }
 
-  await selectAllJlptCheckbox(page).uncheck();
   await expectSelectedJlptLevels(page, []);
   await expect(vocabularyRows(page)).toHaveCount(0);
+  await expect(page.getByTestId('vocabulary-start-quiz-button')).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 
   await selectOnlyJlptLevel(page, 'N5');
@@ -145,7 +149,10 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await expectCountSummaryAbsent(page);
 
   await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeDisabled();
-  await firstVisibleMarkCheckbox(page).check();
+  await expect(headerBulkMarkCheckbox(page)).not.toBeChecked();
+  await headerBulkMarkCheckbox(page).check();
+  await expect(firstVisibleMarkCheckbox(page)).toBeChecked();
+  expect(await page.evaluate(() => window.localStorage.getItem('vocabulary-mark-snapshot'))).toBeNull();
   await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeEnabled();
 
   await page.getByTestId('vocabulary-start-quiz-button').click();
@@ -158,6 +165,7 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await expect(page.getByTestId('vocabulary-unsaved-marks-hint')).toHaveCount(0);
   expect(await page.evaluate(() => window.localStorage.getItem('vocabulary-mark-snapshot'))).toBeNull();
 
+  await expect(headerBulkMarkCheckbox(page)).toBeChecked();
   await page.getByTestId('vocabulary-save-marks-button').click();
 
   await page.reload();
@@ -189,7 +197,7 @@ test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ conte
   await gotoApp(page, '/vocabulary');
   await expectCountSummaryAbsent(page);
   await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
-  await expect(selectAllJlptCheckbox(page)).toBeChecked();
+  await expect(page.getByTestId('vocabulary-filter-jlpt-select-all')).toHaveCount(0);
   await expect(jlptLevelCheckbox(page, 'N1')).toBeChecked();
 
   await context.setOffline(true);
@@ -197,15 +205,17 @@ test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ conte
   try {
     await jlptLevelCheckbox(page, 'N1').uncheck();
     await expect(jlptLevelCheckbox(page, 'N1')).not.toBeChecked();
-    await expect(selectAllJlptCheckbox(page)).not.toBeChecked();
 
-    await selectAllJlptCheckbox(page).check();
+    await jlptLevelCheckbox(page, 'N1').check();
     await expectSelectedJlptLevels(page, jlptLevels);
-    await expect(selectAllJlptCheckbox(page)).toBeChecked();
 
-    await selectAllJlptCheckbox(page).uncheck();
+    for (const level of jlptLevels) {
+      await jlptLevelCheckbox(page, level).uncheck();
+    }
+
     await expectSelectedJlptLevels(page, []);
     await expect(vocabularyRows(page)).toHaveCount(0);
+    await expect(page.getByTestId('vocabulary-start-quiz-button')).toHaveCount(0);
 
     await jlptLevelCheckbox(page, 'N5').check();
     await page.getByTestId('vocabulary-search-input').fill('早上');
@@ -220,7 +230,9 @@ test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ conte
     await expectNoHorizontalOverflow(page);
 
     await checkboxInput(page, 'vocabulary-filter-show-marked-only').uncheck();
-    await firstVisibleMarkCheckbox(page).check();
+    await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeDisabled();
+    await headerBulkMarkCheckbox(page).check();
+    await expect(firstVisibleMarkCheckbox(page)).toBeChecked();
     await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeEnabled();
     await page.getByTestId('vocabulary-start-quiz-button').click();
     await expect(page.getByTestId('exam-modal')).toBeVisible();

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import BaseButton from '@/shared/components/BaseButton.vue';
 import BaseCheckbox from '@/shared/components/BaseCheckbox.vue';
 import {
@@ -15,9 +14,11 @@ const props = withDefaults(defineProps<{
   practiceMode: boolean;
   selectedJlptLevels: Set<VocabularyJlptLevel>;
   canSaveMarks?: boolean;
+  canShowStartQuiz?: boolean;
   canStartQuiz?: boolean;
 }>(), {
   canSaveMarks: true,
+  canShowStartQuiz: true,
   canStartQuiz: false
 });
 
@@ -32,10 +33,6 @@ const emit = defineEmits<{
   startQuiz: [];
 }>();
 
-const allJlptLevelsSelected = computed(() =>
-  vocabularyJlptLevels.every((level) => props.selectedJlptLevels.has(level))
-);
-
 function updateJlptLevel(level: VocabularyJlptLevel, value: boolean) {
   const nextLevels = new Set(props.selectedJlptLevels);
 
@@ -46,10 +43,6 @@ function updateJlptLevel(level: VocabularyJlptLevel, value: boolean) {
   }
 
   emit('update:selectedJlptLevels', nextLevels);
-}
-
-function updateAllJlptLevels(value: boolean) {
-  emit('update:selectedJlptLevels', new Set(value ? vocabularyJlptLevels : []));
 }
 
 function jlptLevelTestId(level: VocabularyJlptLevel) {
@@ -91,25 +84,30 @@ function jlptLevelWrapperTestId(level: VocabularyJlptLevel) {
     </div>
 
     <div class="vocabulary-level-controls" data-testid="vocabulary-level-controls">
-      <div data-testid="vocabulary-filter-jlpt-level-all">
-        <BaseCheckbox
-          data-testid="vocabulary-filter-jlpt-select-all"
-          :model-value="allJlptLevelsSelected"
-          label="全部勾選"
-          @update:model-value="updateAllJlptLevels"
-        />
+      <div class="vocabulary-level-controls-left" data-testid="vocabulary-level-controls-left">
+        <div
+          v-for="level in vocabularyJlptLevels"
+          :key="level"
+          :data-testid="jlptLevelWrapperTestId(level)"
+        >
+          <BaseCheckbox
+            :data-testid="jlptLevelTestId(level)"
+            :model-value="props.selectedJlptLevels.has(level)"
+            :label="level"
+            @update:model-value="updateJlptLevel(level, $event)"
+          />
+        </div>
       </div>
-      <div
-        v-for="level in vocabularyJlptLevels"
-        :key="level"
-        :data-testid="jlptLevelWrapperTestId(level)"
-      >
-        <BaseCheckbox
-          :data-testid="jlptLevelTestId(level)"
-          :model-value="props.selectedJlptLevels.has(level)"
-          :label="level"
-          @update:model-value="updateJlptLevel(level, $event)"
-        />
+      <div class="vocabulary-level-controls-right" data-testid="vocabulary-level-controls-right">
+        <BaseButton
+          v-if="props.canShowStartQuiz"
+          data-testid="vocabulary-start-quiz-button"
+          variant="primary"
+          :disabled="!props.canStartQuiz"
+          @click="emit('startQuiz')"
+        >
+          開始測驗
+        </BaseButton>
       </div>
     </div>
 
@@ -129,14 +127,6 @@ function jlptLevelWrapperTestId(level: VocabularyJlptLevel) {
         />
       </div>
       <div class="vocabulary-action-controls-right" data-testid="vocabulary-action-controls-right">
-        <BaseButton
-          data-testid="vocabulary-start-quiz-button"
-          variant="primary"
-          :disabled="!props.canStartQuiz"
-          @click="emit('startQuiz')"
-        >
-          開始測驗
-        </BaseButton>
         <BaseButton
           data-testid="vocabulary-save-marks-button"
           variant="secondary"

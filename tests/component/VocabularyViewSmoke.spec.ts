@@ -7,7 +7,6 @@ import { mountWithPracticeSession } from './testUtils';
 const jlptLevels = ['N1', 'N2', 'N3', 'N4', 'N5'] as const;
 
 const jlptLevelTestIds = {
-  all: 'vocabulary-filter-jlpt-level-all',
   N1: 'vocabulary-filter-jlpt-level-n1',
   N2: 'vocabulary-filter-jlpt-level-n2',
   N3: 'vocabulary-filter-jlpt-level-n3',
@@ -25,8 +24,6 @@ function expectNoWordCountSummary(wrapper: VueWrapper) {
 }
 
 function expectJlptControlsChecked(wrapper: VueWrapper) {
-  expect((getFilterInput(wrapper, jlptLevelTestIds.all).element as HTMLInputElement).checked).toBe(true);
-
   for (const level of jlptLevels) {
     expect((getFilterInput(wrapper, jlptLevelTestIds[level]).element as HTMLInputElement).checked).toBe(true);
   }
@@ -51,24 +48,28 @@ async function mountVocabularyView() {
 }
 
 async function waitForVocabularyRows(wrapper: VueWrapper, expectedMinimum = 1) {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
     await flushPromises();
     await nextTick();
 
     if (visibleVocabularyRows(wrapper).length >= expectedMinimum) {
       return;
     }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
   }
 }
 
 async function waitForVisibleVocabularyRowCount(wrapper: VueWrapper, expectedCount: number) {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
     await flushPromises();
     await nextTick();
 
     if (visibleVocabularyRows(wrapper).length === expectedCount) {
       return;
     }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
   }
 }
 
@@ -84,6 +85,14 @@ async function markFirstVisibleVocabularyRow(wrapper: VueWrapper) {
   await firstVisibleVocabularyRow(wrapper).get('input[type="checkbox"]').setValue(true);
   await flushPromises();
   await nextTick();
+}
+
+async function clearAllJlptLevels(wrapper: VueWrapper) {
+  for (const level of jlptLevels) {
+    await getFilterInput(wrapper, jlptLevelTestIds[level]).setValue(false);
+  }
+
+  await waitForVisibleVocabularyRowCount(wrapper, 0);
 }
 
 function appearsBefore(first: Element, second: Element) {
@@ -103,44 +112,62 @@ describe('VocabularyViewSmoke', () => {
     expect(wrapper.get('.vocabulary-view').classes()).toContain('py-1');
     expect(wrapper.find('[data-testid="vocabulary-control-bar"]').exists()).toBe(true);
     expectNoWordCountSummary(wrapper);
+    expect(wrapper.find('[data-testid="vocabulary-filter-jlpt-select-all"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="vocabulary-filter-jlpt-level-all"]').exists()).toBe(false);
     expectJlptControlsChecked(wrapper);
     expect(wrapper.find('[data-testid="vocabulary-table"]').exists()).toBe(true);
   });
 
-  it('控制列將 level controls 放在 action controls 上方，並讓練習與註記靠左、測驗與儲存靠右', async () => {
+  it('控制列將 level controls 放在 action controls 上方，並讓 JLPT 與測驗共用同一列', async () => {
     const { wrapper } = await mountVocabularyView();
 
     const controlBar = wrapper.get('[data-testid="vocabulary-control-bar"]');
     const levelControls = controlBar.get('[data-testid="vocabulary-level-controls"]');
+    const levelControlsLeft = levelControls.get('[data-testid="vocabulary-level-controls-left"]');
+    const levelControlsRight = levelControls.get('[data-testid="vocabulary-level-controls-right"]');
     const actionControls = controlBar.get('[data-testid="vocabulary-action-controls"]');
     const actionControlsLeft = actionControls.get('[data-testid="vocabulary-action-controls-left"]');
     const actionControlsRight = actionControls.get('[data-testid="vocabulary-action-controls-right"]');
+    const n1Level = levelControlsLeft.get('[data-testid="vocabulary-filter-jlpt-level-n1"]');
+    const n5Level = levelControlsLeft.get('[data-testid="vocabulary-filter-jlpt-level-n5"]');
     const practiceMode = actionControlsLeft.get('[data-testid="vocabulary-filter-practice-mode"]');
     const markedOnly = actionControlsLeft.get('[data-testid="vocabulary-filter-show-marked-only"]');
-    const startQuiz = actionControlsRight.get('[data-testid="vocabulary-start-quiz-button"]');
+    const startQuiz = levelControlsRight.get('[data-testid="vocabulary-start-quiz-button"]');
     const saveMarks = actionControls.get('[data-testid="vocabulary-save-marks-button"]');
 
     expect(appearsBefore(levelControls.element, actionControls.element)).toBe(true);
+    expect(appearsBefore(n1Level.element, n5Level.element)).toBe(true);
+    expect(appearsBefore(levelControlsLeft.element, levelControlsRight.element)).toBe(true);
     expect(appearsBefore(practiceMode.element, markedOnly.element)).toBe(true);
     expect(appearsBefore(actionControlsLeft.element, actionControlsRight.element)).toBe(true);
-    expect(appearsBefore(startQuiz.element, saveMarks.element)).toBe(true);
+    expect(appearsBefore(levelControls.element, saveMarks.element)).toBe(true);
+    expect(startQuiz.element).toBeInstanceOf(HTMLElement);
+    expect(actionControlsRight.find('[data-testid="vocabulary-start-quiz-button"]').exists()).toBe(false);
     expect(actionControls.element.firstElementChild).toBe(actionControlsLeft.element);
     expect(actionControls.element.lastElementChild).toBe(actionControlsRight.element);
   });
 
-  it('可儲存註記並清除目前顯示單字的註記', async () => {
+  it('可儲存註記，header 批次取消只更新目前 visible draft marks', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const { wrapper } = await mountVocabularyView();
 
-    await wrapper.get('[data-testid="vocabulary-mark-checkbox-1"]').setValue(true);
+    await wrapper.get('[data-testid="vocabulary-search-input"]').setValue('早上');
+    await waitForVisibleVocabularyRowCount(wrapper, 1);
+    const markCheckbox = firstVisibleVocabularyRow(wrapper).get('input[type="checkbox"]');
+
+    await markCheckbox.setValue(true);
     await wrapper.get('[data-testid="vocabulary-save-marks-button"]').trigger('click');
 
     expect(window.localStorage.getItem('vocabulary-mark-snapshot')).not.toBeNull();
     expect(wrapper.html()).toContain('vocabulary-marked-row');
+    expect((wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]').element as HTMLInputElement).checked).toBe(true);
 
-    await wrapper.get('[data-testid="vocabulary-clear-marks-checkbox"]').setValue(true);
-    expect(window.localStorage.getItem('vocabulary-mark-snapshot')).toBeNull();
+    await wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]').setValue(false);
+
+    expect((firstVisibleVocabularyRow(wrapper).get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
+    expect(window.localStorage.getItem('vocabulary-mark-snapshot')).not.toBeNull();
+    expect(wrapper.html()).toContain('vocabulary-marked-row');
   });
 
   it('長按約 0.4 秒會暫時揭露隱藏欄位，放開後恢復', async () => {
@@ -207,9 +234,16 @@ describe('VocabularyViewSmoke', () => {
 
     expect(startQuizButton.attributes('disabled')).toBeDefined();
 
+    await clearAllJlptLevels(wrapper);
+    expect(wrapper.find('[data-testid="vocabulary-start-quiz-button"]').exists()).toBe(false);
+
+    await getFilterInput(wrapper, jlptLevelTestIds.N5).setValue(true);
+    await waitForVocabularyRows(wrapper);
+
     await wrapper.get('[data-testid="vocabulary-search-input"]').setValue('早上');
     await waitForVisibleVocabularyRowCount(wrapper, 1);
     expect(visibleVocabularyRows(wrapper)).toHaveLength(1);
+    expect(wrapper.get('[data-testid="vocabulary-start-quiz-button"]').attributes('disabled')).toBeDefined();
 
     await markFirstVisibleVocabularyRow(wrapper);
     expect(wrapper.get('[data-testid="vocabulary-start-quiz-button"]').attributes('disabled')).toBeUndefined();

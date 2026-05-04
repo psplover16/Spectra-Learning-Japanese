@@ -1,0 +1,23 @@
+## 1. 測試先行
+
+- [x] [P] 1.1 在 `tests/component/VocabularyControlBar.spec.ts` 新增失敗測試，覆蓋 `JLPT level filter controls`、`Vocabulary controls layout`、`Select-all level synchronization` 與 `Decision: Split vocabulary controls into two left-right rows`；完成定義：select-all level checkbox 查詢不存在，`N1`、`N2`、`N3`、`N4`、`N5` 出現在 JLPT row 左側，start-quiz control 出現在同列右側，action row 仍保留 save-marks control。
+- [x] [P] 1.2 在 `tests/component/VocabularyViewSmoke.spec.ts` 新增失敗測試，覆蓋 `Vocabulary quiz starts from visible marked vocabulary` 與 `Decision: Keep start quiz hidden only when there are no visible rows`；完成定義：沒有 visible rows 時 start-quiz control 不渲染，有 visible rows 且沒有 visible draft/persisted marks 時顯示 disabled，有 visible draft 或 persisted mark 時顯示 enabled。
+- [x] [P] 1.3 在 `tests/component/VocabularyStageTable.spec.ts` 與 `tests/component/useVocabularySession.spec.ts` 新增失敗測試，覆蓋 `Table header bulk toggles visible draft vocabulary marks`、`Header bulk mark checkbox reflects visible draft mark state`、`Table header clear removes only visible vocabulary marks`、`Decision: Replace header clear with draft-only visible bulk mark` 與 `Decision: Derive header checkbox checked state from visible draft marks`；完成定義：header checked 會加入 visible draft keys，header unchecked 會移除 visible draft keys，hidden draft keys 保留，`window.alert`、localStorage、`persistedMarkedKeys` 都不變。
+- [x] [P] 1.4 在 `tests/e2e/vocabulary-word-practice.spec.ts` 新增 375px 與離線情境的失敗 E2E，覆蓋控制列與 header 批次勾選；完成定義：頁面無水平 overflow，select-all level checkbox 不存在，start-quiz hidden/disabled/enabled 狀態可操作驗證，header checkbox 僅批次更新目前 visible draft marks。
+
+## 2. 實作
+
+- [x] 2.1 更新 `src/modules/vocabulary/components/VocabularyControlBar.vue` 與 `src/styles/main.css`，實作 `JLPT level filter controls`、`Vocabulary controls layout`、移除 `Select-all level synchronization`，並落實 `Decision: Split vocabulary controls into two left-right rows`；完成定義：JLPT row 僅顯示 `N1` 到 `N5` individual checkboxes 與右側 start-quiz control，下方 action row 僅承載 practice mode、mark-only、save-marks control。
+- [x] 2.2 更新 `src/modules/vocabulary/views/VocabularyView.vue` 與必要的 control props，實作 `Vocabulary quiz starts from visible marked vocabulary` 與 `Decision: Keep start quiz hidden only when there are no visible rows`；完成定義：visible entries 為空時 start-quiz 不渲染，visible entries 非空但無 visible marked entry 時 disabled，至少一筆 visible draft/persisted marked entry 時 enabled 並以目前 visible marked snapshot 建立 quiz deck。
+- [x] 2.3 更新 `src/modules/vocabulary/components/VocabularyStageTable.vue` 的 header checkbox props/emits，實作 `Table header bulk toggles visible draft vocabulary marks` 並取代 `Table header clear removes only visible vocabulary marks`；完成定義：header checkbox emit 批次 draft mark 意圖，不顯示刪除確認，不直接呼叫 localStorage 或 persisted mark 更新流程。
+- [x] 2.4 更新 `src/modules/vocabulary/composables/useVocabularySession.ts` 的 visible-scope bulk mark action 與 header checked derivation，實作 `Header bulk mark checkbox reflects visible draft mark state`、`Decision: Replace header clear with draft-only visible bulk mark` 與 `Decision: Derive header checkbox checked state from visible draft marks`；完成定義：批次操作先 snapshot 當下 visible row keys，再更新 `draftMarkedKeys`，scope 外 draft keys 保留，header checked 狀態只由 visible row keys 與 `draftMarkedKeys` 推導。
+- [x] 2.5 更新 `src/styles/main.css` 與 `tests/component/VocabularyControlBar.spec.ts`，補齊 `Vocabulary controls layout` 與 `Decision: Split vocabulary controls into two left-right rows` 的 checkbox 起點對齊；完成定義：`vocabulary-action-controls-left` 使用與 `vocabulary-level-controls` 相同的 padding，練習/只顯示註記 row 的 checkbox group 與 N1-N5 row checkbox group 視覺起點一致。
+- [x] 2.6 修正 `src/styles/main.css` 與 `tests/component/VocabularyControlBar.spec.ts` 的 action row padding 歸屬；完成定義：padding 設在包住練習、只顯示註記與儲存註記的 `vocabulary-action-controls` row，而不是只設在 `vocabulary-action-controls-left`，並與 `vocabulary-level-controls` 的 padding 一致。
+
+- [x] 2.7 更新 `src/styles/main.css` 與 `tests/component/VocabularyControlBar.spec.ts`，補齊 `Vocabulary controls layout` 與 `Decision: Split vocabulary controls into two left-right rows` 的 action row 背景一致性；完成定義：包住練習、只顯示註記與儲存註記的 `vocabulary-action-controls` row 使用與 `vocabulary-level-controls` 相同的背景色、外框與圓角，且測試鎖定這些 class。
+
+## 3. 驗證與文件
+
+- [x] 3.1 更新 `PROJECT_ARCHITECTURE.md` 的 vocabulary control/table/session 職責描述；完成定義：文件明確記錄 JLPT row、start-quiz visibility、header draft-only bulk mark，以及 localStorage 仍只由 save-marks action 持久化。
+- [x] 3.2 執行單元、元件、E2E 與建置驗證；完成定義：`VocabularyControlBar`、`VocabularyStageTable`、`VocabularyViewSmoke`、`useVocabularySession`、`vocabulary-word-practice` 相關測試通過，Vite build 通過且沒有 500 KB chunk 警戒新增問題。
+- [x] 3.3 手動驗證手機寬度與離線情境；完成定義：在 375px viewport 且離線模式下，JLPT row/action row 無水平 overflow，start-quiz hidden/disabled/enabled 狀態正確，header checkbox 只影響目前 visible draft marks 且重新整理前 localStorage 不變。

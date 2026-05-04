@@ -40,14 +40,15 @@ tests:
 ---
 ### Requirement: JLPT level filter controls
 
-The vocabulary practice page SHALL display one checkbox for each JLPT level `N1` through `N5`, plus one select-all checkbox for the full level set. Each individual JLPT checkbox SHALL correspond to the vocabulary data file for the same level, and the visible vocabulary SHALL include only entries from selected levels after those level files are loaded.
+The vocabulary practice page SHALL display one checkbox for each JLPT level `N1` through `N5` and SHALL NOT display a select-all checkbox for the full level set. Each individual JLPT checkbox SHALL correspond to the vocabulary data file for the same level, and the visible vocabulary SHALL include only entries from selected levels after those level files are loaded. The JLPT level controls row SHALL place the `N1`, `N2`, `N3`, `N4`, and `N5` checkboxes on the left side of the row and SHALL reserve the right side of the same row for the start-quiz control.
 
 #### Scenario: Initial level filter state
 
 - **WHEN** the vocabulary practice page first renders
 - **THEN** the `N1`, `N2`, `N3`, `N4`, and `N5` checkboxes are checked
-- **AND** the select-all checkbox is checked
+- **AND** no select-all checkbox is displayed
 - **AND** the visible vocabulary includes every loaded item allowed by the other active filters
+- **AND** the start-quiz control appears on the right side of the same JLPT level controls row
 
 #### Scenario: Level checkbox affects visible vocabulary
 
@@ -71,82 +72,22 @@ The vocabulary practice page SHALL display one checkbox for each JLPT level `N1`
 
 
 <!-- @trace
-source: vocabulary-quiz-feature
+source: vocabulary-control-bar-bulk-mark-adjustments
 updated: 2026-05-04
 code:
   - src/styles/main.css
-  - _private/propose.md
-  - src/modules/exam/components/ExamModal.vue
-  - src/modules/vocabulary/data/jpWords_N4.ts
-  - src/modules/vocabulary/data/jpWords.ts
-  - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
-  - src/modules/vocabulary/data/jpWords_N2.ts
-  - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/exam/types/exam.ts
-  - src/modules/vocabulary/data/jpWords_N5.ts
-  - src/modules/vocabulary/data/jpWords_N1.ts
-  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
-  - _private/discuss.txt
-  - src/modules/vocabulary/composables/useVocabularySession.ts
-  - src/modules/vocabulary/data/jpWords_N3.ts
-  - PROJECT_ARCHITECTURE.md
-  - src/modules/vocabulary/components/VocabularyControlBar.vue
   - src/modules/vocabulary/components/VocabularyStageTable.vue
-  - _private/筆記.md
-  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
-  - tests/unit/vocabularyStageTestData.ts
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/propose.md
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - PROJECT_ARCHITECTURE.md
 tests:
-  - tests/unit/useVocabularyExamSession.spec.ts
-  - tests/unit/vocabularyData.spec.ts
-  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
-  - tests/component/VocabularyControlBar.spec.ts
   - tests/e2e/vocabulary-word-practice.spec.ts
   - tests/component/VocabularyViewSmoke.spec.ts
-  - tests/component/ExamModal.spec.ts
-  - tests/unit/vocabularyMeaningFormat.spec.ts
   - tests/component/VocabularyStageTable.spec.ts
-  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
   - tests/component/useVocabularySession.spec.ts
--->
-
----
-### Requirement: Select-all level synchronization
-
-The select-all checkbox SHALL be derived from the selected JLPT level set and SHALL synchronize changes with the individual level checkboxes.
-
-#### Scenario: Select all is checked
-
-- **WHEN** a user checks the select-all checkbox
-- **THEN** the `N1`, `N2`, `N3`, `N4`, and `N5` checkboxes become checked
-- **AND** the select-all checkbox remains checked
-
-#### Scenario: Individual level is unchecked
-
-- **WHEN** the select-all checkbox is checked
-- **AND** a user unchecks one JLPT level checkbox
-- **THEN** the select-all checkbox becomes unchecked
-
-#### Scenario: Select all is unchecked
-
-- **WHEN** the select-all checkbox is checked
-- **AND** a user unchecks the select-all checkbox
-- **THEN** the `N1`, `N2`, `N3`, `N4`, and `N5` checkboxes become unchecked
-- **AND** the visible vocabulary is empty
-
-#### Scenario: All individual levels are checked manually
-
-- **WHEN** a user checks `N1`, `N2`, `N3`, `N4`, and `N5` individually
-- **THEN** the select-all checkbox becomes checked
-
-
-<!-- @trace
-source: improve-vocabulary-leveling-and-performance
-updated: 2026-04-30
-code:
-  - _private/筆記.md
-  - src/styles/main.css
-tests:
   - tests/component/VocabularyControlBar.spec.ts
 -->
 
@@ -213,19 +154,26 @@ tests:
 ---
 ### Requirement: Vocabulary controls layout
 
-The vocabulary practice page SHALL place JLPT level controls above the row containing practice mode, mark-only filter, and save marks controls.
-The vocabulary practice page SHALL stack the upper non-table control blocks with an 8px vertical gap between adjacent blocks.
+The vocabulary practice page SHALL place JLPT level controls above the action controls row. The JLPT level controls row SHALL place individual JLPT level checkboxes on the left side and the start-quiz control on the right side. The action controls row SHALL place practice mode and mark-only controls on the left side and the save-marks control on the right side. The action controls row SHALL use the same padding, background color, border treatment, and rounded corners as the JLPT level controls row so both rows align from the same visual starting edge and read as one consistent control group. The vocabulary practice page SHALL stack the upper non-table control blocks with an 8px vertical gap between adjacent blocks.
 
 #### Scenario: Level controls are above action controls
 
 - **WHEN** the vocabulary practice controls render
-- **THEN** the `N1`, `N2`, `N3`, `N4`, `N5`, and select-all checkboxes appear above the row containing practice mode, mark-only filter, and save marks controls
+- **THEN** the `N1`, `N2`, `N3`, `N4`, and `N5` checkboxes appear above the row containing practice mode, mark-only filter, and save marks controls
+- **AND** no select-all checkbox appears in the level controls row
+
+#### Scenario: JLPT row shares start quiz control
+
+- **WHEN** the JLPT level controls row renders with at least one visible vocabulary row
+- **THEN** the `N1`, `N2`, `N3`, `N4`, and `N5` checkboxes appear on the left side of that row
+- **AND** the start-quiz control appears on the right side of that row
 
 #### Scenario: Action controls share one row
 
 - **WHEN** the action controls render
 - **THEN** the practice mode checkbox and mark-only checkbox appear on the left side with a gap between them
 - **AND** the save marks button appears on the right side of the same row
+- **AND** the action controls row uses the same padding, background color, border treatment, and rounded corners as the JLPT level controls row
 
 #### Scenario: Upper control blocks have an 8px vertical gap
 
@@ -234,12 +182,22 @@ The vocabulary practice page SHALL stack the upper non-table control blocks with
 
 
 <!-- @trace
-source: improve-vocabulary-leveling-and-performance
-updated: 2026-04-30
+source: vocabulary-control-bar-bulk-mark-adjustments
+updated: 2026-05-04
 code:
-  - _private/筆記.md
   - src/styles/main.css
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/propose.md
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - PROJECT_ARCHITECTURE.md
 tests:
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/useVocabularySession.spec.ts
   - tests/component/VocabularyControlBar.spec.ts
 -->
 

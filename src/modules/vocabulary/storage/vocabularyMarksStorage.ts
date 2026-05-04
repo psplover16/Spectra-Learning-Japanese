@@ -72,7 +72,17 @@ function writeSnapshot(snapshot: VocabularyMarkSnapshot) {
 }
 
 function readRawSnapshot() {
-  const rawValue = window.localStorage.getItem(vocabularyMarksStorageKey);
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  let rawValue: string | null;
+
+  try {
+    rawValue = window.localStorage.getItem(vocabularyMarksStorageKey);
+  } catch {
+    return null;
+  }
 
   if (!rawValue) {
     return null;
