@@ -2,234 +2,399 @@
 
 ## 摘要
 
-子路由「單字練習」新增測驗功能，並補強多義單字的資料規則。整體拆成 2 個 Spectra changes 依序執行：
+本次需求主軸是：**子路由「單字練習」新增測驗功能**。
+但在新增測驗之前，必須先整理單字字典，處理重複詞條、多義詞排列、無漢字義項排序，以及 stage 對應的資料拆分方式。
 
-1. **`add-multi-meaning-vocabulary-rule`**：定義多義單字資料規則、新增 `から` entry、修正既有違規條目
-2. **`add-vocabulary-quiz-feature`**：新增「開始測驗」按鈕、測驗 Modal、結算寫回 draftMarkedKeys
+整體順序必須固定：
 
-來源：`_private/discuss.txt`。
+1. **先執行 A：單字表檢查、整併、規則化與拆分**
+2. **再執行 B：測驗功能添加**
 
----
-
-## 程式碼上下文（既有實作）
-
-| 檔案 | 角色 |
-|------|------|
-| `src/modules/exam/components/ExamModal.vue` | 既有測驗 modal（下一步 / 我不清楚 / 關閉確認流程，已驗證） |
-| `src/modules/exam/composables/useExamSession.ts` | 字母練習 session（`createExamSession()` / `settle()` / `buildLoopedDeck`） |
-| `src/modules/exam/types/exam.ts` | `ExamQuestionCard`（kana 欄位寫死：`hiragana / katakana / romaji`） |
-| `src/modules/vocabulary/types/vocabulary.ts` | `VocabularyEntry.markKey: string`、`VocabularyMarkSnapshot.version: 2`（natural-key 重構已完成） |
-| `src/modules/vocabulary/composables/useVocabularySession.ts` | `draftMarkedKeys` / `persistedMarkedKeys: Set<string>`、`saveMarks()` 寫 v2 snapshot |
-| `src/modules/vocabulary/components/VocabularyControlBar.vue` | 控制列（左 checkbox 群、右「儲存註記」按鈕） |
-| `src/modules/vocabulary/components/VocabularyStageTable.vue` | 每列右側 checkbox（綁 `entry.markKey`） |
-| `src/modules/vocabulary/data/jpWords.ts` | 字典檔（多義單字目前以 `\n` 分段） |
-| `src/modules/practice/components/PracticeToolbar.vue` | 字母練習「送出」按鈕（`BaseButton variant="primary" :disabled`） — 配色參考 |
-
-> **前提**：上一輪 propose 的「natural-key 重構」（`refactor-vocabulary-marks-storage-key`）已實作完成。本次新需求直接基於現有 `markKey` / `markedKeys` 架構設計，不再動 storage 層。
+本文件**只根據 `_private/discuss.txt` 整理**，不混入其他來源。
 
 ---
 
-## 設計總則 A：多義單字資料模型
+## A. 單字表檢查、整併、規則化與拆分
 
-### A.1 `kanji` 與 `meaning` 欄位的分段規則
+### A.1 新增 `から` 單字
 
-兩欄都視為「以 `\n` 分段的列表」：
+新增一個隸屬 **N5** 的單字。
+這是**一個單字**，但有多個漢字義項與一個無漢字義項：
 
-- **`kanji` 欄**：只列出**有漢字**的義，按順序，不放 placeholder。例：`殻\n空`
-- **`meaning` 欄**：列出**所有**義（有漢字 + 無漢字），無漢字的義一律放尾端。例：`外殼\n空(無內容)\n從～、因為～；助詞`
-- **對齊規則**：第 k 段 meaning 對應第 k 個 kanji；超出 kanji 段數的 meaning 段一律是「無漢字義」、放最後
-- **約束**：`meaning.split('\n').length >= kanji.split('\n').length`，無漢字段一定在尾端
-- **單義單字**：`kanji` 與 `meaning` 都是單一字串、無 `\n`（與既有絕大多數 entries 行為一致）
+| 假名 | 漢字 | 中文 |
+|------|------|------|
+| から | 殻 | 外殼 |
+| から | 空 | 空(無內容) |
+| から |  | 從～、因為～；助詞 |
 
-### A.2 新增 entry 的處理規則
+未來若新增單字時不確定層級，必須查詢 **JLPT 標準** 後再決定 stage。
 
-- **去重 key**：`text + kanji`（完整字串，含 `\n`）
-  - 完全相同（兩欄都同）→ 拒絕加入
-  - 同音異字（text 同、kanji 不同，例 `あつい / 暑い` vs `あつい / 熱い`）→ 允許加入
-- **位置**：不特別排序，直接 append 到該 stage 區段尾端
-- **入庫前檢查**：spec / lint 規則中明文：新增前先比對 `text + kanji`，已存在則拒絕加入
+### A.2 高度重複單字整併規則
 
-### A.3 `から` 新增 entry（N5 區段尾端）
+目前專案的單字有高度重複跡象，例如 `あげる`。
+當同一組內容出現在不同 stage 時，必須整併，避免不必要的誤會。
+
+#### Stage 優先順序
+
+- stage 強度規則：`N5 > N4 > N3 > N2 > N1`
+- 若同一組內容分散在多個 stage，整併後優先放到**較簡單的 stage**
+
+#### 跨 stage 合併規則
+
+整併後一律放到「目前出現的所有 stage 中最簡單的那一個」（不是固定 N5）：
+
+| 重複出現的 stage | 合併到 |
+|------------------|--------|
+| N3 + N5 | N5 |
+| N1 + N3 | N3 |
+| N2 + N4 | N4 |
+| N1 + N2 + N5 | N5 |
+
+#### 同假名、同漢字的整併原則
+
+- 若兩組詞條的**假名與漢字完全相同**
+- 必須先判斷現有翻譯是否已經足夠容納，不要累積過多冗餘意思
+- 若中文翻譯完全不同，則要檢查翻譯是否正確
+- 若翻譯正確，則加以合併
+
+#### `あげる` 範例
 
 ```ts
 {
-  text: "から",
-  romanization: "ka-ra",
-  kanji: "殻\n空",
-  meaning: "外殼\n空(無內容)\n從～、因為～；助詞",
+  text: "あげる",
+  romanization: "a-ge-ru",
+  kanji: "上げる\n上げる\n上げる\n挙げる\n揚げる",
+  meaning: "提高（一段動詞；他動詞）\n給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）",
   stage: "N5",
-}
+},
 ```
 
-### A.4 既有違規條目處理
+此例表示：
 
-寫一支 audit 腳本掃描 `jpWords.ts`，找出違反 A.1 規則的條目（無漢字義不在尾端、或 meaning 段數 < kanji 段數）。違規條目逐筆修正：搬到尾端、meaning 段順序也跟著調整。
+- 同一個 `text` 可以保留多個義項
+- 同一個 `kanji` 行也可能因中文義不同而重複出現
+- 整併時不能只看 `text` 或 `kanji`，必須連同 `meaning` 一起判斷
 
----
+### A.3 多義單字格式規則
 
-## 設計總則 B：測驗功能
+目前專案中應該已有像 `から` 這樣的情況：
 
-### B.1 「開始測驗」按鈕（VocabularyControlBar）
+- 一個單字
+- 有多個漢字
+- 也可能有沒有漢字、但意思不同的義項
 
-- **位置**：放在「儲存註記」按鈕**左側**；那一行右半邊變成 `[開始測驗] [儲存註記]`
-- **間距**：兩按鈕之間的間距 = 左半邊 checkbox 群內部 checkbox 間距
-- **enabled 條件**：`visibleEntries.value.some(e => draftMarkedKeys.value.has(e.markKey))` ≥ 1
-- **disabled 樣式**：`BaseButton variant="primary" :disabled="!canStartVocabularyExam"`，配色參考字母練習「送出」按鈕
+原始理解是：
 
-### B.2 題目展開（測驗開始時 snapshot）
+- 若無漢字義項出現在排序中間，過去可能會用 `\n` 當 placeholder
+- 若無漢字義項出現在最後，則不特別處理
 
-對「測驗開始時 `visibleEntries ∩ draftMarkedKeys` 快照」中每筆 entry，依 `meaning` 段數展開 `N` 題：
+這次要把規則改得更一致。
 
-| 段 index | 對應 kanji 段 | promptText | answerText | question id |
-|----------|--------------|-----------|-----------|-------------|
-| 0 | `殻` | `から／殻` | `外殼` | `${markKey}__seg0` |
-| 1 | `空` | `から／空` | `空(無內容)` | `${markKey}__seg1` |
-| 2 | （無）| `から` | `從～、因為～；助詞` | `${markKey}__seg2` |
+#### 新規則
 
-- prompt 中的分隔符用全形「／」（與 discuss.txt 行 32–33 一致）
-- 同一個原始 entry 的多題共享同一個 `markKey`（沿用 `entry.markKey`，由 `vocabularyFilters` 既有規則生成）
-- 每張題卡的 unique id 為 `${markKey}__seg${index}`，結算時用 `markKey` 聚合同 entry 的所有題卡
-- **題目總數**：`sum(snapshot 中每個 entry 的 meaning.split('\n').length)`，**無題數上限**
-- **題目排序**：所有題卡展開後做**全題完全洗牌**，同 entry 的多題會散在隨機位置
-- **題目集合 snapshot**：測驗開始時固定，之後使用者切換 stage filter / 改 checkbox 都不影響進行中的題庫
+- **有漢字的義項一律排前面**
+- **沒有漢字的義項一律排最後面**
+- 因此最後一個無漢字義項，不再需要為了中間對齊而額外放空白 `\n`
 
-### B.3 結算規則（per-entry 匯總）
+#### 同 kanji 重複與空白 placeholder 的合法情況
 
-統一原則：
+- **同一個 kanji 字串可以在多個 `kanji` 行重複出現**，前提是該 kanji 對應到多個不同中文義（如 `あげる` 範例中的 `上げる` 出現 3 次）
+- 若某行**沒有漢字、且該行不是 `kanji` 的最後一行**，仍須用 `\n` 作為該行的 placeholder，這樣 `kanji` 與 `meaning` 才能逐行對齊
+- 唯有最後一行可省略 placeholder（因為已沒有後續行需要對齊）
 
-> **只有「全部段都已答 + 全部都是『下一步』」才解除打勾；任何「我不知道」或「未答」都視為打勾。**
+#### 後續新增規則
 
-| 該 entry 的答題狀態 | 結算動作 |
-|---------------------|---------|
-| 至少一段點過「我不知道」 | 加入 `draftMarkedKeys`（打勾） |
-| 至少一段**未答**（即使其他段都點「下一步」）| 加入 `draftMarkedKeys`（打勾） |
-| 完全沒答任何段（中途關閉、該 entry 都還沒輪到） | 加入 `draftMarkedKeys`（打勾） |
-| **全部段都已答 + 全部都是「下一步」** | 從 `draftMarkedKeys` 移除（取消打勾） |
+- 未來如果想添加漢字或中文翻譯，一律**從最後面開始添加**
+- 但不得違背「有漢字在前、無漢字在後」的規則
+- 這條規則必須正式寫進專案，之後所有新增單字都套用
 
-**結算寫入路徑**：
+### A.4 `jpWords.ts` 拆分與載入方式
 
-- **只更新 `draftMarkedKeys`**（純畫面狀態 = table 上各列右側的 checkbox 勾選狀態）
-- **不**寫 `persistedMarkedKeys`、**不**寫 localStorage、**不**走 `saveMarks()` 路徑
-- 使用者要持久化必須再點「儲存註記」按鈕（與一般打勾改動的路徑相同）
-- 因為測驗開始時題庫 = `visibleEntries ∩ draftMarkedKeys`（每個受測 entry 原本就是打勾），所以結算只有「保留打勾」或「移除打勾」兩種終態，不會出現「測驗中新增打勾」
+完成上述整理後，將原本的 `jpWords.ts` 拆分成五份：
 
-**與字母練習結算完全分開**：
+- `jpWords_N1.ts`
+- `jpWords_N2.ts`
+- `jpWords_N3.ts`
+- `jpWords_N4.ts`
+- `jpWords_N5.ts`
 
-- 字母練習結算：寫 `latestUnknownResults` localStorage，顯示 `UnknownResultPanel`
-- 單字練習結算：只動 `draftMarkedKeys`，**不**寫 `latestUnknownResults`、**不**顯示任何 result panel、**不**產生「我不清楚的單字」清單
+拆分之後：
 
-### B.4 Modal 行為（複用 ExamModal）
+- 單字練習頁目前的 **N1~N5 checkbox**
+- 要剛好對應這五份新的 ts 檔案
 
-- **保留** `ExamModal.vue` 結構與 `next / unknown / confirmClose` 事件介面
-- **擴充點**：
-  - 新增 prop `promptSize?: 'lg' | 'md'`，預設 `'lg'`（字母練習用），單字練習傳 `'md'`（≈ 1.5rem）
-  - 答案區加 `word-break: break-word; overflow-wrap: anywhere;` 防破版
-- **中途關閉**：使用者按 X 鈕 → `window.confirm('確定要結束練習嗎？')` → 確認後**也走 settle()**，套用 B.3 結算規則（已答的算數，未答的視為打勾）
+#### 載入策略
 
-### B.5 Session 結構（兩支並列）
+- 採用 **lazy import**
+- 理由是這樣比較高效
+- stage checkbox 不只影響顯示範圍，也是資料載入切分的邏輯入口
 
-新增 `useVocabularyExamSession` composable，與既有 `createExamSession` 並列：
+#### Export 形式與載入入口
 
-- 字母練習：用既有 `createExamSession`，邏輯不動
-- 單字練習：用新的 `useVocabularyExamSession`，負責：
-  - 從 `visibleEntries ∩ draftMarkedKeys` 快照展開題目（B.2）
-  - 結算時跑 B.3 規則回寫 `draftMarkedKeys`
-- 題目型別：`exam.ts` 加一個 `VocabularyExamQuestionCard`，與既有 `ExamQuestionCard` 並列（不需要 generic 化）
-
-### B.6 結算後 UX 提示
-
-結算結束時 modal 顯示一段提示：「測驗結算已更新畫面上的勾選，記得按『儲存註記』才能保存」。或者讓「儲存註記」按鈕在 `hasUnsavedMarkChanges` 為 true 時視覺強調（如 highlight）。具體交給設計階段定。
+- 五個檔案各自以 `export default` 匯出一個 array
+- 動態 import **直接由 `useVocabularySession` 根據 stage filter 呼叫對應檔案**（不再保留統一的 `jpWords.ts` 入口做轉發）
+- 既有 `vocabularyFilters` / `markKey` 流程須改寫，以支援「資料尚未載入完成」的中間狀態
 
 ---
 
-## 風險與因應
+## B. 測驗功能添加
 
-| # | 風險 | 影響 | 因應 |
-|---|------|------|------|
-| R1 | 結算後 `draftMarkedKeys` ≠ `persistedMarkedKeys`，使用者可能誤以為已自動保存，關頁面 → 結果丟失 | UX | B.6 的提示 + 「儲存註記」按鈕視覺強調 |
-| R2 | 既有資料若違反 A.1 規則（無漢字義在中間） | 規則套用後資料不一致 | A.4 的 audit 腳本掃描 + 逐筆修正 |
-| R3 | ExamModal 改動可能影響字母練習測驗 | 既有功能回歸 | `promptSize` 預設 `'lg'` 保持字母練習零變動；新測試覆蓋兩條路徑 |
-| R4 | 多義 entry 的 kanji + meaning 段數不一致 → 題目展開錯亂 | 題目顯示錯誤 | dev mode assert；上線版以 meaning 段數為準、kanji 段不足補空字串 |
-| R5 | 全題完全洗牌後，使用者中途關閉時某 entry 可能只答到部分段 | 結算需處理「部分已答」 | B.3 的 4 列規則已涵蓋（任一未答 → 打勾） |
-| R6 | 字母練習與單字練習結算行為不一致，未來可能被誤改成共用 | 行為退化 | `useVocabularyExamSession.settle()` 加註解明確說明「不寫 localStorage / 不顯示 unknown panel」；spec 中明文寫出兩者差異 |
+### B.0 基本前提
 
----
+此次改動以**不影響子路由「字母練習」的測驗 UI 及功能**為優先。
 
-## Spectra Changes 拆分
+也就是說：
 
-### A. `add-multi-meaning-vocabulary-rule`
+- 單字測驗可以參考字母練習的測驗 UI
+- 但不能把字母練習現有測驗功能做壞
 
-獨立可驗收，不依賴其他 change。
+### B.1 「開始測驗」按鈕
 
-**Tasks**：
+在單字練習頁新增「開始測驗」按鈕。
 
-- 在 spec 中明文規定 A.1（多義單字資料分段規則）與 A.2（新增 entry 的去重 key + append-only 規則）
-- 新增 `から` entry（A.3）到 jpWords.ts 中 N5 區段尾端
-- 寫 audit 腳本掃描 jpWords.ts 違規條目（A.4）
-- 違規條目逐筆修正：搬尾端、meaning 段順序對齊
-- 加 lint / build-time 檢查：每筆 entry 都符合 A.1 約束（meaning 段數 ≥ kanji 段數）
+#### 位置
 
-**驗收**：
+- 放在「儲存註記」左側
+- 同一行左半邊是 checkbox 群
+- 同一行右半邊是按鈕群
+- 右半邊排列為：`[開始測驗] [儲存註記]`
 
-- 新增的 `から` entry 可被 `useVocabularySession` 正確載入並顯示三段 meaning
-- audit 腳本對全檔執行 0 violation
-- 嘗試新增完全重複（同 text + kanji）的 entry 會被 lint 擋下
+#### 間距
 
-### B. `add-vocabulary-quiz-feature`
+- 「開始測驗」與「儲存註記」之間的間距
+- 必須等於左半邊 checkbox 群內部的 checkbox 間距
 
-依賴 A 完成（題目展開規則需要 A.1 的資料模型）。
+#### disabled 規則
 
-**Tasks**：
+- 畫面上顯示的單字表，至少要有一個右側 checkbox 被勾選
+- 若目前畫面上沒有任何符合條件的單字列，則「開始測驗」必須 disabled
+- disabled 的顏色與變化，參考子路由「字母練習」的「送出」按鈕
 
-- `VocabularyControlBar` 新增「開始測驗」按鈕（B.1）
-- 新增 `useVocabularyExamSession` composable（B.2 + B.3 + B.5）
-- `ExamModal.vue` 加 `promptSize` prop + 答案斷行樣式（B.4）
-- `exam.ts` 擴充 `VocabularyExamQuestionCard` 型別
-- `VocabularyView.vue` 引入 ExamModal 與新 session
-- 結算後提示使用者要按「儲存註記」才會持久化（B.6）
+### B.2 題目選定方式
 
-**測試**：
+題目來源不是整份字典，而是：
 
-- 題目展開（から 三題、單義單字一題、kanji + meaning 段數對齊）
-- 結算 4 種狀態（全下一步 / 任一不知道 / 任一未答 / 完全沒答）
-- 「開始測驗」 enabled / disabled 條件（visibleEntries ∩ draftMarkedKeys 為空時 disabled）
-- 結算後 `draftMarkedKeys` 變動但 `persistedMarkedKeys` 不變（不寫 localStorage）
-- 結算後不影響 `latestUnknownResults`（與字母練習結算解耦）
-- 中途關閉測驗也跑 settle（confirmClose 路徑）
-- 測驗中切換 stage filter 不影響已 snapshot 的題庫
+- 以畫面下方單字表中
+- 每一個 `tr` 最右側的 checkbox 勾選狀態
+- 作為是否參與考試的範圍
 
----
+#### 納入規則
 
-## 已收斂的決策（速查）
+- **只要是畫面上可見，且被勾選的單字列，就納入考題**
+- 若原本有勾選，但因 stage checkbox 被隱藏，就不納入考題
 
-| 主題 | 決策 |
-|------|------|
-| 多義 entry 分段 | `\n` 分段、無漢字義一律放尾端、`meaning` 段數 ≥ `kanji` 段數 |
-| 新增 entry 去重 key | `text + kanji`（同音異字允許、完全相同拒絕） |
-| 新增 entry 位置 | append 到該 stage 區段尾端，不特別排序 |
-| `から` 的 stage | N5 |
-| 「開始測驗」題目來源 | `visibleEntries ∩ draftMarkedKeys`（畫面上 + 已勾選） |
-| 「開始測驗」disabled 條件 | 上述交集為空時 disable，配色參考字母練習「送出」按鈕 |
-| 題目展開 | 每段 meaning 一題；prompt = `text／kanji`（無漢字段只有 text）；題卡 id = `${markKey}__seg${index}` |
-| 題目排序 | 全題完全洗牌 |
-| 題目集合 | 測驗開始時 snapshot、之後固定 |
-| 題數限制 | 無上限 |
-| Modal | 複用 ExamModal + `promptSize='md'` + 答案斷行 |
-| Session 結構 | 兩支並列（字母用 `createExamSession`、單字用新增 `useVocabularyExamSession`） |
-| 結算寫入 | 只動 `draftMarkedKeys`；**不**寫 localStorage、**不**走 saveMarks |
-| 結算 per-entry 規則 | 全段已答 + 全「下一步」→ 移除打勾；任一「我不知道」或「未答」→ 打勾 |
-| 中途關閉 | 也跑 settle（已答算數、未答視為打勾） |
-| 字母 vs 單字結算 | 完全分開：字母寫 `latestUnknownResults` 並顯示 panel；單字不寫、不顯示 |
+#### checkbox 勾選的判斷範圍
 
----
+- 勾選範圍為 **`visibleEntries ∩ (draftMarkedKeys ∪ persistedMarkedKeys)`**
+- 也就是說，畫面上 checkbox 處於勾選狀態的單字列即納入考題，**不論該勾選是否已透過「儲存註記」寫入 localStorage**
 
-## 建議下一步（交由 Codex / `/spectra-propose` 處理）
+#### 題庫 snapshot
 
-依序啟動：
+- 測驗頁會覆蓋整個畫面，使用者**無法**在測驗進行中切換 stage 或修改勾選
+- 因此題庫在「開始測驗」當下即固定，測驗中不再隨任何狀態變動
 
+#### 範例
+
+- 若 `あさ` 被勾選，但上方把 N5 checkbox 取消勾選，`あさ` 被隱藏，就不納入考題
+- 若 `あい` 先前已儲存註記，因此有打勾；但上方把 N5 checkbox 取消勾選，`あい` 被隱藏，就不納入考題
+- 若之後把 N5 checkbox 勾回來，而 `あい` 此時可見且有勾選，則 `あい` 納入考題
+
+### B.3 題目呈現方式
+
+單字測驗介面與子路由「字母練習」的測驗方式雷同，但規則不同。
+
+#### 共通方向
+
+- 可以沿用字母練習的測驗 UI 方向
+- 必要時可以做組件化，避免多餘程式碼
+
+#### 作答流程
+
+- 按下「下一步」或「我不清楚」時
+- 必須分別記錄該題屬於哪一種結果
+- 最後結算時依結果做不同處理
+
+#### 題目區大小
+
+- 字母練習的題目文字很大，單字測驗不適合沿用
+- 單字測驗的題目文字大小要改成 **`1.5rem`**
+- `ExamModal` 將題目尺寸 **prop 化**（例：`promptSize='md'` 對應 `1.5rem`，預設 `'lg'` 維持字母練習現況），讓組件可重用且不影響字母練習
+
+#### 多義單字展題規則
+
+題目固定由**假名 + 漢字**組成。
+
+以 `から` 為例，因為它有三種意思，所以要拆成三題：
+
+1. `から／殻`
+2. `から／空`
+3. `から`
+
+此處要特別注意：
+
+- 無漢字義項也要能形成題目
+- 並非所有多義詞都一律拆成多題
+
+#### `あげる` 類型的特殊規則
+
+有可能發生：
+
+- 同樣的假名
+- 同樣的漢字
+- 但有不同的中文翻譯
+
+例如：
+
+- `あげる／上げる`
+
+這種情況：
+
+- **題目算一題**
+- 答案則用 `\n` 把不同答案分開
+
+範例答案：
+
+```text
+提高（一段動詞；他動詞）
+給（一段動詞）
+舉起（一段動詞）
 ```
-/spectra-propose add-multi-meaning-vocabulary-rule
-/spectra-propose add-vocabulary-quiz-feature
-```
 
-第一支必須先完成並驗收，第二支才能展開（因為題目展開規則依賴 A.1 的資料模型）。
+也就是說：
+
+- `から` 類型是**多題**
+- `あげる／上げる` 這種同題幹、同漢字、不同中文的情況是**一題多行答案**
+
+#### 同題幹合併的實作層
+
+- 此類合併屬於**執行期處理**，不在 A.2 整併資料時做
+- 資料層保留原始多段 `kanji` / `meaning`（如 A.2 的 `あげる` 範例）
+- 測驗展題時以 **`(text, kanji-line)` 分組**，把同組的多個中文義以 `\n` 串接成一題的多行答案
+
+#### 題目順序
+
+- 題庫展開後採**完全隨機洗牌**（不依字典順序、不依 stage、不維持同 entry 相鄰）
+
+### B.4 答案區與版面調整
+
+答案顯示流程與字母練習相同：
+
+- 一開始先顯示題目
+- 點選「下一步」或「我不清楚」後
+- 再跳出對應答案
+
+#### `から` 範例
+
+- `から／殻` → `外殼`
+- `から／空` → `空(無內容)`
+- `から` → `從～、因為～；助詞`
+
+#### 長答案規則
+
+- 若答案文字太長，必須避免破版
+- 必須支援正常斷行
+- 因為答案可能有多行，所以答案區必須能容納複數個答案
+
+#### UI 調整
+
+由於答案可能有複數個，原本字母練習測驗中的提示區需要移除。
+提示區是原本顯示以下文字的區域：
+
+- `已顯示答案，請決定是否標記為我不清楚`
+- `請先自行作答，再決定是否按下我不清楚`
+
+這次改動要求：
+
+- **移除提示區**
+- 題目區高度預設變矮一些
+- 題目文字靠近上方
+- 答案區高度拉高
+
+目標是讓單字測驗更能容納多行答案。
+
+### B.5 結算規則
+
+單字測驗的結算成果必須與字母練習的測驗**完全不同，互相獨立**。
+
+#### 基本規則
+
+- 在答題時點選「下一步」的單字，結算時解除對應單字列的勾選
+- 在答題時點選「我不知道」的單字，結算時保留或加回對應單字列的勾選
+
+#### 多重題目規則
+
+若一筆單字拆成多題，則要看整組結果。
+
+例如 `から`：
+
+- `から／殻` 點「我不知道」
+- `から／空` 點「下一步」
+- `から` 點「我不知道」
+
+那麼 `から` 這一列的 checkbox **仍然要打勾**
+
+只有在以下情況，才會取消勾選：
+
+- 該單字拆出的所有題目
+- **全部都點了「下一步」**
+
+換句話說：
+
+- 只要其中任何一題是「我不知道」
+- 該單字列就必須保持打勾
+
+#### 未答題（中途關閉）的處理
+
+- 嚴格規則：若使用者中途關閉測驗，使得某些題目從未顯示／從未答，**該單字保留原勾選狀態，不做任何更動**
+- 註：依目前流程，使用者必須先勾選單字才會被納入測驗，因此「未答 → 保留原狀」實務上等同「保留勾選」
+
+#### 結算寫入位置
+
+- 結算結果**只寫入 `draftMarkedKeys`**（畫面狀態，尚未持久化）
+- **不**自動觸發 `saveMarks()`、**不**直接寫 `persistedMarkedKeys`、**不**直接寫 localStorage
+- 與一般打勾改動的路徑一致：使用者需自行按下「儲存註記」才會持久化
+
+---
+
+## 執行順序
+
+順序不可顛倒：
+
+1. **先做 A：字典檢查、整併、格式規則化、拆分**
+2. **再做 B：測驗功能**
+
+原因是：
+
+- `から` 這種多義格式直接影響題目怎麼拆
+- `あげる` 這種重複詞條直接影響題目是一題還是多題，以及答案如何呈現
+- 若先做測驗，再回頭改字典格式，會讓題目模型與結算規則反覆重做
+
+---
+
+## 已收斂的關鍵決策
+
+1. `から` 是 **N5** 單字，且是一筆多義 entry
+2. 同一組重複單字跨 stage 時，依 `N5 > N4 > N3 > N2 > N1` 優先往**較簡單**的 stage 合併；採「目前出現的所有 stage 中最簡單者」原則（N1+N3 → N3、N2+N4 → N4，不一律落到 N5）
+3. 多義單字格式採「有漢字在前、無漢字在後」
+4. 同一個 kanji 字串可在多個 `kanji` 行重複出現（對應不同中文義）；無漢字且非最後一行時，仍須用 `\n` placeholder 對齊
+5. `jpWords.ts` 要拆成 `jpWords_N1.ts` 到 `jpWords_N5.ts`，每檔 `export default` 一個 array
+6. N1~N5 checkbox 對應新分檔，由 `useVocabularySession` 直接 lazy import；`vocabularyFilters` / `markKey` 須支援「資料未載入完成」的中間狀態
+7. 單字測驗優先不得影響字母練習的既有測驗 UI 與功能
+8. 題目來源 = `visibleEntries ∩ (draft ∪ persisted)`；測驗開啟後題庫即 snapshot，不隨後續操作變動
+9. `から` 類型是**多題**；`あげる／上げる` 類型是**一題、多行答案**
+10. 同題幹合併屬執行期處理，資料層保留原始多段；展題時以 `(text, kanji-line)` 分組
+11. 題目順序採**完全隨機洗牌**
+12. 題目區字級 prop 化（單字測驗 `1.5rem`，字母練習維持現況）
+13. 提示區移除，題目區變矮，答案區拉高
+14. 結算結果只寫入 `draftMarkedKeys`，不自動持久化
+15. 未答題（中途關閉）一律保留原勾選狀態
+16. 單字測驗結算與字母練習測驗完全獨立
+17. 舊 parked change `add-multi-meaning-vocabulary-rule` 已廢棄；A 部分（含 A.1～A.4）將以新 change 重新 propose，涵蓋整個 A 範圍
+
+---
+
+## Conclusion
+
+**Decision**: 單字測驗功能可以做，但必須先完成字典整併、格式規則化、分 stage 拆檔與 lazy import，之後再做測驗 UI、出題與結算。
+**Rationale**: 這次測驗規則直接依賴字典資料結構，尤其 `から` 與 `あげる` 代表兩種不同的多義處理方式；若資料模型沒先整理，測驗會在出題、答案呈現與結算三處同時失真。
+**Capture to**: `_private/propose.md`
