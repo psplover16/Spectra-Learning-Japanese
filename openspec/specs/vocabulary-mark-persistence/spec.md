@@ -48,7 +48,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -105,7 +105,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -182,7 +182,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -244,7 +244,7 @@ code:
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
   - src/modules/vocabulary/types/vocabulary.ts
   - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
   - _private/筆記.md
   - _private/n3.csv
   - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
@@ -262,4 +262,176 @@ tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
   - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+-->
+
+---
+### Requirement: Saving vocabulary marks merges only visible entries
+
+The vocabulary save-marks action SHALL persist a merge of currently visible vocabulary row keys into the existing version 2 localStorage mark snapshot. The system MUST capture the visible row key scope at the moment the user invokes save. For each key in that scope, the system SHALL write the key when draft marks contain it and SHALL remove the key when draft marks do not contain it. The system SHALL preserve every persisted key that is outside that scope. The visible row key scope MUST reflect active search, selected JLPT levels, marked-only state, practice mode state, loaded vocabulary data, and any other filter that affects the rows currently shown on the page.
+
+#### Scenario: Saving checked visible entry preserves hidden persisted entry
+
+- **WHEN** entries `A(stage=N1)` and `B(stage=N5)` are persisted marks
+- **AND** the current visible row scope contains only `A(stage=N1)`
+- **AND** draft marks contain `A(stage=N1)`
+- **AND** the user invokes save marks
+- **THEN** localStorage contains the key for `A(stage=N1)`
+- **AND** localStorage still contains the key for `B(stage=N5)`
+
+#### Scenario: Saving unchecked visible entry removes only that visible entry
+
+- **WHEN** entries `A(stage=N1)` and `B(stage=N5)` are persisted marks
+- **AND** the current visible row scope contains only `A(stage=N1)`
+- **AND** draft marks do not contain `A(stage=N1)`
+- **AND** the user invokes save marks
+- **THEN** localStorage does not contain the key for `A(stage=N1)`
+- **AND** localStorage still contains the key for `B(stage=N5)`
+
+#### Scenario: Visible scope follows active filters
+
+- **WHEN** search text, selected JLPT levels, marked-only state, or practice mode changes the visible vocabulary rows
+- **AND** the user invokes save marks
+- **THEN** only keys for rows visible after those filters are applied are merged into localStorage
+- **AND** persisted keys for filtered-out rows remain unchanged
+
+
+<!-- @trace
+source: vocabulary-quiz-followup-adjustments
+updated: 2026-05-04
+code:
+  - src/modules/exam/types/exam.ts
+  - src/modules/vocabulary/data/jpWords.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/筆記.md
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - src/styles/main.css
+  - src/modules/exam/components/ExamModal.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - _private/propose.md
+  - tests/unit/vocabularyStageTestData.ts
+  - _private/discuss.txt
+tests:
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyMeaningFormat.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/useVocabularyExamSession.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+  - tests/component/ExamModal.spec.ts
+-->
+
+---
+### Requirement: Table header bulk toggles visible draft vocabulary marks
+
+The table header mark checkbox SHALL control only the draft mark state for currently visible vocabulary row keys. The vocabulary session MUST capture the current visible row key scope at the moment the header checkbox changes. When the header checkbox is checked, the vocabulary session SHALL add every key in that scope to `draftMarkedKeys`. When the header checkbox is unchecked, the vocabulary session SHALL remove every key in that scope from `draftMarkedKeys`. The vocabulary session SHALL preserve every draft key outside that scope. The header checkbox SHALL NOT show a delete confirmation, SHALL NOT write localStorage, and SHALL NOT update `persistedMarkedKeys`. The persisted snapshot SHALL change only when the user invokes the save-marks action.
+
+#### Scenario: Header checkbox selects currently visible draft marks
+
+- **WHEN** the current visible row scope contains keys `A|` and `B|`
+- **AND** `draftMarkedKeys` contains no key from that scope
+- **AND** the user checks the table header mark checkbox
+- **THEN** `draftMarkedKeys` contains `A|` and `B|`
+- **AND** draft keys outside the visible row scope remain unchanged
+- **AND** localStorage and `persistedMarkedKeys` remain unchanged
+- **AND** no delete confirmation is shown
+
+#### Scenario: Header checkbox unselects currently visible draft marks
+
+- **WHEN** the current visible row scope contains keys `A|` and `B|`
+- **AND** `draftMarkedKeys` contains `A|`, `B|`, and hidden key `C|`
+- **AND** the user unchecks the table header mark checkbox
+- **THEN** `draftMarkedKeys` does not contain `A|` or `B|`
+- **AND** `draftMarkedKeys` still contains `C|`
+- **AND** localStorage and `persistedMarkedKeys` remain unchanged
+- **AND** no delete confirmation is shown
+
+#### Scenario: Header checkbox preserves hidden draft marks
+
+- **WHEN** the current visible row scope contains only key `A|`
+- **AND** `draftMarkedKeys` contains visible key `A|` and hidden key `B|`
+- **AND** the user unchecks the table header mark checkbox
+- **THEN** `draftMarkedKeys` does not contain `A|`
+- **AND** `draftMarkedKeys` still contains `B|`
+
+
+<!-- @trace
+source: vocabulary-control-bar-bulk-mark-adjustments
+updated: 2026-05-04
+code:
+  - src/styles/main.css
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/propose.md
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - PROJECT_ARCHITECTURE.md
+tests:
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
+### Requirement: Header bulk mark checkbox reflects visible draft mark state
+
+The table header mark checkbox SHALL be checked only when at least one vocabulary row is visible and every currently visible row key is present in `draftMarkedKeys`. The table header mark checkbox SHALL be unchecked when no row is visible or at least one currently visible row key is absent from `draftMarkedKeys`.
+
+#### Scenario: Header checkbox is checked when all visible rows are draft marked
+
+- **WHEN** the current visible row scope contains keys `A|` and `B|`
+- **AND** `draftMarkedKeys` contains `A|` and `B|`
+- **THEN** the table header mark checkbox is checked
+
+#### Scenario: Header checkbox is unchecked when one visible row is not draft marked
+
+- **WHEN** the current visible row scope contains keys `A|` and `B|`
+- **AND** `draftMarkedKeys` contains `A|`
+- **AND** `draftMarkedKeys` does not contain `B|`
+- **THEN** the table header mark checkbox is unchecked
+
+#### Scenario: Header checkbox updates after a visible row is unchecked
+
+- **WHEN** the current visible row scope contains keys `A|` and `B|`
+- **AND** the table header mark checkbox is checked because `draftMarkedKeys` contains `A|` and `B|`
+- **AND** the user unchecks the row mark checkbox for `B|`
+- **THEN** the table header mark checkbox becomes unchecked
+- **AND** `draftMarkedKeys` still contains `A|`
+- **AND** `draftMarkedKeys` does not contain `B|`
+
+<!-- @trace
+source: vocabulary-control-bar-bulk-mark-adjustments
+updated: 2026-05-04
+code:
+  - src/styles/main.css
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/propose.md
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - PROJECT_ARCHITECTURE.md
+tests:
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
 -->

@@ -32,7 +32,6 @@ function createFilterState(
     showAllSounds: true,
     showKanji: true,
     showMarkedOnly: false,
-    practiceMode: false,
     columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
     allowedKanaSet: new Set<string>(),
     ...filterOverrides,

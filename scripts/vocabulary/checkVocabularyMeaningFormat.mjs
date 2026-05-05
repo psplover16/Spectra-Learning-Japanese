@@ -66,6 +66,23 @@ function createMisalignedDiagnostic(entry, meaningLines, kanjiLines) {
   };
 }
 
+function createMissingKanjiPlaceholderDiagnostic(entry, meaningLines, kanjiLines, requiredKanjiLineCount) {
+  return {
+    ...entryDiagnosticBase(entry, entry.meaning),
+    kanjiLineCount: kanjiLines.length,
+    meaningLineCount: meaningLines.length,
+    requiredKanjiLineCount,
+  };
+}
+
+function createMisorderedKanjiDiagnostic(entry, firstKanjiLessLine, laterKanjiLine) {
+  return {
+    ...entryDiagnosticBase(entry, entry.meaning),
+    firstKanjiLessLine,
+    laterKanjiLine,
+  };
+}
+
 function extractJmdictReadings(entry) {
   return unique([
     ...toArray(entry.reb),
@@ -260,8 +277,65 @@ function analyzeLineAlignment(entry, diagnostics) {
     return;
   }
 
-  if (kanjiLines.length !== meaningLines.length) {
+  if (kanjiLines.length > meaningLines.length) {
     diagnostics.misalignedMeaningEntries.push(createMisalignedDiagnostic(entry, meaningLines, kanjiLines));
+    return;
+  }
+
+  const firstKanjiLessLine = kanjiLines.findIndex((kanjiLine) => kanjiLine === '');
+
+  if (firstKanjiLessLine !== -1) {
+    const laterKanjiOffset = kanjiLines
+      .slice(firstKanjiLessLine + 1)
+      .findIndex((kanjiLine) => kanjiLine !== '');
+
+    if (laterKanjiOffset !== -1) {
+      diagnostics.misorderedKanjiEntries.push(
+        createMisorderedKanjiDiagnostic(entry, firstKanjiLessLine, firstKanjiLessLine + 1 + laterKanjiOffset),
+      );
+      return;
+    }
+  }
+
+  if (kanjiLines.length === meaningLines.length) {
+    return;
+  }
+
+  const omittedTrailingLineCount = meaningLines.length - kanjiLines.length;
+
+  if (omittedTrailingLineCount > 1) {
+    diagnostics.missingKanjiPlaceholderEntries.push(
+      createMissingKanjiPlaceholderDiagnostic(entry, meaningLines, kanjiLines, meaningLines.length - 1),
+    );
+    return;
+  }
+
+}
+
+function analyzeDuplicateTextKanjiEntries(rawVocabularyEntries, diagnostics) {
+  const entriesByTextKanji = new Map();
+
+  for (const entry of rawVocabularyEntries) {
+    const key = `${entry.text}\u0000${entry.kanji}`;
+    const existing = entriesByTextKanji.get(key) ?? [];
+    existing.push(entry);
+    entriesByTextKanji.set(key, existing);
+  }
+
+  for (const duplicateEntries of entriesByTextKanji.values()) {
+    if (duplicateEntries.length <= 1) {
+      continue;
+    }
+
+    const [firstEntry] = duplicateEntries;
+    diagnostics.duplicateTextKanjiEntries.push({
+      text: firstEntry.text,
+      kanji: firstEntry.kanji,
+      entries: duplicateEntries.map((entry) => ({
+        stage: entry.stage,
+        meaning: entry.meaning,
+      })),
+    });
   }
 }
 
@@ -280,6 +354,9 @@ export function analyzeVocabularyMeaningFormat(rawVocabularyEntries, rawJmdictEn
     halfWidthMarkerEntries: [],
     sharedMarkerEntries: [],
     misalignedMeaningEntries: [],
+    misorderedKanjiEntries: [],
+    missingKanjiPlaceholderEntries: [],
+    duplicateTextKanjiEntries: [],
     missingPosMarkers: [],
     unresolvedJmdictEntries: [],
     allowlistedUnresolvedEntries: [],
@@ -297,6 +374,8 @@ export function analyzeVocabularyMeaningFormat(rawVocabularyEntries, rawJmdictEn
     analyzeLineAlignment(entry, diagnostics);
     analyzeJmdictMarkers(entry, jmdictEntries, diagnostics, unresolvedAllowlist);
   }
+
+  analyzeDuplicateTextKanjiEntries(rawVocabularyEntries, diagnostics);
 
   return diagnostics;
 }

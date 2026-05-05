@@ -51,10 +51,33 @@ export interface MisalignedMeaningDiagnostic extends VocabularyMeaningDiagnostic
   meaningLineCount: number;
 }
 
+export interface MisorderedKanjiDiagnostic extends VocabularyMeaningDiagnostic {
+  firstKanjiLessLine: number;
+  laterKanjiLine: number;
+}
+
+export interface MissingKanjiPlaceholderDiagnostic extends VocabularyMeaningDiagnostic {
+  kanjiLineCount: number;
+  meaningLineCount: number;
+  requiredKanjiLineCount: number;
+}
+
+export interface DuplicateTextKanjiDiagnostic {
+  text: string;
+  kanji: string;
+  entries: Array<{
+    stage: string;
+    meaning: string;
+  }>;
+}
+
 export interface VocabularyMeaningDiagnostics {
   halfWidthMarkerEntries: VocabularyMeaningDiagnostic[];
   sharedMarkerEntries: VocabularyMeaningDiagnostic[];
   misalignedMeaningEntries: MisalignedMeaningDiagnostic[];
+  misorderedKanjiEntries: MisorderedKanjiDiagnostic[];
+  missingKanjiPlaceholderEntries: MissingKanjiPlaceholderDiagnostic[];
+  duplicateTextKanjiEntries: DuplicateTextKanjiDiagnostic[];
   missingPosMarkers: MissingPosMarkerDiagnostic[];
   unresolvedJmdictEntries: UnresolvedJmdictDiagnostic[];
   allowlistedUnresolvedEntries: UnresolvedJmdictDiagnostic[];

@@ -46,7 +46,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -61,55 +61,83 @@ tests:
 ---
 ### Requirement: Vocabulary kanji lines align with meaning lines
 
-Vocabulary dictionary entries SHALL keep `kanji` and `meaning` line positions aligned. When `meaning` contains multiple lines, `kanji` MUST contain the same number of lines. If a sense reuses an existing kanji spelling, that kanji spelling MUST be repeated on the corresponding `kanji` line. If a sense truly has no kanji spelling, the corresponding `kanji` line MUST be empty.
+Vocabulary dictionary entries SHALL align `kanji` and `meaning` lines so that kanji-bearing senses appear before kanji-less senses. When a sense has a kanji spelling, the corresponding `kanji` line MUST contain that spelling. When multiple senses use the same kanji spelling, that spelling MUST be repeated on each corresponding `kanji` line. When a sense has no kanji spelling, its meaning line MUST appear after every kanji-bearing sense. A kanji-less sense that is followed by another meaning line MUST have an empty `kanji` placeholder line; the final kanji-less sense is valid with an omitted trailing `kanji` line.
 
 #### Scenario: Reused kanji is repeated for aligned senses
 
 - **WHEN** a vocabulary entry has multiple meaning lines and two senses use the same kanji spelling
-- **THEN** the `kanji` value contains one line for each `meaning` line
+- **THEN** the `kanji` value contains one line for each kanji-bearing meaning line
 - **AND** the repeated kanji spelling appears on each corresponding `kanji` line
 
 ##### Example: aligned ageru senses
 
 | Entry text | Expected kanji | Expected meaning |
 | ---------- | -------------- | ---------------- |
-| `あげる` | `上げる\n上げる\n挙げる\n揚げる` | `給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）` |
+| `あげる` | `上げる\n上げる\n上げる\n挙げる\n揚げる` | `提高（一段動詞；他動詞）\n給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）` |
 
-#### Scenario: Missing kanji is represented by an empty aligned line
+#### Scenario: Kanji-less final sense omits trailing placeholder
 
-- **WHEN** a meaning line truly has no kanji spelling
-- **THEN** the corresponding `kanji` line is empty
-- **AND** other `kanji` lines remain in their original positions
+- **WHEN** a vocabulary entry has kanji-bearing senses followed by one final kanji-less sense
+- **THEN** the `kanji` value lists only the kanji-bearing senses
+- **AND** the final meaning line represents the kanji-less sense
 
-##### Example: intentional empty kanji line
+##### Example: kara senses
 
 | Entry text | Expected kanji | Expected meaning |
 | ---------- | -------------- | ---------------- |
-| `example` | `例一\n\n例三` | `第一義\n第二義\n第三義` |
+| `から` | `殻\n空` | `外殼\n空(無內容)\n從～、因為～；助詞` |
+
+#### Scenario: Kanji-less non-final tail sense keeps placeholder
+
+- **WHEN** a vocabulary entry has more than one kanji-less sense after all kanji-bearing senses
+- **THEN** every kanji-less sense except the final meaning line has an empty `kanji` placeholder line
+- **AND** no kanji-bearing sense appears after an empty `kanji` placeholder line
+
+##### Example: two kanji-less tail senses
+
+| Entry text | Expected kanji | Expected meaning |
+| ---------- | -------------- | ---------------- |
+| `example` | `例一\n` | `第一義\n第二義無漢字\n第三義無漢字` |
 
 
 <!-- @trace
-source: standardize-vocabulary-meaning-pos-format
-updated: 2026-05-03
+source: vocabulary-quiz-feature
+updated: 2026-05-04
 code:
-  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
-  - src/modules/vocabulary/composables/useVocabularySession.ts
-  - src/modules/vocabulary/types/vocabulary.ts
-  - src/modules/vocabulary/components/VocabularyStageTable.vue
-  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
-  - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
-  - src/modules/vocabulary/views/VocabularyView.vue
+  - src/styles/main.css
+  - _private/propose.md
+  - src/modules/exam/components/ExamModal.vue
+  - src/modules/vocabulary/data/jpWords_N4.ts
   - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - src/modules/exam/types/exam.ts
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
+  - _private/discuss.txt
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - _private/筆記.md
+  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
+  - tests/unit/vocabularyStageTestData.ts
 tests:
+  - tests/unit/useVocabularyExamSession.spec.ts
   - tests/unit/vocabularyData.spec.ts
-  - tests/component/useVocabularySession.spec.ts
-  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/ExamModal.spec.ts
   - tests/unit/vocabularyMeaningFormat.spec.ts
   - tests/component/VocabularyStageTable.spec.ts
-  - tests/unit/vocabularyFilters.spec.ts
-  - tests/unit/vocabularyMarksStorage.spec.ts
-  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/useVocabularySession.spec.ts
 -->
 
 ---
@@ -142,7 +170,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -183,7 +211,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -246,7 +274,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -316,7 +344,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -355,7 +383,7 @@ code:
   - src/modules/vocabulary/utils/vocabularyFilters.ts
   - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
   - src/modules/vocabulary/views/VocabularyView.vue
-  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
 tests:
   - tests/unit/vocabularyData.spec.ts
   - tests/component/useVocabularySession.spec.ts
@@ -365,4 +393,206 @@ tests:
   - tests/unit/vocabularyFilters.spec.ts
   - tests/unit/vocabularyMarksStorage.spec.ts
   - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+-->
+
+
+<!-- @trace
+source: vocabulary-quiz-feature
+updated: 2026-05-04
+code:
+  - src/styles/main.css
+  - _private/propose.md
+  - src/modules/exam/components/ExamModal.vue
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - src/modules/exam/types/exam.ts
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
+  - _private/discuss.txt
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - _private/筆記.md
+  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
+  - tests/unit/vocabularyStageTestData.ts
+tests:
+  - tests/unit/useVocabularyExamSession.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/vocabularyMeaningFormat.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+-->
+
+---
+### Requirement: Vocabulary duplicate senses are consolidated before quiz use
+
+Vocabulary data SHALL consolidate entries with the same `text` and same `kanji` value when their meanings are valid distinct senses. The consolidated entry SHALL keep all verified meanings as separate meaning lines and SHALL keep repeated kanji lines when those meanings share the same kanji spelling. The consolidated entry SHALL use the simplest JLPT stage among the duplicate source entries according to `N5`, `N4`, `N3`, `N2`, then `N1`.
+
+#### Scenario: Same text and kanji across stages are merged
+
+- **WHEN** `あげる` with the same `kanji` spelling appears in `N3` and `N5`
+- **THEN** the vocabulary data contains one consolidated `あげる` entry in `N5`
+- **AND** the entry keeps each verified distinct meaning as its own meaning line
+
+#### Scenario: Different kanji homophones remain separate entries
+
+- **WHEN** two entries have the same `text` but different `kanji` values
+- **THEN** the vocabulary data keeps them as separate entries
+
+
+<!-- @trace
+source: vocabulary-quiz-feature
+updated: 2026-05-04
+code:
+  - src/styles/main.css
+  - _private/propose.md
+  - src/modules/exam/components/ExamModal.vue
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - src/modules/exam/types/exam.ts
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
+  - _private/discuss.txt
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - _private/筆記.md
+  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
+  - tests/unit/vocabularyStageTestData.ts
+tests:
+  - tests/unit/useVocabularyExamSession.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/vocabularyMeaningFormat.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+-->
+
+---
+### Requirement: New vocabulary senses are appended without violating kanji ordering
+
+New kanji or meaning senses SHALL be appended at the end of the current entry editing operation, then normalized so every kanji-bearing sense appears before every kanji-less sense. The normalized entry MUST preserve one meaning line per sense and MUST preserve repeated kanji lines for distinct meanings that share the same kanji.
+
+#### Scenario: New kanji-bearing sense is inserted before kanji-less tail
+
+- **WHEN** a new kanji-bearing sense is added to an entry that already has a kanji-less final sense
+- **THEN** the resulting entry places the new kanji-bearing sense before the kanji-less final sense
+- **AND** the kanji-less sense remains at the end of `meaning`
+
+<!-- @trace
+source: vocabulary-quiz-feature
+updated: 2026-05-04
+code:
+  - src/styles/main.css
+  - _private/propose.md
+  - src/modules/exam/components/ExamModal.vue
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - src/modules/vocabulary/data/jpWords.ts
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - src/modules/exam/types/exam.ts
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
+  - _private/discuss.txt
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - _private/筆記.md
+  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
+  - tests/unit/vocabularyStageTestData.ts
+tests:
+  - tests/unit/useVocabularyExamSession.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/ExamModal.spec.ts
+  - tests/unit/vocabularyMeaningFormat.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
+  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+-->
+
+---
+### Requirement: Vocabulary data rejects duplicate text and kanji entries across stages
+
+Vocabulary source data SHALL NOT contain more than one raw vocabulary entry with the same `text` and the same `kanji` value across JLPT stage files. When duplicate source entries share the same `text` and same `kanji`, the data SHALL be consolidated into one entry at the simplest source JLPT stage according to `N5`, `N4`, `N3`, `N2`, then `N1`. The consolidated entry MUST preserve valid distinct meanings as separate `meaning` lines and MUST preserve kanji-to-meaning line alignment.
+
+#### Scenario: Duplicate text and kanji across stages fails validation
+
+- **WHEN** raw vocabulary data contains one entry with `text = "あげる"`, `kanji = "上げる"`, and `stage = "N3"`
+- **AND** raw vocabulary data also contains another entry with `text = "あげる"`, `kanji = "上げる"`, and `stage = "N5"`
+- **THEN** vocabulary data validation reports the duplicate text-and-kanji entries
+- **AND** implementation is not complete until the entries are consolidated into one `N5` entry
+
+#### Scenario: Consolidated duplicate keeps aligned senses
+
+- **WHEN** duplicate entries with the same `text` and same `kanji` are consolidated
+- **THEN** the consolidated entry keeps every verified distinct meaning as its own `meaning` line
+- **AND** each kanji-bearing meaning line has the corresponding `kanji` line
+- **AND** the consolidated entry uses the simplest source JLPT stage
+
+#### Scenario: Future additions cannot reintroduce duplicate text and kanji
+
+- **WHEN** a new raw vocabulary entry is added to any JLPT stage file
+- **AND** another raw vocabulary entry already has the same `text` and same `kanji`
+- **THEN** vocabulary data validation fails until the entries are consolidated
+
+#### Scenario: Same text with different kanji remains separate
+
+- **WHEN** raw vocabulary data contains two entries with the same `text`
+- **AND** the entries have different `kanji` values
+- **THEN** vocabulary data validation does not require those entries to be consolidated by this requirement
+
+<!-- @trace
+source: adjust-vocabulary-practice-reading-mode
+updated: 2026-05-05
+code:
+  - src/modules/vocabulary/utils/vocabularyFilters.ts
+  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - src/modules/vocabulary/components/VocabularyControlBar.vue
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - src/styles/main.css
+  - src/modules/vocabulary/views/VocabularyView.vue
+  - _private/propose.md
+  - _private/discuss.txt
+tests:
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/component/VocabularyControlBar.spec.ts
+  - tests/unit/vocabularyData.spec.ts
+  - tests/unit/vocabularyFilters.spec.ts
+  - tests/component/VocabularyStageTable.spec.ts
 -->

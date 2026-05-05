@@ -1,29 +1,30 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue';
+import { ref } from 'vue';
 import type { VocabularyColumnVisibility, VocabularyEntry } from '@/modules/vocabulary/types/vocabulary';
 import { getDisplayWord } from '@/modules/vocabulary/utils/vocabularyFilters';
 
 const props = defineProps<{
   entries: VocabularyEntry[];
   showKanji: boolean;
-  practiceMode: boolean;
+  wordPracticeVisible: boolean;
   columnVisibility: VocabularyColumnVisibility;
   savedMarkedKeys: ReadonlySet<string>;
   draftMarkedKeys: ReadonlySet<string>;
+  allVisibleDraftMarked: boolean;
   revealedEntryId: number | null;
 }>();
 
 const emit = defineEmits<{
   'update:wordColumnVisible': [value: boolean];
+  'update:wordPracticeVisible': [value: boolean];
   'update:combinedColumnVisible': [value: boolean];
   'update:meaningColumnVisible': [value: boolean];
   'toggle-marked': [key: string, value: boolean];
-  'clear-marks': [];
+  'bulk-toggle-marked': [value: boolean];
   'begin-reveal': [id: number];
   'end-reveal': [id?: number];
 }>();
 
-const clearMarksChecked = ref(false);
 const pressedAtMap = new Map<number, number>();
 const suppressRowClickId = ref<number | null>(null);
 
@@ -51,21 +52,12 @@ function combinedColumnVisible(entryId: number) {
   return isContentVisible('combined', entryId);
 }
 
-function cellContentClasses(visible: boolean) {
-  return visible ? 'vocabulary-cell-content' : 'vocabulary-cell-content vocabulary-hidden-content';
+function wordCellText(entry: VocabularyEntry) {
+  return getDisplayWord(entry.text, props.columnVisibility.word, props.wordPracticeVisible);
 }
 
-async function handleClearMarksChange(event: Event) {
-  const target = event.target as HTMLInputElement;
-
-  if (!target.checked) {
-    return;
-  }
-
-  clearMarksChecked.value = true;
-  emit('clear-marks');
-  await nextTick();
-  clearMarksChecked.value = false;
+function cellContentClasses(visible: boolean) {
+  return visible ? 'vocabulary-cell-content' : 'vocabulary-cell-content vocabulary-hidden-content';
 }
 
 function handlePointerDown(id: number) {
@@ -100,14 +92,29 @@ function handleRowClick(entry: VocabularyEntry) {
       <thead>
         <tr class="vocabulary-header-row">
           <th class="vocabulary-header-cell">
-            <label class="vocabulary-header-toggle">
-              <input
-                type="checkbox"
-                :checked="props.columnVisibility.word"
-                @change="emit('update:wordColumnVisible', ($event.target as HTMLInputElement).checked)"
-              />
-              <span>單字</span>
-            </label>
+            <div
+              class="vocabulary-header-toggle vocabulary-word-header-controls gap-[0.5rem]"
+              data-testid="vocabulary-word-header-controls"
+            >
+              <label class="vocabulary-word-header-toggle">
+                <input
+                  data-testid="vocabulary-word-column-checkbox"
+                  type="checkbox"
+                  :checked="props.columnVisibility.word"
+                  @change="emit('update:wordColumnVisible', ($event.target as HTMLInputElement).checked)"
+                />
+                <span>單字</span>
+              </label>
+              <label class="vocabulary-word-header-toggle">
+                <input
+                  data-testid="vocabulary-word-practice-checkbox"
+                  type="checkbox"
+                  :checked="props.wordPracticeVisible"
+                  @change="emit('update:wordPracticeVisible', ($event.target as HTMLInputElement).checked)"
+                />
+                <span>練習</span>
+              </label>
+            </div>
           </th>
           <th class="vocabulary-header-cell">
             <label class="vocabulary-header-toggle">
@@ -130,13 +137,13 @@ function handleRowClick(entry: VocabularyEntry) {
             </label>
           </th>
           <th class="vocabulary-mark-header-cell">
-            <div class="vocabulary-clear-marks-shell">
+            <div class="vocabulary-bulk-mark-shell">
               <input
-                data-testid="vocabulary-clear-marks-checkbox"
+                data-testid="vocabulary-bulk-mark-checkbox"
                 type="checkbox"
-                title="刪除全部註記"
-                :checked="clearMarksChecked"
-                @change="handleClearMarksChange"
+                title="勾選或取消勾選目前顯示單字"
+                :checked="props.allVisibleDraftMarked"
+                @change="emit('bulk-toggle-marked', ($event.target as HTMLInputElement).checked)"
               />
             </div>
           </th>
@@ -162,9 +169,9 @@ function handleRowClick(entry: VocabularyEntry) {
           >
             <span
               :data-testid="`vocabulary-word-content-${entry.id}`"
-              :class="cellContentClasses(isContentVisible('word', entry.id))"
+              :class="cellContentClasses(props.columnVisibility.word || props.wordPracticeVisible)"
             >
-              {{ getDisplayWord(entry.text, props.practiceMode) }}
+              {{ wordCellText(entry) }}
             </span>
           </td>
           <td

@@ -10,6 +10,13 @@ import type {
 
 const smallKanaSet = new Set(['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ゎ', 'っ', 'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ヮ', 'ッ', 'ー']);
 const punctuationSet = new Set([' ', '\n', '\r', '\t', '・', '／', '/', '〜', '～', '(', ')', '（', '）', '　']);
+const vocabularyJlptLearningOrder: Record<VocabularyJlptLevel, number> = {
+  N5: 0,
+  N4: 1,
+  N3: 2,
+  N2: 3,
+  N1: 4
+};
 
 function convertKanaByCodePoint(text: string, offset: number, start: number, end: number) {
   return Array.from(text)
@@ -31,6 +38,28 @@ export function toHiragana(text: string) {
 
 export function toKatakana(text: string) {
   return convertKanaByCodePoint(text, 0x60, 0x3041, 0x3096);
+}
+
+export function swapKanaScripts(text: string) {
+  return Array.from(text)
+    .map((char) => {
+      const codePoint = char.codePointAt(0);
+
+      if (codePoint === undefined) {
+        return char;
+      }
+
+      if (codePoint >= 0x3041 && codePoint <= 0x3096) {
+        return String.fromCodePoint(codePoint + 0x60);
+      }
+
+      if (codePoint >= 0x30a1 && codePoint <= 0x30f6) {
+        return String.fromCodePoint(codePoint - 0x60);
+      }
+
+      return char;
+    })
+    .join('');
 }
 
 export function normalizeSearchText(text: string) {
@@ -148,25 +177,35 @@ export function filterVocabularyEntries(
 ) {
   const markedKeySet = new Set(markedKeys);
 
-  return entries.filter((entry) => {
-    if (!matchesJlptLevel(entry, filterState.selectedJlptLevels)) {
-      return false;
-    }
+  return entries
+    .filter((entry) => {
+      if (!matchesJlptLevel(entry, filterState.selectedJlptLevels)) {
+        return false;
+      }
 
-    if (!matchesPracticeSelection(entry, filterState.allowedKanaSet, includeHiragana, includeKatakana, filterState.showAllSounds)) {
-      return false;
-    }
+      if (!matchesPracticeSelection(entry, filterState.allowedKanaSet, includeHiragana, includeKatakana, filterState.showAllSounds)) {
+        return false;
+      }
 
-    if (!matchesSearch(entry, filterState.searchText)) {
-      return false;
-    }
+      if (!matchesSearch(entry, filterState.searchText)) {
+        return false;
+      }
 
-    if (filterState.showMarkedOnly && !markedKeySet.has(entry.markKey)) {
-      return false;
-    }
+      if (filterState.showMarkedOnly && !markedKeySet.has(entry.markKey)) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .sort((left, right) => {
+      const stageOrder = vocabularyJlptLearningOrder[left.stage] - vocabularyJlptLearningOrder[right.stage];
+
+      if (stageOrder !== 0) {
+        return stageOrder;
+      }
+
+      return left.id - right.id;
+    });
 }
 
 export function buildVisibleStageGroups(
@@ -188,17 +227,16 @@ export function buildVisibleStageGroups(
     .filter((group) => group.visibleCount > 0);
 }
 
-export function getDisplayWord(text: string, practiceMode: boolean) {
-  if (!practiceMode) {
+export function getDisplayWord(text: string, wordVisible: boolean, wordPracticeVisible: boolean) {
+  if (wordVisible) {
     return text;
   }
 
-  const hasKatakana = Array.from(text).some((char) => {
-    const codePoint = char.codePointAt(0);
-    return codePoint !== undefined && codePoint >= 0x30a1 && codePoint <= 0x30f6;
-  });
+  if (wordPracticeVisible) {
+    return swapKanaScripts(text);
+  }
 
-  return hasKatakana ? toHiragana(text) : toKatakana(text);
+  return '';
 }
 
 export function createStageSlug(stage: string) {

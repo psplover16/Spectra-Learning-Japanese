@@ -12,6 +12,9 @@
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "spectra": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/Invoke-SpectraUtf8.ps1",
+    "spectra:analyze": "npm run spectra -- analyze",
+    "spectra:validate": "npm run spectra -- validate",
     "test:ci": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:e2e"
   },
   "dependencies": {

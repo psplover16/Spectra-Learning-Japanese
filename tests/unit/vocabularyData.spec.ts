@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { rawVocabularyEntries, vocabularyEntries, vocabularyStageGroups } from '@/modules/vocabulary/data/jpWords';
+import {
+  rawVocabularyEntries,
+  vocabularyEntries,
+  vocabularyStageFiles,
+  vocabularyStageGroups
+} from './vocabularyStageTestData';
 
 const allowedJlptStages = new Set(['N1', 'N2', 'N3', 'N4', 'N5']);
 
@@ -80,6 +85,20 @@ const expectedV16Entries = [
 ];
 
 describe('vocabulary data', () => {
+  it('依 JLPT stage 拆成五份資料檔，且每份只包含對應 stage', () => {
+    expect(Object.fromEntries(Object.entries(vocabularyStageFiles).map(([stage, entries]) => [stage, entries.length]))).toEqual({
+      N1: 31,
+      N2: 106,
+      N3: 155,
+      N4: 293,
+      N5: 363
+    });
+
+    for (const [stage, entries] of Object.entries(vocabularyStageFiles)) {
+      expect(entries.every((entry) => entry.stage === stage)).toBe(true);
+    }
+  });
+
   it('只允許 JLPT N1 到 N5 作為 stage', () => {
     const rawStages = [...new Set(rawVocabularyEntries.map((entry) => entry.stage))];
     const normalizedStages = [...new Set(vocabularyEntries.map((entry) => entry.stage))];
@@ -91,46 +110,25 @@ describe('vocabulary data', () => {
   });
 
   it('將字典正規化為穩定 id 與 stage 分組', () => {
-    expect(rawVocabularyEntries).toHaveLength(1086);
-    expect(vocabularyEntries).toHaveLength(1086);
+    expect(rawVocabularyEntries).toHaveLength(948);
+    expect(vocabularyEntries).toHaveLength(948);
     expect(vocabularyEntries[0]?.id).toBe(1);
-    expect(vocabularyEntries[1075]).toMatchObject({
-      id: 1076,
-      text: 'がいねんてき',
-      kanji: '概念的',
-      meaning: '概念性的（な形容詞）',
-      stage: 'N1'
-    });
-    expect(vocabularyEntries.at(-1)?.id).toBe(1086);
+    expect(vocabularyEntries.at(-1)?.id).toBe(948);
     expect(vocabularyStageGroups).toHaveLength(5);
-    expect(vocabularyStageGroups[0]?.stage).toBe('N5');
-    expect(vocabularyStageGroups.at(-1)?.stage).toBe('N1');
+    expect(vocabularyStageGroups.map((group) => group.stage)).toEqual(['N1', 'N2', 'N3', 'N4', 'N5']);
   });
 
-  it('只在字典檔尾端追加 v15 與 v16 指定詞條，且不改動既有尾端資料', () => {
-    expect(rawVocabularyEntries.at(-11)).toMatchObject({
-      text: 'がいねんてき',
-      romanization: 'ga-i-nen-te-ki',
-      kanji: '概念的',
-      meaning: '概念性的（な形容詞）',
-      stage: 'N1'
+  it('保留 v15 與 v16 指定詞條，並將 N5 から 放在 N5 stage 檔尾端', () => {
+    const n5Entries = vocabularyStageFiles.N5;
+
+    expect(rawVocabularyEntries).toEqual(expect.arrayContaining([...expectedTailEntries, ...expectedV16Entries]));
+    expect(n5Entries.at(-1)).toMatchObject({
+      text: 'から',
+      romanization: 'ka-ra',
+      kanji: '殻\n空',
+      meaning: '外殼\n空(無內容)\n從～、因為～；助詞',
+      stage: 'N5'
     });
-    expect(rawVocabularyEntries.slice(-10, -6)).toEqual(expectedTailEntries);
-    expect(rawVocabularyEntries.slice(-6)).toEqual(expectedV16Entries);
-    expect(vocabularyEntries.slice(-10, -6)).toMatchObject([
-      { id: 1077, ...expectedTailEntries[0] },
-      { id: 1078, ...expectedTailEntries[1] },
-      { id: 1079, ...expectedTailEntries[2] },
-      { id: 1080, ...expectedTailEntries[3] }
-    ]);
-    expect(vocabularyEntries.slice(-6)).toMatchObject([
-      { id: 1081, ...expectedV16Entries[0] },
-      { id: 1082, ...expectedV16Entries[1] },
-      { id: 1083, ...expectedV16Entries[2] },
-      { id: 1084, ...expectedV16Entries[3] },
-      { id: 1085, ...expectedV16Entries[4] },
-      { id: 1086, ...expectedV16Entries[5] }
-    ]);
   });
 
   it('沿用既有 話す -> 說話（五段動詞） 覆蓋，且不為說話新增重複詞條', () => {
@@ -150,14 +148,13 @@ describe('vocabulary data', () => {
   });
 
   it('新增詞條若屬動詞或形容詞，meaning 必須附上既有格式的詞性標記', () => {
-    const appendedEntries = rawVocabularyEntries.slice(-10);
     const partOfSpeechMarkerPattern = /（(五段動詞|一段動詞|な形容詞|い形容詞)）$/;
 
-    expect(appendedEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toBe('光滑（な形容詞）');
-    expect(appendedEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toMatch(partOfSpeechMarkerPattern);
-    expect(appendedEntries.find((entry) => entry.kanji === '肌')?.meaning).toBe('皮膚');
-    expect(appendedEntries.find((entry) => entry.kanji === '動き')?.meaning).toBe('動作');
-    expect(appendedEntries.find((entry) => entry.kanji === '居酒屋')?.meaning).toBe('居酒屋');
+    expect(rawVocabularyEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toBe('光滑（な形容詞）');
+    expect(rawVocabularyEntries.find((entry) => entry.kanji === '滑らか')?.meaning).toMatch(partOfSpeechMarkerPattern);
+    expect(rawVocabularyEntries.find((entry) => entry.kanji === '肌')?.meaning).toBe('皮膚');
+    expect(rawVocabularyEntries.find((entry) => entry.kanji === '動き')?.meaning).toBe('動作');
+    expect(rawVocabularyEntries.find((entry) => entry.kanji === '居酒屋')?.meaning).toBe('居酒屋');
   });
 
   it('v16 方位詞與補充詞條各自唯一存在', () => {
@@ -165,5 +162,33 @@ describe('vocabulary data', () => {
       expect(rawVocabularyEntries.filter((item) => item.kanji === entry.kanji && item.text === entry.text)).toHaveLength(1);
       expect(vocabularyEntries.filter((item) => item.kanji === entry.kanji && item.text === entry.text)).toHaveLength(1);
     }
+  });
+
+  it('不允許同 text 且同 kanji 的詞條散落在不同 stage，但保留同 text 不同 kanji 的同音詞', () => {
+    const duplicateTextKanjiKeys = rawVocabularyEntries
+      .map((entry) => `${entry.text}\u0000${entry.kanji}`)
+      .filter((key, index, keys) => keys.indexOf(key) !== index);
+    const sameTextDifferentKanjiGroups = new Map<string, Set<string>>();
+
+    for (const entry of rawVocabularyEntries) {
+      const kanjiSet = sameTextDifferentKanjiGroups.get(entry.text) ?? new Set<string>();
+      kanjiSet.add(entry.kanji);
+      sameTextDifferentKanjiGroups.set(entry.text, kanjiSet);
+    }
+
+    expect(duplicateTextKanjiKeys).toEqual([]);
+    expect(sameTextDifferentKanjiGroups.get('こい')).toEqual(new Set(['恋', '濃い']));
+    expect(sameTextDifferentKanjiGroups.get('はやい')).toEqual(new Set(['速い', '早い']));
+  });
+
+  it('あげる 整併到最簡單 stage 並保留所有上げる義項', () => {
+    const ageruEntries = rawVocabularyEntries.filter((entry) => entry.text === 'あげる');
+
+    expect(ageruEntries).toHaveLength(1);
+    expect(ageruEntries[0]).toMatchObject({
+      kanji: '上げる\n上げる\n上げる\n挙げる\n揚げる',
+      meaning: '提高（一段動詞；他動詞）\n給（一段動詞）\n舉起（一段動詞）\n列舉／舉例（一段動詞）\n油炸（一段動詞）',
+      stage: 'N5'
+    });
   });
 });

@@ -10,6 +10,24 @@ npm ci
 npm run dev
 ```
 
+## Spectra 與 PowerShell UTF-8
+
+本專案的中文文件與 Spectra 設定皆以 UTF-8 無 BOM 儲存。若在 Windows PowerShell 5.1 直接讀取 UTF-8 無 BOM 檔案，可能因預設 code page 顯示亂碼；請優先使用專案提供的 UTF-8 入口：
+
+```powershell
+npm run spectra -- list
+npm run spectra -- show app-version-display
+npm run spectra:analyze
+npm run spectra:validate
+```
+
+若需要在目前 PowerShell 工作階段直接閱讀專案文件，可先套用專案 UTF-8 設定：
+
+```powershell
+. .\scripts\Use-ProjectUtf8.ps1
+Get-Content .\PROJECT_ARCHITECTURE.md
+```
+
 ## 本地測試
 
 第一次執行 e2e 前，先安裝 Playwright 瀏覽器：

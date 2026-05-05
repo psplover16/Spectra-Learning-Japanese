@@ -41,7 +41,6 @@ export interface VocabularyFilterState {
   showAllSounds: boolean;
   showKanji: boolean;
   showMarkedOnly: boolean;
-  practiceMode: boolean;
   columnVisibility: VocabularyColumnVisibility;
   allowedKanaSet: Set<string>;
   selectedJlptLevels: Set<VocabularyJlptLevel>;
