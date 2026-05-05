@@ -40,6 +40,28 @@ export function toKatakana(text: string) {
   return convertKanaByCodePoint(text, 0x60, 0x3041, 0x3096);
 }
 
+export function swapKanaScripts(text: string) {
+  return Array.from(text)
+    .map((char) => {
+      const codePoint = char.codePointAt(0);
+
+      if (codePoint === undefined) {
+        return char;
+      }
+
+      if (codePoint >= 0x3041 && codePoint <= 0x3096) {
+        return String.fromCodePoint(codePoint + 0x60);
+      }
+
+      if (codePoint >= 0x30a1 && codePoint <= 0x30f6) {
+        return String.fromCodePoint(codePoint - 0x60);
+      }
+
+      return char;
+    })
+    .join('');
+}
+
 export function normalizeSearchText(text: string) {
   return text.trim().replace(/\s+/g, '').toLowerCase();
 }
@@ -205,17 +227,16 @@ export function buildVisibleStageGroups(
     .filter((group) => group.visibleCount > 0);
 }
 
-export function getDisplayWord(text: string, practiceMode: boolean) {
-  if (!practiceMode) {
+export function getDisplayWord(text: string, wordVisible: boolean, wordPracticeVisible: boolean) {
+  if (wordVisible) {
     return text;
   }
 
-  const hasKatakana = Array.from(text).some((char) => {
-    const codePoint = char.codePointAt(0);
-    return codePoint !== undefined && codePoint >= 0x30a1 && codePoint <= 0x30f6;
-  });
+  if (wordPracticeVisible) {
+    return swapKanaScripts(text);
+  }
 
-  return hasKatakana ? toHiragana(text) : toKatakana(text);
+  return '';
 }
 
 export function createStageSlug(stage: string) {

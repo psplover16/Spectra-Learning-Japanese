@@ -77,6 +77,53 @@ function firstVisibleMarkCheckbox(page: Page) {
   return vocabularyRows(page).first().locator('input[type="checkbox"]');
 }
 
+async function expectLastVocabularyRowFullyVisible(page: Page) {
+  const scroll = page.getByTestId('vocabulary-table-scroll');
+  const lastRow = vocabularyRows(page).last();
+
+  await scroll.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+
+  const [scrollBox, rowBox] = await Promise.all([
+    scroll.boundingBox(),
+    lastRow.boundingBox()
+  ]);
+
+  expect(scrollBox).not.toBeNull();
+  expect(rowBox).not.toBeNull();
+  expect(rowBox!.y + rowBox!.height).toBeLessThanOrEqual(scrollBox!.y + scrollBox!.height + 1);
+}
+
+async function expectCompactControlSizing(page: Page) {
+  const searchInput = page.getByTestId('vocabulary-search-input');
+  const modeButton = page.getByTestId('vocabulary-reading-mode-button');
+  const startQuizButton = page.getByTestId('vocabulary-start-quiz-button');
+
+  await expect(searchInput).toHaveCSS('height', '32px');
+  await expect(startQuizButton).toBeVisible();
+
+  const startQuizBox = await startQuizButton.boundingBox();
+  const readModeBox = await modeButton.boundingBox();
+
+  expect(startQuizBox).not.toBeNull();
+  expect(readModeBox).not.toBeNull();
+  expect(Math.round(readModeBox!.width)).toBe(Math.round(startQuizBox!.width));
+  expect(Math.round(readModeBox!.height)).toBe(Math.round(startQuizBox!.height));
+
+  await modeButton.click();
+  await expect(modeButton).toHaveText('操作模式');
+
+  const operateModeBox = await modeButton.boundingBox();
+
+  expect(operateModeBox).not.toBeNull();
+  expect(Math.round(operateModeBox!.width)).toBe(Math.round(startQuizBox!.width));
+  expect(Math.round(operateModeBox!.height)).toBe(Math.round(startQuizBox!.height));
+
+  await modeButton.click();
+  await expect(modeButton).toHaveText('閱讀模式');
+}
+
 async function expectOnlyRowContaining(page: Page, expectedTexts: readonly string[]) {
   const row = vocabularyRows(page).first();
 
@@ -107,7 +154,12 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
 
   await expectPrimaryTabs(page);
   await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
+  await expect(page.getByTestId('vocabulary-filter-practice-mode')).toHaveCount(0);
+  await expect(page.getByTestId('vocabulary-reading-mode-button')).toHaveText('閱讀模式');
+  await expect(page.getByTestId('vocabulary-action-controls')).toContainText('僅註記');
+  await expect(page.getByTestId('vocabulary-action-controls')).not.toContainText('只顯示註記');
   await expectCountSummaryAbsent(page);
+  await expectCompactControlSizing(page);
   await expectNoHorizontalOverflow(page);
 
   await expect(page.getByTestId('vocabulary-filter-jlpt-select-all')).toHaveCount(0);
@@ -144,9 +196,26 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   expect(consoleErrors).toEqual([]);
 
   await selectOnlyJlptLevel(page, 'N5');
+  await expect(vocabularyRows(page).first()).toBeVisible();
+  await expectLastVocabularyRowFullyVisible(page);
+
+  await page.getByTestId('vocabulary-reading-mode-button').click();
+  await expect(page.getByTestId('vocabulary-reading-mode-button')).toHaveText('操作模式');
+  await expect(page.getByTestId('vocabulary-search-input')).toBeVisible();
+  await expect(page.getByTestId('vocabulary-level-controls')).toBeHidden();
+  await expect(page.getByTestId('vocabulary-action-controls')).toBeHidden();
+  await expect(page.getByTestId('vocabulary-table-region')).toHaveClass(/vocabulary-table-region-reading-mode/);
+  await expectLastVocabularyRowFullyVisible(page);
+
+  await page.getByTestId('vocabulary-reading-mode-button').click();
+  await expect(page.getByTestId('vocabulary-reading-mode-button')).toHaveText('閱讀模式');
+  await expect(page.getByTestId('vocabulary-level-controls')).toBeVisible();
+  await expect(page.getByTestId('vocabulary-action-controls')).toBeVisible();
+
   await page.getByTestId('vocabulary-search-input').fill('早上');
   await expectOnlyRow(page, ['あさ', '朝', '早上']);
   await expectCountSummaryAbsent(page);
+  await expectLastVocabularyRowFullyVisible(page);
 
   await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeDisabled();
   await expect(headerBulkMarkCheckbox(page)).not.toBeChecked();
@@ -157,6 +226,7 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
 
   await page.getByTestId('vocabulary-start-quiz-button').click();
   await expect(page.getByTestId('exam-modal')).toBeVisible();
+  await expect(page.getByTestId('exam-modal').locator('..')).toHaveCSS('z-index', '100');
   await expect(page.getByTestId('exam-prompt')).toHaveClass(/exam-modal-prompt-md/);
   await expect(page.getByTestId('exam-hint')).toHaveCount(0);
   await page.getByTestId('exam-unknown-button').click();
@@ -199,6 +269,9 @@ test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ conte
   await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
   await expect(page.getByTestId('vocabulary-filter-jlpt-select-all')).toHaveCount(0);
   await expect(jlptLevelCheckbox(page, 'N1')).toBeChecked();
+  await expect(page.getByTestId('vocabulary-action-controls')).toContainText('僅註記');
+  await expect(page.getByTestId('vocabulary-action-controls')).not.toContainText('只顯示註記');
+  await expectCompactControlSizing(page);
 
   await context.setOffline(true);
 
@@ -219,16 +292,24 @@ test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ conte
 
     await jlptLevelCheckbox(page, 'N5').check();
     await page.getByTestId('vocabulary-search-input').fill('早上');
-    await checkboxInput(page, 'vocabulary-filter-practice-mode').check();
-    await checkboxInput(page, 'vocabulary-filter-show-marked-only').check();
+    await expect(page.getByTestId('vocabulary-filter-practice-mode')).toHaveCount(0);
+    await page.getByTestId('vocabulary-reading-mode-button').click();
 
     await expect(page.getByTestId('vocabulary-search-input')).toHaveValue('早上');
-    await expect(jlptLevelCheckbox(page, 'N5')).toBeChecked();
-    await expect(checkboxInput(page, 'vocabulary-filter-practice-mode')).toBeChecked();
-    await expect(checkboxInput(page, 'vocabulary-filter-show-marked-only')).toBeChecked();
+    await expect(page.getByTestId('vocabulary-reading-mode-button')).toHaveText('操作模式');
+    await expect(page.getByTestId('vocabulary-level-controls')).toBeHidden();
+    await expect(page.getByTestId('vocabulary-action-controls')).toBeHidden();
     await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
+    await page.getByTestId('vocabulary-reading-mode-button').click();
+    await expect(page.getByTestId('vocabulary-reading-mode-button')).toHaveText('閱讀模式');
+    await expect(page.getByTestId('vocabulary-level-controls')).toBeVisible();
+    await expect(page.getByTestId('vocabulary-action-controls')).toBeVisible();
+    await expect(jlptLevelCheckbox(page, 'N5')).toBeChecked();
+
+    await checkboxInput(page, 'vocabulary-filter-show-marked-only').check();
+    await expect(checkboxInput(page, 'vocabulary-filter-show-marked-only')).toBeChecked();
     await checkboxInput(page, 'vocabulary-filter-show-marked-only').uncheck();
     await expect(page.getByTestId('vocabulary-start-quiz-button')).toBeDisabled();
     await headerBulkMarkCheckbox(page).check();

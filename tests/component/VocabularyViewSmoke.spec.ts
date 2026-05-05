@@ -130,7 +130,8 @@ describe('VocabularyViewSmoke', () => {
     const actionControlsRight = actionControls.get('[data-testid="vocabulary-action-controls-right"]');
     const n1Level = levelControlsLeft.get('[data-testid="vocabulary-filter-jlpt-level-n1"]');
     const n5Level = levelControlsLeft.get('[data-testid="vocabulary-filter-jlpt-level-n5"]');
-    const practiceMode = actionControlsLeft.get('[data-testid="vocabulary-filter-practice-mode"]');
+    const showKanji = actionControlsLeft.get('[data-testid="vocabulary-filter-show-kanji"]');
+    const showAllSounds = actionControlsLeft.get('[data-testid="vocabulary-filter-show-all-sounds"]');
     const markedOnly = actionControlsLeft.get('[data-testid="vocabulary-filter-show-marked-only"]');
     const startQuiz = levelControlsRight.get('[data-testid="vocabulary-start-quiz-button"]');
     const saveMarks = actionControls.get('[data-testid="vocabulary-save-marks-button"]');
@@ -138,13 +139,48 @@ describe('VocabularyViewSmoke', () => {
     expect(appearsBefore(levelControls.element, actionControls.element)).toBe(true);
     expect(appearsBefore(n1Level.element, n5Level.element)).toBe(true);
     expect(appearsBefore(levelControlsLeft.element, levelControlsRight.element)).toBe(true);
-    expect(appearsBefore(practiceMode.element, markedOnly.element)).toBe(true);
+    expect(appearsBefore(showKanji.element, showAllSounds.element)).toBe(true);
+    expect(appearsBefore(showAllSounds.element, markedOnly.element)).toBe(true);
     expect(appearsBefore(actionControlsLeft.element, actionControlsRight.element)).toBe(true);
     expect(appearsBefore(levelControls.element, saveMarks.element)).toBe(true);
     expect(startQuiz.element).toBeInstanceOf(HTMLElement);
     expect(actionControlsRight.find('[data-testid="vocabulary-start-quiz-button"]').exists()).toBe(false);
     expect(actionControls.element.firstElementChild).toBe(actionControlsLeft.element);
     expect(actionControls.element.lastElementChild).toBe(actionControlsRight.element);
+    expect(controlBar.find('[data-testid="vocabulary-filter-practice-mode"]').exists()).toBe(false);
+    expect(markedOnly.text()).toContain('僅註記');
+    expect(actionControls.text()).not.toContain('只顯示註記');
+  });
+
+  it('預設為操作模式，並可切換閱讀模式且保留搜尋列與模式按鈕列', async () => {
+    const { wrapper } = await mountVocabularyView();
+    const view = wrapper.get('[data-testid="vocabulary-view"]');
+    const tableRegion = wrapper.get('[data-testid="vocabulary-table-region"]');
+    const searchControls = wrapper.get('[data-testid="vocabulary-search-controls"]');
+    const modeButton = wrapper.get('[data-testid="vocabulary-reading-mode-button"]');
+
+    expect(view.classes()).not.toContain('vocabulary-view-reading-mode');
+    expect(tableRegion.classes()).not.toContain('vocabulary-table-region-reading-mode');
+    expect(modeButton.text()).toBe('閱讀模式');
+    expect(modeButton.classes()).toContain('vocabulary-reading-mode-button--read');
+    expect(searchControls.isVisible()).toBe(true);
+
+    await modeButton.trigger('click');
+    await nextTick();
+
+    const operationButton = wrapper.get('[data-testid="vocabulary-reading-mode-button"]');
+
+    expect(wrapper.get('[data-testid="vocabulary-view"]').classes()).toContain('vocabulary-view-reading-mode');
+    expect(wrapper.get('[data-testid="vocabulary-table-region"]').classes()).toContain('vocabulary-table-region-reading-mode');
+    expect(operationButton.text()).toBe('操作模式');
+    expect(operationButton.classes()).toContain('vocabulary-reading-mode-button--operate');
+    expect(wrapper.get('[data-testid="vocabulary-search-controls"]').isVisible()).toBe(true);
+
+    await operationButton.trigger('click');
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="vocabulary-view"]').classes()).not.toContain('vocabulary-view-reading-mode');
+    expect(wrapper.get('[data-testid="vocabulary-table-region"]').classes()).not.toContain('vocabulary-table-region-reading-mode');
   });
 
   it('可儲存註記，header 批次取消只更新目前 visible draft marks', async () => {
@@ -250,6 +286,10 @@ describe('VocabularyViewSmoke', () => {
 
     await wrapper.get('[data-testid="vocabulary-start-quiz-button"]').trigger('click');
     expect(wrapper.find('[data-testid="exam-modal"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="vocabulary-reading-mode-button"]').trigger('click');
+    await nextTick();
+    expect(wrapper.get('[data-testid="exam-modal"]').classes()).toContain('surface-card');
+    expect(wrapper.get('[data-testid="vocabulary-table-region"]').classes()).toContain('vocabulary-table-region-reading-mode');
     expect(wrapper.get('[data-testid="exam-prompt"]').classes()).toContain('exam-modal-prompt-md');
     expect(wrapper.find('[data-testid="exam-hint"]').exists()).toBe(false);
 

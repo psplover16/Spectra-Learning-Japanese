@@ -25,7 +25,7 @@ function mountControlBar(selectedJlptLevels: Iterable<JlptLevel> = jlptLevels) {
     showAllSounds: true,
     showKanji: true,
     showMarkedOnly: false,
-    practiceMode: false,
+    readingMode: false,
     selectedJlptLevels: new Set(selectedJlptLevels)
   };
 
@@ -39,7 +39,7 @@ function mountControlBarWithProps(props: ControlBarProps) {
       showAllSounds: true,
       showKanji: true,
       showMarkedOnly: false,
-      practiceMode: false,
+      readingMode: false,
       selectedJlptLevels: new Set(jlptLevels),
       ...props
     }
@@ -102,17 +102,52 @@ describe('VocabularyControlBar', () => {
     await wrapper.get('[data-testid="vocabulary-search-input"]').setValue('概念');
     expect(wrapper.emitted('update:searchText')?.[0]).toEqual(['概念']);
 
-    await wrapper.get('[data-testid="vocabulary-filter-show-all-sounds"] input').setValue(false);
-    expect(wrapper.emitted('update:showAllSounds')?.[0]).toEqual([false]);
+    expect(wrapper.find('[data-testid="vocabulary-filter-practice-mode"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="vocabulary-filter-show-kanji"] input').setValue(false);
     expect(wrapper.emitted('update:showKanji')?.[0]).toEqual([false]);
 
-    await wrapper.get('[data-testid="vocabulary-filter-practice-mode"] input').setValue(true);
-    expect(wrapper.emitted('update:practiceMode')?.[0]).toEqual([true]);
+    await wrapper.get('[data-testid="vocabulary-filter-show-all-sounds"] input').setValue(false);
+    expect(wrapper.emitted('update:showAllSounds')?.[0]).toEqual([false]);
 
     await wrapper.get('[data-testid="vocabulary-filter-show-marked-only"] input').setValue(true);
     expect(wrapper.emitted('update:showMarkedOnly')?.[0]).toEqual([true]);
+  });
+
+  it('操作區依序顯示漢字、全部字音、僅註記，且預設勾選漢字與全部字音', () => {
+    const wrapper = mountControlBar();
+    const actionControlsLeft = wrapper.get('[data-testid="vocabulary-action-controls-left"]');
+    const showKanji = actionControlsLeft.get('[data-testid="vocabulary-filter-show-kanji"]');
+    const showAllSounds = actionControlsLeft.get('[data-testid="vocabulary-filter-show-all-sounds"]');
+    const markedOnly = actionControlsLeft.get('[data-testid="vocabulary-filter-show-marked-only"]');
+
+    expect(appearsBefore(showKanji.element, showAllSounds.element)).toBe(true);
+    expect(appearsBefore(showAllSounds.element, markedOnly.element)).toBe(true);
+    expect((showKanji.get('input').element as HTMLInputElement).checked).toBe(true);
+    expect((showAllSounds.get('input').element as HTMLInputElement).checked).toBe(true);
+    expect((markedOnly.get('input').element as HTMLInputElement).checked).toBe(false);
+    expect(markedOnly.text()).toContain('僅註記');
+    expect(actionControlsLeft.text()).not.toContain('只顯示註記');
+  });
+
+  it('模式按鈕在閱讀模式與操作模式之間切換文字、顏色與事件', async () => {
+    const wrapper = mountControlBar();
+    const modeButton = wrapper.get('[data-testid="vocabulary-reading-mode-button"]');
+
+    expect(modeButton.text()).toBe('閱讀模式');
+    expect(modeButton.classes()).toContain('vocabulary-reading-mode-button--read');
+
+    await modeButton.trigger('click');
+    expect(wrapper.emitted('update:readingMode')?.[0]).toEqual([true]);
+
+    await wrapper.setProps({ readingMode: true });
+    const operationButton = wrapper.get('[data-testid="vocabulary-reading-mode-button"]');
+
+    expect(operationButton.text()).toBe('操作模式');
+    expect(operationButton.classes()).toContain('vocabulary-reading-mode-button--operate');
+
+    await operationButton.trigger('click');
+    expect(wrapper.emitted('update:readingMode')?.[1]).toEqual([false]);
   });
 
   it('預設勾選 N1-N5、不顯示全部勾選，並把開始測驗放在 JLPT row 右側', () => {
@@ -207,6 +242,20 @@ describe('VocabularyControlBar', () => {
     expect(actionControlsLeftCss).not.toContain('px-2');
     expect(actionControlsLeftCss).not.toContain('py-2');
     expect(actionControlsRightCss).toContain('gap-2');
+  });
+
+  it('keeps compact search height and mode button sizing aligned with start quiz', () => {
+    const css = readMainCss();
+    const searchInputCss = cssBodyForSelector(css, '.vocabulary-search-input');
+    const modeButtonCss = cssBodyForSelector(css, '.vocabulary-reading-mode-button');
+
+    expect(searchInputCss).toContain('h-8');
+    expect(searchInputCss).not.toContain('h-10');
+    expect(modeButtonCss).toContain('px-2');
+    expect(modeButtonCss).toContain('py-1');
+    expect(modeButtonCss).not.toContain('h-10');
+    expect(modeButtonCss).not.toContain('px-3');
+    expect(modeButtonCss).not.toContain('rounded-md');
   });
 
   it('依 props 隱藏開始測驗按鈕，顯示時可停用或送出事件，且不顯示未儲存提示', async () => {

@@ -25,6 +25,17 @@ const entries: VocabularyEntry[] = [
     stage: 'N5',
     textKanaUnits: ['あ', 'い'],
     hasKanji: false
+  },
+  {
+    id: 3,
+    markKey: 'あサ|',
+    text: 'あサ',
+    romanization: 'a-sa',
+    kanji: '',
+    meaning: '混合假名',
+    stage: 'N5',
+    textKanaUnits: ['あ', 'サ'],
+    hasKanji: false
   }
 ];
 
@@ -37,7 +48,7 @@ function mountTable(props: StageTableProps = {}) {
     props: {
       entries,
       showKanji: true,
-      practiceMode: false,
+      wordPracticeVisible: false,
       columnVisibility: { word: true, combined: false, meaning: false, preserveLayoutWhenHidden: true },
       savedMarkedKeys: new Set<string>(),
       draftMarkedKeys: new Set<string>(),
@@ -58,11 +69,51 @@ describe('VocabularyStageTable', () => {
     await checkboxes[0]!.setValue(true);
     expect(wrapper.emitted('update:wordColumnVisible')?.[0]).toEqual([true]);
 
-    await checkboxes[1]!.setValue(true);
+    await checkboxes[2]!.setValue(true);
     expect(wrapper.emitted('update:combinedColumnVisible')?.[0]).toEqual([true]);
 
     expect(wrapper.find('tbody td .vocabulary-hidden-content').exists()).toBe(true);
-    expect(wrapper.findAll('tbody td')).toHaveLength(8);
+    expect(wrapper.findAll('tbody td')).toHaveLength(12);
+  });
+
+  it('單字表頭同時提供單字與練習 checkbox，並使用指定間距 class', async () => {
+    const wrapper = mountTable();
+    const wordHeader = wrapper.get('[data-testid="vocabulary-word-header-controls"]');
+    const wordCheckbox = wrapper.get('[data-testid="vocabulary-word-column-checkbox"]');
+    const practiceCheckbox = wrapper.get('[data-testid="vocabulary-word-practice-checkbox"]');
+
+    expect(wordHeader.classes()).toContain('vocabulary-word-header-controls');
+    expect(wordHeader.classes()).toContain('gap-[0.5rem]');
+    expect((wordCheckbox.element as HTMLInputElement).checked).toBe(true);
+    expect((practiceCheckbox.element as HTMLInputElement).checked).toBe(false);
+
+    await practiceCheckbox.setValue(true);
+    expect(wrapper.emitted('update:wordPracticeVisible')?.[0]).toEqual([true]);
+  });
+
+  it('單字欄位顯示原假名、假名互換與空白狀態', async () => {
+    const wrapper = mountTable({
+      wordPracticeVisible: true
+    });
+
+    expect(wrapper.get('[data-testid="vocabulary-word-content-1"]').text()).toBe('あさ');
+    expect(wrapper.get('[data-testid="vocabulary-word-content-3"]').text()).toBe('あサ');
+
+    await wrapper.setProps({
+      columnVisibility: { word: false, combined: false, meaning: false, preserveLayoutWhenHidden: true },
+      wordPracticeVisible: true
+    });
+
+    expect(wrapper.get('[data-testid="vocabulary-word-content-1"]').text()).toBe('アサ');
+    expect(wrapper.get('[data-testid="vocabulary-word-content-3"]').text()).toBe('アさ');
+
+    await wrapper.setProps({
+      columnVisibility: { word: false, combined: false, meaning: false, preserveLayoutWhenHidden: true },
+      wordPracticeVisible: false
+    });
+
+    expect(wrapper.get('[data-testid="vocabulary-word-content-1"]').text()).toBe('');
+    expect(wrapper.get('[data-testid="vocabulary-word-content-3"]').text()).toBe('');
   });
 
   it('列內註記 checkbox、row click 與 header 批次註記 checkbox 會發出 draft mark 事件', async () => {

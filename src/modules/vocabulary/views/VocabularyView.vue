@@ -41,13 +41,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="vocabulary-view py-1">
+  <div
+    class="vocabulary-view py-1"
+    :class="{ 'vocabulary-view-reading-mode': session.readingMode.value }"
+    data-testid="vocabulary-view"
+  >
     <VocabularyControlBar
       v-model:search-text="session.searchText.value"
       v-model:show-all-sounds="session.showAllSounds.value"
       v-model:show-kanji="session.showKanji.value"
       v-model:show-marked-only="session.showMarkedOnly.value"
-      v-model:practice-mode="session.practiceMode.value"
+      v-model:reading-mode="session.readingMode.value"
       v-model:selected-jlpt-levels="session.selectedJlptLevels.value"
       :can-save-marks="session.hasAnyVisibleEntries.value"
       :can-show-start-quiz="session.hasAnyVisibleEntries.value"
@@ -56,23 +60,30 @@ onBeforeUnmount(() => {
       @start-quiz="startVocabularyQuiz"
     />
 
-    <VocabularyStageTable
-      :entries="session.visibleEntries.value"
-      :show-kanji="session.showKanji.value"
-      :practice-mode="session.practiceMode.value"
-      :column-visibility="session.columnVisibility.value"
-      :saved-marked-keys="session.persistedMarkedKeys.value"
-      :draft-marked-keys="session.draftMarkedKeys.value"
-      :all-visible-draft-marked="session.allVisibleDraftMarked.value"
-      :revealed-entry-id="session.revealedEntryId.value"
-      @update:word-column-visible="session.wordColumnVisible.value = $event"
-      @update:combined-column-visible="session.combinedColumnVisible.value = $event"
-      @update:meaning-column-visible="session.meaningColumnVisible.value = $event"
-      @toggle-marked="session.toggleMarked"
-      @bulk-toggle-marked="session.bulkToggleVisibleDraftMarks"
-      @begin-reveal="session.beginReveal"
-      @end-reveal="session.endReveal"
-    />
+    <div
+      class="vocabulary-table-region"
+      :class="{ 'vocabulary-table-region-reading-mode': session.readingMode.value }"
+      data-testid="vocabulary-table-region"
+    >
+      <VocabularyStageTable
+        :entries="session.visibleEntries.value"
+        :show-kanji="session.showKanji.value"
+        :word-practice-visible="session.wordPracticeVisible.value"
+        :column-visibility="session.columnVisibility.value"
+        :saved-marked-keys="session.persistedMarkedKeys.value"
+        :draft-marked-keys="session.draftMarkedKeys.value"
+        :all-visible-draft-marked="session.allVisibleDraftMarked.value"
+        :revealed-entry-id="session.revealedEntryId.value"
+        @update:word-column-visible="session.wordColumnVisible.value = $event"
+        @update:word-practice-visible="session.wordPracticeVisible.value = $event"
+        @update:combined-column-visible="session.combinedColumnVisible.value = $event"
+        @update:meaning-column-visible="session.meaningColumnVisible.value = $event"
+        @toggle-marked="session.toggleMarked"
+        @bulk-toggle-marked="session.bulkToggleVisibleDraftMarks"
+        @begin-reveal="session.beginReveal"
+        @end-reveal="session.endReveal"
+      />
+    </div>
 
     <ExamModal
       :open="vocabularyExamSession.isOpen.value"

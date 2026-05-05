@@ -164,6 +164,23 @@ describe('vocabulary data', () => {
     }
   });
 
+  it('不允許同 text 且同 kanji 的詞條散落在不同 stage，但保留同 text 不同 kanji 的同音詞', () => {
+    const duplicateTextKanjiKeys = rawVocabularyEntries
+      .map((entry) => `${entry.text}\u0000${entry.kanji}`)
+      .filter((key, index, keys) => keys.indexOf(key) !== index);
+    const sameTextDifferentKanjiGroups = new Map<string, Set<string>>();
+
+    for (const entry of rawVocabularyEntries) {
+      const kanjiSet = sameTextDifferentKanjiGroups.get(entry.text) ?? new Set<string>();
+      kanjiSet.add(entry.kanji);
+      sameTextDifferentKanjiGroups.set(entry.text, kanjiSet);
+    }
+
+    expect(duplicateTextKanjiKeys).toEqual([]);
+    expect(sameTextDifferentKanjiGroups.get('こい')).toEqual(new Set(['恋', '濃い']));
+    expect(sameTextDifferentKanjiGroups.get('はやい')).toEqual(new Set(['速い', '早い']));
+  });
+
   it('あげる 整併到最簡單 stage 並保留所有上げる義項', () => {
     const ageruEntries = rawVocabularyEntries.filter((entry) => entry.text === 'あげる');
 

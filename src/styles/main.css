@@ -667,8 +667,28 @@ textarea {
     @apply flex h-full flex-col gap-2;
   }
 
+  .vocabulary-view-reading-mode {
+    @apply relative;
+  }
+
+  .vocabulary-view-reading-mode .vocabulary-control-bar {
+    gap: 0;
+  }
+
+  .vocabulary-view-reading-mode .vocabulary-level-controls,
+  .vocabulary-view-reading-mode .vocabulary-action-controls {
+    max-height: 0;
+    border-width: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
   .vocabulary-control-bar {
-    @apply flex flex-col gap-2 px-1;
+    @apply relative z-20 flex flex-col gap-2 px-1;
   }
 
   .vocabulary-control-row,
@@ -694,6 +714,8 @@ textarea {
 
   .vocabulary-level-controls {
     @apply flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
+    max-height: 8rem;
+    transition: max-height 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 120ms ease;
   }
 
   .vocabulary-level-controls-left {
@@ -706,6 +728,8 @@ textarea {
 
   .vocabulary-action-controls {
     @apply flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
+    max-height: 6rem;
+    transition: max-height 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 120ms ease;
   }
 
   .vocabulary-action-controls-left {
@@ -717,16 +741,42 @@ textarea {
   }
 
   .vocabulary-search-input {
-    @apply h-10 w-full rounded-md border border-gray-300 bg-white px-2 py-1 outline-none transition focus:border-gray-500;
+    @apply h-8 w-full rounded-md border border-gray-300 bg-white px-2 py-1 outline-none transition focus:border-gray-500;
+  }
+
+  .vocabulary-reading-mode-button {
+    @apply inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded px-2 py-1 text-sm font-semibold transition-colors;
+  }
+
+  .vocabulary-reading-mode-button--read {
+    @apply border-emerald-300 bg-emerald-100 text-emerald-950 hover:bg-emerald-200;
+  }
+
+  .vocabulary-reading-mode-button--operate {
+    @apply border-red-700 bg-red-600 text-white hover:bg-red-500;
   }
 
   .vocabulary-count-summary {
     @apply text-sm font-medium text-ink;
   }
 
+  .vocabulary-table-region {
+    @apply relative z-0 min-h-0;
+  }
+
+  .vocabulary-table-region-reading-mode {
+    @apply z-10 rounded-md border border-clay/15 bg-parchment p-1 shadow-soft;
+  }
+
+  .vocabulary-table-region-reading-mode .vocabulary-table-scroll {
+    max-height: calc(100dvh - 112px);
+  }
+
   .vocabulary-table-scroll {
     @apply overflow-y-auto;
     max-height: calc(100dvh - 196px);
+    padding-bottom: 0.75rem;
+    scroll-padding-bottom: 0.75rem;
   }
 
   .vocabulary-table {
@@ -742,7 +792,17 @@ textarea {
   }
 
   .vocabulary-header-toggle {
-    @apply inline-flex items-center gap-2 whitespace-nowrap;
+    @apply inline-flex items-center whitespace-nowrap;
+    gap: 0.4rem;
+  }
+
+  .vocabulary-word-header-controls {
+    gap: 0.5rem;
+  }
+
+  .vocabulary-word-header-toggle {
+    @apply inline-flex items-center whitespace-nowrap;
+    gap: 0.2rem;
   }
 
   .vocabulary-body-cell {

@@ -6,7 +6,7 @@ import { getDisplayWord } from '@/modules/vocabulary/utils/vocabularyFilters';
 const props = defineProps<{
   entries: VocabularyEntry[];
   showKanji: boolean;
-  practiceMode: boolean;
+  wordPracticeVisible: boolean;
   columnVisibility: VocabularyColumnVisibility;
   savedMarkedKeys: ReadonlySet<string>;
   draftMarkedKeys: ReadonlySet<string>;
@@ -16,6 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:wordColumnVisible': [value: boolean];
+  'update:wordPracticeVisible': [value: boolean];
   'update:combinedColumnVisible': [value: boolean];
   'update:meaningColumnVisible': [value: boolean];
   'toggle-marked': [key: string, value: boolean];
@@ -49,6 +50,10 @@ function combinedContent(entry: VocabularyEntry) {
 
 function combinedColumnVisible(entryId: number) {
   return isContentVisible('combined', entryId);
+}
+
+function wordCellText(entry: VocabularyEntry) {
+  return getDisplayWord(entry.text, props.columnVisibility.word, props.wordPracticeVisible);
 }
 
 function cellContentClasses(visible: boolean) {
@@ -87,14 +92,29 @@ function handleRowClick(entry: VocabularyEntry) {
       <thead>
         <tr class="vocabulary-header-row">
           <th class="vocabulary-header-cell">
-            <label class="vocabulary-header-toggle">
-              <input
-                type="checkbox"
-                :checked="props.columnVisibility.word"
-                @change="emit('update:wordColumnVisible', ($event.target as HTMLInputElement).checked)"
-              />
-              <span>單字</span>
-            </label>
+            <div
+              class="vocabulary-header-toggle vocabulary-word-header-controls gap-[0.5rem]"
+              data-testid="vocabulary-word-header-controls"
+            >
+              <label class="vocabulary-word-header-toggle">
+                <input
+                  data-testid="vocabulary-word-column-checkbox"
+                  type="checkbox"
+                  :checked="props.columnVisibility.word"
+                  @change="emit('update:wordColumnVisible', ($event.target as HTMLInputElement).checked)"
+                />
+                <span>單字</span>
+              </label>
+              <label class="vocabulary-word-header-toggle">
+                <input
+                  data-testid="vocabulary-word-practice-checkbox"
+                  type="checkbox"
+                  :checked="props.wordPracticeVisible"
+                  @change="emit('update:wordPracticeVisible', ($event.target as HTMLInputElement).checked)"
+                />
+                <span>練習</span>
+              </label>
+            </div>
           </th>
           <th class="vocabulary-header-cell">
             <label class="vocabulary-header-toggle">
@@ -149,9 +169,9 @@ function handleRowClick(entry: VocabularyEntry) {
           >
             <span
               :data-testid="`vocabulary-word-content-${entry.id}`"
-              :class="cellContentClasses(isContentVisible('word', entry.id))"
+              :class="cellContentClasses(props.columnVisibility.word || props.wordPracticeVisible)"
             >
-              {{ getDisplayWord(entry.text, props.practiceMode) }}
+              {{ wordCellText(entry) }}
             </span>
           </td>
           <td

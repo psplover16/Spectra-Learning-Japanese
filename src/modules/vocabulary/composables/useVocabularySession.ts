@@ -37,8 +37,9 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
   const showAllSounds = ref(true);
   const showKanji = ref(true);
   const showMarkedOnly = ref(false);
-  const practiceMode = ref(false);
+  const readingMode = ref(false);
   const wordColumnVisible = ref(true);
+  const wordPracticeVisible = ref(false);
   const combinedColumnVisible = ref(false);
   const meaningColumnVisible = ref(false);
   const revealedEntryId = ref<number | null>(null);
@@ -65,7 +66,6 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     showAllSounds: showAllSounds.value,
     showKanji: showKanji.value,
     showMarkedOnly: showMarkedOnly.value,
-    practiceMode: practiceMode.value,
     columnVisibility: columnVisibility.value,
     allowedKanaSet: deriveAllowedKanaSet(
       practiceSession.selectedKanaItems.value,
@@ -312,8 +312,9 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     showAllSounds,
     showKanji,
     showMarkedOnly,
-    practiceMode,
+    readingMode,
     wordColumnVisible,
+    wordPracticeVisible,
     combinedColumnVisible,
     meaningColumnVisible,
     selectedJlptLevels,
