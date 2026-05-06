@@ -1,10 +1,38 @@
 import { describe, expect, it } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import N5GrammarView from '@/modules/n5Grammar/views/N5GrammarView.vue';
 import { mountWithPracticeSession } from './testUtils';
 
+async function waitForN5GrammarSections(wrapper: ReturnType<typeof mountWithPracticeSession>['wrapper']) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    await flushPromises();
+    await nextTick();
+
+    if (wrapper.find('[data-testid="n5-grammar-title-core-term-usage-overview"]').exists()) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 5));
+  }
+
+  throw new Error('N5 grammar sections did not load.');
+}
+
 describe('N5GrammarViewSmoke', () => {
-  it('預設 render 顯示新的前兩個 N5 文法群組，且不出現其他 route 的內容', () => {
+  it('先 render 穩定 shell，再載入 N5 文法資料', () => {
     const { wrapper } = mountWithPracticeSession(N5GrammarView);
+
+    expect(wrapper.find('[data-testid="n5-grammar-view"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="n5-grammar-loading-state"]').text()).toMatch(/文法資料(準備|載入)中/);
+    expect(wrapper.find('[data-testid="n5-grammar-title-core-term-usage-overview"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it('預設 render 顯示新的前兩個 N5 文法群組，且不出現其他 route 的內容', async () => {
+    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    await waitForN5GrammarSections(wrapper);
 
     expect(wrapper.find('[data-testid="n5-grammar-view"]').exists()).toBe(true);
     expect(wrapper.text()).toContain('核心詞類用法總覽');

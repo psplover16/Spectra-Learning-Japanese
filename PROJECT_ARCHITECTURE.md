@@ -52,9 +52,10 @@ Spectra-Learning-Japanese/
 ```text
 src/
 ├─ app/ (應用程式入口層：啟動 Vue、切路由、提供全域殼層)
-│  ├─ AppShell.vue (整個網站的外框；建立 PracticeSession、提供 RouterView、共享 route tabs 頁首與 PWA Toast，並處理小螢幕下 tabs-only header 的換列穩定性)
+│  ├─ AppShell.vue (整個網站的外框；建立 PracticeSession、提供 KeepAlive 包住的 RouterView、共享 route tabs 頁首與 PWA Toast，並在 mounted 後 idle preload 主要 route component)
 │  ├─ main.ts (Vue 啟動入口；createApp(AppShell).use(router).mount('#app') 後觸發一次 PWA launch update check)
-│  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 與對應 route meta)
+│  ├─ routePreload.ts (主要路由 component lazy loader registry；集中定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 的 dynamic import，支援 idle preload、hover/focus/touchstart navigation intent preload，並以 loading/loaded 狀態去重)
+│  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 與對應 route meta，component 來源統一引用 `routeComponentLoaders`)
 │
 ├─ assets/ (靜態素材)
 │  ├─ hero.png (專案使用的圖片素材)
@@ -105,14 +106,16 @@ src/
 │  │  │  ├─ N5GrammarCompareTable.vue (差異對照表 renderer；先顯示比較表，再補充每個儲存格例句群組與必要的主題說明/例句，支援例句重點字標記)
 │  │  │  ├─ N5GrammarInfoBlock.vue (說明後接例句的 renderer；適合連續閱讀型內容，支援例句重點字標記)
 │  │  │  └─ N5GrammarSectionCard.vue (N5 文法群組容器；提供 section 標題 toggle、右側完成 checkbox 放大 hit area、完成後鎖定收合、背景色展開狀態與 sticky header)
+│  │  ├─ composables/
+│  │  │  └─ useN5GrammarSections.ts (N5 文法資料 shell-first 載入 helper；讓 route 先 render loading shell，再 dynamic import `grammarNotes.ts`，並去重同一次載入)
 │  │  ├─ data/
-│  │  │  └─ grammarNotes.ts (N5 文法結構化靜態資料；整理 v11~v16 筆記、排序規則、來源覆蓋、共通註記、圖片轉表格資料與敬體總覽儲存格例句)
+│  │  │  └─ grammarNotes.ts (N5 文法結構化靜態資料；整理 v11~v16 筆記、排序規則、來源覆蓋、共通註記、圖片轉表格資料與敬體總覽儲存格例句；由 `useN5GrammarSections` 延後載入)
 │  │  ├─ storage/
 │  │  │  └─ n5GrammarCompletionStorage.ts (N5 文法 section 完成註記 storage；以 `duotify.n5Grammar.completed` 保存 version 1 snapshot、completed section ids 與更新時間，並清除壞資料)
 │  │  ├─ types/
 │  │  │  └─ grammarNotes.ts (N5 文法資料型別定義，例如 section、topic、可標記重點字的 example、compare table、tableExampleGroups 與來源覆蓋項)
 │  │  └─ views/
-│  │     └─ N5GrammarView.vue (N5 文法正式學習頁；依 section completion 狀態拆成未學習/已學習兩個 zone，並依 presentation mode 組裝 compare/info/bullet 三種 renderer)
+│  │     └─ N5GrammarView.vue (N5 文法正式學習頁；先 render 穩定 loading shell，再載入 section 資料，依 section completion 狀態拆成未學習/已學習兩個 zone，並在 KeepAlive activated 時同步 localStorage 完成狀態)
 │  │
 │  ├─ practice/ (主練習頁模組：假名選擇、練習設定、規則說明)
 │  │  ├─ components/
@@ -149,10 +152,10 @@ src/
 │     ├─ components/
 │     │  ├─ VocabularyControlBar.vue (單字頁控制區；提供搜尋、N1～N5 individual checkbox、JLPT row 右側開始測驗、action row 左側練習/註記篩選與右側儲存註記，不顯示未儲存提示且不提供 JLPT 全部勾選)
 │     │  ├─ VocabularyCountSummary.vue (舊單字數量摘要元件；單字頁目前不再渲染可見筆數文字)
-│     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、共用欄位顯示、目前可見範圍 draft 註記批次勾選/取消與長按揭露事件，header checkbox 不直接寫入 localStorage)
+│     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、loading row、共用欄位顯示、目前可見範圍 draft 註記批次勾選/取消與長按揭露事件，header checkbox 不直接寫入 localStorage)
 │     ├─ composables/
 │     │  ├─ useVocabularyExamSession.ts (單字測驗獨立 session；從開始當下的可見且已勾選單字建立 snapshot，依 text/kanji 義項分組出題，結算時只更新 draftMarkedKeys)
-│     │  └─ useVocabularySession.ts (單字頁狀態管理；集中持有 JLPT level、stage lazy import 載入/錯誤狀態、`/practice` 勾選、搜尋條件、註記草稿／持久化、目前可見範圍儲存、draft-only 批次勾選與長按揭露；localStorage 持久化只由儲存註記動作執行)
+│     │  └─ useVocabularySession.ts (單字頁狀態管理；集中持有 JLPT level、stage lazy import 載入/錯誤狀態、`/practice` 勾選、搜尋條件、註記草稿／持久化、目前可見範圍儲存、draft-only 批次勾選與長按揭露；以 N5→N1 分段載入讓 shell 先出現，並在 KeepAlive deactivated 時清理 pending reveal timer)
 │     ├─ data/
 │     │  └─ jpWords_N1.ts ～ jpWords_N5.ts (依 JLPT stage 拆分的 raw 單字資料；runtime 由 `useVocabularySession` 依 checkbox lazy import 對應檔案，測試也由這五份資料聚合全量檢查)
 │     ├─ storage/
@@ -162,7 +165,7 @@ src/
 │     ├─ utils/
 │     │  └─ vocabularyFilters.ts (單字字種轉換、JLPT/search/註記/練習條件的單一路徑篩選、N5→N1 顯示排序與顯示內容導出)
 │     └─ views/
-│        └─ VocabularyView.vue (單字頁畫面；組裝不含數量摘要的控制列、lazy-loaded 單表格字典、搜尋篩選、註記、長按揭露與單字測驗 ExamModal 串接；無可見單字時隱藏開始測驗，有可見單字但無可見註記時保留 disabled)
+│        └─ VocabularyView.vue (單字頁畫面；組裝不含數量摘要的控制列、lazy-loaded 單表格字典、搜尋篩選、註記、長按揭露與單字測驗 ExamModal 串接；無可見單字時隱藏開始測驗，有可見單字但無可見註記時保留 disabled，並在 KeepAlive activated/deactivated 成對管理 body scroll lock)
 │
 ├─ shared/ (跨模組共用的元件與工具)
 │  ├─ components/
@@ -171,7 +174,7 @@ src/
 │  │  ├─ BaseCheckbox.vue (全站共用核取方塊元件)
 │  │  ├─ BaseInput.vue (全站共用輸入框元件)
 │  │  ├─ RouteSubMenu.vue (可重用路由子列表；由 options/config 渲染按鈕、提供 overlay 外部點擊關閉與 Escape 關閉，不耦合業務 storage 或 router)
-│  │  ├─ RouteTabs.vue (頁面主路由切換導覽列；呈現「字母練習 / 變化規則 / 目前文法等級 / 單字練習」，並委派文法等級切換給 GrammarLevelSwitcher)
+│  │  ├─ RouteTabs.vue (頁面主路由切換導覽列；呈現「字母練習 / 變化規則 / 目前文法等級 / 單字練習」，在 pointer hover、keyboard focus、touchstart 時預熱目標 route component，並委派文法等級切換給 GrammarLevelSwitcher)
 │  │  └─ ToastBanner.vue (全站共用 Toast 提示；主要用於 PWA 更新 / 離線提示)
 │  ├─ config/
 │  │  ├─ publicAssets.ts (公開資產常數；集中定義 favicon 與 PWA icon 檔名，供 Vite 設定與測試共用)
@@ -217,9 +220,11 @@ tests/
 ├─ e2e/ (Playwright 端到端測試)
 │  ├─ app-shell.smoke.spec.ts (整個網站 shell 與基本進站流程 smoke test；驗證四主路由導覽、文法等級切換、N5 direct URL 與持久化)
 │  ├─ grammar-change-rules.spec.ts (375px 下 `/grammar` 的展開流程、主要文法表格可見性與不破版驗證)
+│  ├─ pwa-offline-route-cache.spec.ts (production preview 專用 PWA 離線快取測試；需設定 `PLAYWRIGHT_PWA=1`，驗證已訪問 `/vocabulary` 後離線回訪仍可 render route shell)
 │  ├─ practice-layout.smoke.spec.ts (375px 下 `/practice` 首屏、表格可讀性與無水平捲動 smoke test)
 │  ├─ practice-exam-flow.spec.ts (從選字到開始測驗的完整流程測試，含 modal 題目列存在驗證)
 │  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性、不破版與 N5 section sticky header 接續黏頂驗證)
+│  ├─ route-switching-performance.spec.ts (主要路由切換效能 smoke test；依序訪問 /practice、/grammar、/vocabulary、N1～N5 文法路由，驗證 AppShell/nav 持續存在、main region 不空白、console 無錯、已訪問路由狀態保留與 scroll lock 清理)
 │  ├─ vocabulary-word-practice.spec.ts (單字頁端到端測試；驗證 375px 下 JLPT lazy individual 篩選、搜尋、draft-only header 批次勾選、註記持久化、單字測驗、長按揭露、離線控制列與窄版穩定性)
 │  └─ testUtils.ts (e2e 共用 helper；含四主路由 controls、動態文法等級 label、nowrap 與無水平捲動斷言)
 ├─ mocks/ (測試替身 / mock 模組)
@@ -235,6 +240,7 @@ tests/
 │  ├─ n5GrammarCompletionStorage.spec.ts (N5 文法完成註記 storage 測試；驗證 version 1 snapshot 寫入讀回、完成 id 快照、空資料與 invalid payload 清除)
 │  ├─ pwaLifecycleService.spec.ts (PWA 更新流程與 toast 狀態測試)
 │  ├─ questionDeck.spec.ts (洗牌與循環題組工具測試)
+│  ├─ routePreload.spec.ts (route preload registry 測試；驗證同一路由 pending/completed preload 會去重，未知路由不觸發 loader)
 │  ├─ useExamSession.spec.ts (字母測驗流程狀態機測試)
 │  ├─ useVocabularyExamSession.spec.ts (單字測驗 session 測試；驗證 visible marked snapshot、多義分組、draft-only 結算與 alphabet latest unknown storage 隔離)
 │  ├─ usePracticeSession.spec.ts (練習狀態管理測試)
@@ -273,10 +279,21 @@ scripts/ (專案自訂腳本目錄)
 index.html
   -> /src/app/main.ts
   -> AppShell.vue
+  -> routePreload.ts 提供 router component loader、idle preload 與 navigation intent preload
   -> router.ts 決定目前頁面
   -> PracticeView / GrammarView / VocabularyView / N1GrammarView～N4GrammarView / N5GrammarView
   -> 各模組 composables、components、utils
 ```
+
+## 路由切換效能責任
+
+- `/` 維持 redirect 到 `/practice`；App 啟動先讓 `/practice` 與 AppShell 可操作，再由 `AppShell.vue` 在 mounted 後呼叫 `preloadPrimaryRouteComponentsOnIdle()` 低優先級預熱其他主要 route component。
+- `src/app/routePreload.ts` 是主要 route component dynamic import 的單一 registry。`router.ts` 與導覽意圖預熱都引用同一批 loader，避免 router 與 preload helper 各自維護不同 import 路徑。
+- Route preload 只載入 route component module，不預先掛載未訪問 route instance，也不直接處理 `jpWords_N*.ts` 或 `grammarNotes.ts` 這類重資料；重資料仍由 route 進入後的 composable 依 visible scope 載入。
+- `AppShell.vue` 使用 RouterView slot 搭配 KeepAlive 保留已訪問的主要路由 instance，範圍包含 `/practice`、`/grammar`、`/vocabulary`、`/n1-grammar`、`/n2-grammar`、`/n3-grammar`、`/n4-grammar`、`/n5-grammar`。
+- 被 KeepAlive 的 route 需處理 activated/deactivated 行為：`VocabularyView.vue` 成對管理 body scroll lock，`useVocabularySession.ts` 清掉 pending reveal timer，`PracticeView.vue` 清掉延遲 scroll timer，`N5GrammarView.vue` 在重新啟用時同步 localStorage 完成狀態。
+- `VocabularyView.vue` 與 `N5GrammarView.vue` 都採 shell-first：先 render 控制列、表格/loading row 或 N5 loading section，再分段 dynamic import 單字 stage 或 N5 文法資料。
+- PWA 驗證方式包含 `npm run build` 檢查 500 KB chunk 警戒線、`npx playwright test tests/e2e/route-switching-performance.spec.ts --project=chromium` 驗證主要路由切換，以及 production preview 下設定 `PLAYWRIGHT_PWA=1` 執行 `tests/e2e/pwa-offline-route-cache.spec.ts` 驗證已訪問 `/vocabulary` 後離線回訪。
 
 ## 公開資產與 PWA Icon 責任
 

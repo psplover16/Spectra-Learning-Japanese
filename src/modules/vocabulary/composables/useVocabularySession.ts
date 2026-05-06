@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue';
 import { usePracticeSession } from '@/modules/practice/composables/usePracticeSession';
 import { deriveAllowedKanaSet, filterVocabularyEntries } from '@/modules/vocabulary/utils/vocabularyFilters';
 import {
@@ -22,6 +22,7 @@ const vocabularyStageLoaders: Record<VocabularyJlptLevel, VocabularyStageLoader>
   N4: () => import('@/modules/vocabulary/data/jpWords_N4'),
   N5: () => import('@/modules/vocabulary/data/jpWords_N5')
 };
+const vocabularyJlptLoadOrder: VocabularyJlptLevel[] = ['N5', 'N4', 'N3', 'N2', 'N1'];
 
 export interface UseVocabularySessionOptions {
   stageLoaders?: Partial<Record<VocabularyJlptLevel, VocabularyStageLoader>>;
@@ -81,7 +82,9 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     return normalizeVocabularyEntries(rawEntries);
   });
 
-  const isLoadingVocabulary = computed(() => loadingJlptLevels.value.size > 0);
+  const isLoadingVocabulary = computed(() =>
+    [...selectedJlptLevels.value].some((level) => loadingJlptLevels.value.has(level))
+  );
   const hasVocabularyLoadError = computed(() => vocabularyLoadError.value !== null);
 
   const visibleEntries = computed(() =>
@@ -114,6 +117,10 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     loadingJlptLevels.value = next;
   }
 
+  function haveSameMarkKeys(left: ReadonlySet<string>, right: ReadonlySet<string>) {
+    return left.size === right.size && [...left].every((key) => right.has(key));
+  }
+
   function hydrateMarksWhenAllStagesLoaded() {
     if (marksHydrated.value) {
       return;
@@ -124,13 +131,24 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     }
 
     const snapshot = readVocabularyMarksSnapshot(vocabularyEntries.value);
-    persistedMarkedKeys.value = new Set(snapshot?.markedKeys ?? []);
-    draftMarkedKeys.value = new Set(persistedMarkedKeys.value);
+    const nextPersistedMarkedKeys = new Set(snapshot?.markedKeys ?? []);
+    const hasLocalDraftChanges = !haveSameMarkKeys(draftMarkedKeys.value, persistedMarkedKeys.value);
+
+    persistedMarkedKeys.value = nextPersistedMarkedKeys;
+    draftMarkedKeys.value = hasLocalDraftChanges
+      ? new Set([...nextPersistedMarkedKeys, ...draftMarkedKeys.value])
+      : new Set(nextPersistedMarkedKeys);
     marksHydrated.value = true;
   }
 
+  function orderRequestedJlptLevels(levels: Iterable<VocabularyJlptLevel>) {
+    const requestedLevels = new Set(levels);
+
+    return vocabularyJlptLoadOrder.filter((level) => requestedLevels.has(level));
+  }
+
   async function loadVocabularyStages(levels: Iterable<VocabularyJlptLevel>) {
-    const requestedLevels = [...levels];
+    const requestedLevels = orderRequestedJlptLevels(levels);
     const levelsToLoad = requestedLevels.filter(
       (level) => loadedStageEntries.value[level] === undefined && !stageLoadPromises.has(level)
     );
@@ -147,7 +165,19 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
       }
     });
 
+    const pendingRequestedLoads = requestedLevels.map((level) => stageLoadPromises.get(level)).filter(Boolean);
+    if (pendingRequestedLoads.length > 0) {
+      await Promise.all(pendingRequestedLoads);
+    }
+
     for (const level of levelsToLoad) {
+      if (loadedStageEntries.value[level] !== undefined) {
+        replaceLoadingJlptLevels((next) => {
+          next.delete(level);
+        });
+        continue;
+      }
+
       const loadPromise = (async () => {
         try {
           const module = await stageLoaders[level]();
@@ -170,9 +200,8 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
       })();
 
       stageLoadPromises.set(level, loadPromise);
+      await loadPromise;
     }
-
-    await Promise.all(requestedLevels.map((level) => stageLoadPromises.get(level)).filter(Boolean));
 
     hydrateMarksWhenAllStagesLoaded();
   }
@@ -295,9 +324,13 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     }
   }
 
-  onBeforeUnmount(() => {
+  function clearRevealState() {
     clearRevealTimer();
-  });
+    revealedEntryId.value = null;
+  }
+
+  onBeforeUnmount(clearRevealState);
+  onDeactivated(clearRevealState);
 
   watch(
     selectedJlptLevels,

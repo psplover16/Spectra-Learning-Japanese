@@ -1,10 +1,29 @@
 import { describe, expect, it } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import N5GrammarView from '@/modules/n5Grammar/views/N5GrammarView.vue';
 import { mountWithPracticeSession } from './testUtils';
 
+async function mountLoadedN5GrammarView() {
+  const mounted = mountWithPracticeSession(N5GrammarView);
+
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await flushPromises();
+    await nextTick();
+
+    if (mounted.wrapper.find('[data-testid="n5-grammar-toggle-particle-ka"]').exists()) {
+      return mounted;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  }
+
+  throw new Error('N5 grammar sections did not load.');
+}
+
 describe('N5Grammar particle-ka duration topic', () => {
   it('renders the detailed duration comparison content inside 助詞 か', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
 
     await wrapper.get('[data-testid="n5-grammar-toggle-particle-ka"]').trigger('click');
 

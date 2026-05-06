@@ -1,8 +1,26 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { n5GrammarCompletionStorageKey } from '@/modules/n5Grammar/storage/n5GrammarCompletionStorage';
 import N5GrammarView from '@/modules/n5Grammar/views/N5GrammarView.vue';
 import { mountWithPracticeSession } from './testUtils';
+
+async function mountLoadedN5GrammarView() {
+  const mounted = mountWithPracticeSession(N5GrammarView);
+
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await flushPromises();
+    await nextTick();
+
+    if (mounted.wrapper.find('[data-testid="n5-grammar-title-core-term-usage-overview"]').exists()) {
+      return mounted;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  }
+
+  throw new Error('N5 grammar sections did not load.');
+}
 
 describe('N5GrammarSections', () => {
   afterEach(() => {
@@ -10,7 +28,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('敬體變化速覽預設收合，展開後顯示 compare table 與 12 組儲存格例句', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const body = wrapper.find('[data-testid="n5-grammar-body-polite-overview"]');
 
@@ -33,7 +51,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('不同 section 仍依 mode 顯示對應 renderer，且 sentence-basics 不再有 compare table', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const sentenceBasics = wrapper.get('[data-testid="n5-grammar-section-sentence-basics"]');
     const sentenceBasicsToggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
 
@@ -51,7 +69,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('新增的邀約與變化表現區塊可依 mode 正確展開', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
 
     const invitationToggle = wrapper.get('[data-testid="n5-grammar-toggle-invitation-comparison"]');
     const naruToggle = wrapper.get('[data-testid="n5-grammar-toggle-state-change-naru"]');
@@ -81,7 +99,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('v16 新增 section 依預設展開設定顯示說明、表格與例句', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const targetIds = ['core-term-usage-overview', 'dekiru-ability', 'demonstratives', 'numbers', 'time-expressions'];
 
     for (const id of targetIds) {
@@ -134,7 +152,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('指示詞例句以 class 標記紅色重點字，標題列不夾帶 description', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
 
     expect(wrapper.get('[data-testid="n5-grammar-title-demonstratives"]').text()).toBe('指示詞：こそあど系列');
     expect(wrapper.get('[data-testid="n5-grammar-title-demonstratives"]').text()).not.toContain('here.png');
@@ -150,7 +168,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('完成 checkbox 不會觸發展開，且會以 section 標題提供無障礙標籤', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
     const completionHitArea = wrapper.get('[data-testid="n5-grammar-completion-hit-area-sentence-basics"]');
@@ -177,7 +195,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('展開與收合控制不會切換完成 checkbox', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
     const body = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
@@ -209,7 +227,7 @@ describe('N5GrammarSections', () => {
       })
     );
 
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     await nextTick();
 
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
@@ -243,7 +261,7 @@ describe('N5GrammarSections', () => {
       })
     );
 
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     await nextTick();
 
     const unfinishedZone = wrapper.get('[data-testid="n5-grammar-unfinished-zone"]');
@@ -261,8 +279,8 @@ describe('N5GrammarSections', () => {
     expect(finishedIds).toEqual(['polite-overview', 'past-and-state']);
   });
 
-  it('沒有已學習 section 時不 render 已學習區', () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+  it('沒有已學習 section 時不 render 已學習區', async () => {
+    const { wrapper } = await mountLoadedN5GrammarView();
 
     expect(wrapper.find('[data-testid="n5-grammar-unfinished-zone"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="n5-grammar-finished-zone"]').exists()).toBe(false);
@@ -278,7 +296,7 @@ describe('N5GrammarSections', () => {
       })
     );
 
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     await nextTick();
     const view = wrapper.get('[data-testid="n5-grammar-view"]');
 
@@ -288,7 +306,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('勾選完成 checkbox 後 section 會立即移到已學習區', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const unfinishedZone = wrapper.get('[data-testid="n5-grammar-unfinished-zone"]');
 
     expect(unfinishedZone.find('[data-testid="n5-grammar-section-sentence-basics"]').exists()).toBe(true);
@@ -302,7 +320,7 @@ describe('N5GrammarSections', () => {
   });
 
   it('完成後會立即收合並鎖定，取消完成後不會自動展開', async () => {
-    const { wrapper } = mountWithPracticeSession(N5GrammarView);
+    const { wrapper } = await mountLoadedN5GrammarView();
     const header = wrapper.get('[data-testid="n5-grammar-header-polite-overview"]');
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');

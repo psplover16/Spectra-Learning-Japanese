@@ -1,9 +1,26 @@
 import { describe, expect, it } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import PracticeView from '@/modules/practice/views/PracticeView.vue';
 import GrammarView from '@/modules/grammar/views/GrammarView.vue';
 import VocabularyView from '@/modules/vocabulary/views/VocabularyView.vue';
 import N5GrammarView from '@/modules/n5Grammar/views/N5GrammarView.vue';
 import { mountWithPracticeSession } from './testUtils';
+
+async function waitForN5GrammarSections(wrapper: ReturnType<typeof mountWithPracticeSession>['wrapper']) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await flushPromises();
+    await nextTick();
+
+    if (wrapper.find('[data-testid="n5-grammar-title-core-term-usage-overview"]').exists()) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  }
+
+  throw new Error('N5 grammar sections did not load.');
+}
 
 describe('route ownership', () => {
   it('第一頁不得顯示共享明細 panel', () => {
@@ -13,10 +30,11 @@ describe('route ownership', () => {
     expect(wrapper.find('[data-testid="loanword-section"]').exists()).toBe(true);
   });
 
-  it('文法頁、單字頁與 N5 文法頁各自維持正確 ownership', () => {
+  it('文法頁、單字頁與 N5 文法頁各自維持正確 ownership', async () => {
     const grammar = mountWithPracticeSession(GrammarView).wrapper;
     const vocabulary = mountWithPracticeSession(VocabularyView).wrapper;
     const n5Grammar = mountWithPracticeSession(N5GrammarView).wrapper;
+    await waitForN5GrammarSections(n5Grammar);
 
     expect(grammar.find('[data-testid="selection-detail-panel"]').exists()).toBe(false);
     expect(vocabulary.find('[data-testid="selection-detail-panel"]').exists()).toBe(false);

@@ -3,16 +3,22 @@ import { ref } from 'vue';
 import type { VocabularyColumnVisibility, VocabularyEntry } from '@/modules/vocabulary/types/vocabulary';
 import { getDisplayWord } from '@/modules/vocabulary/utils/vocabularyFilters';
 
-const props = defineProps<{
-  entries: VocabularyEntry[];
-  showKanji: boolean;
-  wordPracticeVisible: boolean;
-  columnVisibility: VocabularyColumnVisibility;
-  savedMarkedKeys: ReadonlySet<string>;
-  draftMarkedKeys: ReadonlySet<string>;
-  allVisibleDraftMarked: boolean;
-  revealedEntryId: number | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    entries: VocabularyEntry[];
+    showKanji: boolean;
+    wordPracticeVisible: boolean;
+    columnVisibility: VocabularyColumnVisibility;
+    savedMarkedKeys: ReadonlySet<string>;
+    draftMarkedKeys: ReadonlySet<string>;
+    allVisibleDraftMarked: boolean;
+    revealedEntryId: number | null;
+    isLoading?: boolean;
+  }>(),
+  {
+    isLoading: false
+  }
+);
 
 const emit = defineEmits<{
   'update:wordColumnVisible': [value: boolean];
@@ -150,6 +156,15 @@ function handleRowClick(entry: VocabularyEntry) {
         </tr>
       </thead>
       <tbody>
+        <tr
+          v-if="props.isLoading && props.entries.length === 0"
+          data-testid="vocabulary-loading-row"
+          class="vocabulary-loading-row"
+        >
+          <td colspan="4" class="vocabulary-body-cell">
+            單字資料載入中
+          </td>
+        </tr>
         <tr
           v-for="entry in props.entries"
           :key="entry.id"
