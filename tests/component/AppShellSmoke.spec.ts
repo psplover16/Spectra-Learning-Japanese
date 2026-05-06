@@ -1,9 +1,24 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import AppShell from '@/app/AppShell.vue';
 import router from '@/app/router';
 import { grammarLevelStorageKey } from '@/modules/grammar/storage/grammarLevelStorage';
+
+async function waitForN5GrammarSections(wrapper: VueWrapper) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await flushPromises();
+    await nextTick();
+
+    if (wrapper.find('[data-testid="n5-grammar-title-core-term-usage-overview"]').exists()) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  }
+
+  throw new Error('N5 grammar sections did not load.');
+}
 
 describe('AppShell', () => {
   beforeEach(async () => {
@@ -42,6 +57,7 @@ describe('AppShell', () => {
 
     await router.push('/n5-grammar');
     await nextTick();
+    await waitForN5GrammarSections(wrapper);
     expect(wrapper.find('[data-testid="n5-grammar-view"]').exists()).toBe(true);
     expect(wrapper.text()).toContain('核心詞類用法總覽');
     expect(wrapper.text()).toContain('敬體變化速覽');

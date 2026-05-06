@@ -91,6 +91,16 @@ describe('VocabularyStageTable', () => {
     expect(wrapper.emitted('update:wordPracticeVisible')?.[0]).toEqual([true]);
   });
 
+  it('載入中且尚無資料列時顯示穩定 loading row', () => {
+    const wrapper = mountTable({
+      entries: [],
+      isLoading: true
+    });
+
+    expect(wrapper.get('[data-testid="vocabulary-loading-row"]').text()).toContain('單字資料載入中');
+    expect(wrapper.findAll('tbody tr[data-testid^="vocabulary-row-"]')).toHaveLength(0);
+  });
+
   it('單字欄位顯示原假名、假名互換與空白狀態', async () => {
     const wrapper = mountTable({
       wordPracticeVisible: true

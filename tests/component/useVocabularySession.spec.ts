@@ -152,6 +152,53 @@ describe('useVocabularySession', () => {
     wrapper.unmount();
   });
 
+  it('依學習順序分段載入 selected JLPT 資料，讓 shell 可先顯示 loading 狀態', async () => {
+    const startedLevels: VocabularyJlptLevel[] = [];
+    const resolvers = new Map<VocabularyJlptLevel, (value: { default: RawVocabularyEntry[] }) => void>();
+    const stageLoaders = Object.fromEntries(
+      vocabularyJlptLevels.map((level) => [
+        level,
+        () => {
+          startedLevels.push(level);
+          return new Promise<{ default: RawVocabularyEntry[] }>((resolve) => {
+            resolvers.set(level, resolve);
+          });
+        }
+      ])
+    ) as Record<VocabularyJlptLevel, () => Promise<{ default: RawVocabularyEntry[] }>>;
+    const { session, wrapper } = mountVocabularySession({ stageLoaders });
+
+    await nextTick();
+
+    expect(startedLevels).toEqual(['N5']);
+    expect(session.isLoadingVocabulary.value).toBe(true);
+    expect(session.visibleEntries.value).toEqual([]);
+
+    resolvers.get('N5')?.({ default: [rawVocabularyEntry('beta', 'N5')] });
+    await flushPromises();
+    await nextTick();
+
+    expect(startedLevels).toEqual(['N5', 'N4']);
+    expect(session.visibleEntries.value.map((entry) => entry.stage)).toEqual(['N5']);
+
+    resolvers.get('N4')?.({ default: [rawVocabularyEntry('delta', 'N4')] });
+    await flushPromises();
+    await nextTick();
+
+    expect(startedLevels).toEqual(['N5', 'N4', 'N3']);
+
+    for (const level of ['N3', 'N2', 'N1'] as const) {
+      resolvers.get(level)?.({ default: [rawVocabularyEntry(level.toLowerCase(), level)] });
+      await flushPromises();
+      await nextTick();
+    }
+
+    expect(startedLevels).toEqual(['N5', 'N4', 'N3', 'N2', 'N1']);
+    expect(session.isLoadingVocabulary.value).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it('暴露 stage lazy import 失敗狀態，避免依賴 unavailable entries', async () => {
     const { session, wrapper } = mountVocabularySession({
       stageLoaders: {

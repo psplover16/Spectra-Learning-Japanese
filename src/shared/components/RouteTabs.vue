@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, useRoute } from 'vue-router';
+import { preloadRouteComponent } from '@/app/routePreload';
 import GrammarLevelSwitcher from '@/modules/grammar/components/GrammarLevelSwitcher.vue';
 
 const route = useRoute();
@@ -10,6 +11,10 @@ const leadingTabs = [
 const trailingTabs = [
   { to: '/vocabulary', label: '單字練習', testId: 'route-tab-vocabulary' }
 ];
+
+function prepareRoute(to: string) {
+  void preloadRouteComponent(to);
+}
 </script>
 
 <template>
@@ -21,6 +26,9 @@ const trailingTabs = [
       :data-testid="tab.testId"
       class="route-tab-link"
       :class="route.path === tab.to ? 'border-clay bg-clay text-white' : 'border-clay/20 bg-white/75 text-ink hover:bg-sand/70'"
+      @pointerenter="prepareRoute(tab.to)"
+      @focus="prepareRoute(tab.to)"
+      @touchstart.passive="prepareRoute(tab.to)"
     >
       {{ tab.label }}
     </RouterLink>
@@ -34,6 +42,9 @@ const trailingTabs = [
       :data-testid="tab.testId"
       class="route-tab-link"
       :class="route.path === tab.to ? 'border-clay bg-clay text-white' : 'border-clay/20 bg-white/75 text-ink hover:bg-sand/70'"
+      @pointerenter="prepareRoute(tab.to)"
+      @focus="prepareRoute(tab.to)"
+      @touchstart.passive="prepareRoute(tab.to)"
     >
       {{ tab.label }}
     </RouterLink>

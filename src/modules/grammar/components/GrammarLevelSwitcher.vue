@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { preloadRouteComponent } from '@/app/routePreload';
 import RouteSubMenu from '@/shared/components/RouteSubMenu.vue';
 import { grammarLevelOptions, isGrammarLevelRoute, isGrammarLevelValue } from '@/modules/grammar/config/grammarLevels';
 import { useGrammarLevel } from '@/modules/grammar/composables/useGrammarLevel';
@@ -19,9 +20,27 @@ function closeSubMenu() {
   isSubMenuOpen.value = false;
 }
 
+function prepareRoute(routePath: string) {
+  void preloadRouteComponent(routePath);
+}
+
+function prepareSelectedRoute() {
+  prepareRoute(selectedOption.value.route);
+}
+
+function prepareGrammarLevelRoutes() {
+  for (const option of grammarLevelOptions) {
+    prepareRoute(option.route);
+  }
+}
+
 function handleTriggerClick() {
   if (isGrammarRoute.value) {
-    isSubMenuOpen.value = !isSubMenuOpen.value;
+    const nextIsOpen = !isSubMenuOpen.value;
+    isSubMenuOpen.value = nextIsOpen;
+    if (nextIsOpen) {
+      prepareGrammarLevelRoutes();
+    }
     return;
   }
 
@@ -42,6 +61,7 @@ function handleSelect(value: string) {
   }
 
   closeSubMenu();
+  prepareRoute(nextOption.route);
   void router.push(nextOption.route);
 }
 
@@ -62,6 +82,9 @@ watch(
       :class="routeTabClass"
       :aria-expanded="isSubMenuOpen"
       aria-haspopup="menu"
+      @pointerenter="prepareSelectedRoute"
+      @focus="prepareSelectedRoute"
+      @touchstart.passive="prepareSelectedRoute"
       @click="handleTriggerClick"
     >
       {{ selectedOption.label }}

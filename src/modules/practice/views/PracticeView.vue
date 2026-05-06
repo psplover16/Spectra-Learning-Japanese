@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
 import PracticeToolbar from '@/modules/practice/components/PracticeToolbar.vue';
 import SeionTable from '@/modules/practice/components/SeionTable.vue';
 import DakuonTable from '@/modules/practice/components/DakuonTable.vue';
@@ -122,6 +122,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearPendingScrollTimer();
+});
+
+onDeactivated(() => {
   clearPendingScrollTimer();
 });
 </script>

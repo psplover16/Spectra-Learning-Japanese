@@ -23,11 +23,14 @@ describe('constitution compliance guardrails', () => {
 
   it('lazy-loads primary route views to stay under the build chunk warning budget', async () => {
     const routerSource = await readFile('src/app/router.ts', 'utf8');
+    const routePreloadSource = await readFile('src/app/routePreload.ts', 'utf8');
 
     expect(routerSource).not.toMatch(/^import \w+View from '@\/modules\/.*\/views\/.*\.vue';$/m);
-    expect(routerSource).toContain("const PracticeView = () => import('@/modules/practice/views/PracticeView.vue');");
-    expect(routerSource).toContain("const GrammarView = () => import('@/modules/grammar/views/GrammarView.vue');");
-    expect(routerSource).toContain("const VocabularyView = () => import('@/modules/vocabulary/views/VocabularyView.vue');");
-    expect(routerSource).toContain("const N5GrammarView = () => import('@/modules/n5Grammar/views/N5GrammarView.vue');");
+    expect(routerSource).toContain("component: routeComponentLoaders['/practice']");
+    expect(routerSource).toContain("component: routeComponentLoaders['/vocabulary']");
+    expect(routePreloadSource).toContain("'/practice': () => import('@/modules/practice/views/PracticeView.vue')");
+    expect(routePreloadSource).toContain("'/grammar': () => import('@/modules/grammar/views/GrammarView.vue')");
+    expect(routePreloadSource).toContain("'/vocabulary': () => import('@/modules/vocabulary/views/VocabularyView.vue')");
+    expect(routePreloadSource).toContain("'/n5-grammar': () => import('@/modules/n5Grammar/views/N5GrammarView.vue')");
   });
 });

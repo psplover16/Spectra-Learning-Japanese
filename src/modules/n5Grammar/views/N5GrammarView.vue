@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onActivated, onMounted, ref } from 'vue';
 import N5GrammarBulletBlock from '@/modules/n5Grammar/components/N5GrammarBulletBlock.vue';
 import N5GrammarCompareTable from '@/modules/n5Grammar/components/N5GrammarCompareTable.vue';
 import N5GrammarInfoBlock from '@/modules/n5Grammar/components/N5GrammarInfoBlock.vue';
 import N5GrammarSectionCard from '@/modules/n5Grammar/components/N5GrammarSectionCard.vue';
 import { defaultExpandedSectionIds } from '@/modules/n5Grammar/config/viewPreferences';
-import { sortedN5GrammarSections } from '@/modules/n5Grammar/data/grammarNotes';
+import { useN5GrammarSections } from '@/modules/n5Grammar/composables/useN5GrammarSections';
 import type { N5GrammarSection } from '@/modules/n5Grammar/types/grammarNotes';
 import {
   readCompletedN5GrammarSectionIds,
@@ -13,16 +13,24 @@ import {
 } from '@/modules/n5Grammar/storage/n5GrammarCompletionStorage';
 
 const completedSectionIds = ref<Set<string>>(new Set());
+const { sections, hasSections, isLoading, loadError, loadSections } = useN5GrammarSections();
 const unfinishedSections = computed<N5GrammarSection[]>(() =>
-  sortedN5GrammarSections.filter((section) => !completedSectionIds.value.has(section.id))
+  sections.value.filter((section) => !completedSectionIds.value.has(section.id))
 );
 const finishedSections = computed<N5GrammarSection[]>(() =>
-  sortedN5GrammarSections.filter((section) => completedSectionIds.value.has(section.id))
+  sections.value.filter((section) => completedSectionIds.value.has(section.id))
 );
 
-onMounted(() => {
+function syncCompletedSectionIds(): void {
   completedSectionIds.value = new Set(readCompletedN5GrammarSectionIds());
+}
+
+onMounted(() => {
+  syncCompletedSectionIds();
+  void loadSections();
 });
+
+onActivated(syncCompletedSectionIds);
 
 function isSectionCompleted(sectionId: string): boolean {
   return completedSectionIds.value.has(sectionId);
@@ -44,7 +52,23 @@ function updateSectionCompleted(sectionId: string, completed: boolean): void {
 
 <template>
   <div data-testid="n5-grammar-view" class="n5-grammar-view space-y-4">
-    <section data-testid="n5-grammar-unfinished-zone" class="space-y-1 p-0">
+    <div
+      v-if="!hasSections && !loadError"
+      data-testid="n5-grammar-loading-state"
+      class="section-card"
+    >
+      {{ isLoading ? '文法資料載入中' : '文法資料準備中' }}
+    </div>
+
+    <div
+      v-if="loadError"
+      data-testid="n5-grammar-load-error"
+      class="section-card"
+    >
+      {{ loadError }}
+    </div>
+
+    <section v-if="hasSections" data-testid="n5-grammar-unfinished-zone" class="space-y-1 p-0">
       <N5GrammarSectionCard
         v-for="section in unfinishedSections"
         :key="section.id"

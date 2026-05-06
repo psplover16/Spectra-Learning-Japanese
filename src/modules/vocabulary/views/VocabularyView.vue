@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue';
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted } from 'vue';
 import ExamModal from '@/modules/exam/components/ExamModal.vue';
 import VocabularyControlBar from '@/modules/vocabulary/components/VocabularyControlBar.vue';
 import VocabularyStageTable from '@/modules/vocabulary/components/VocabularyStageTable.vue';
@@ -31,13 +31,30 @@ function startVocabularyQuiz(): void {
   });
 }
 
-onMounted(() => {
-  lockBodyScroll();
-});
+let bodyScrollLocked = false;
 
-onBeforeUnmount(() => {
-  unlockBodyScroll();
-});
+function activateVocabularyView(): void {
+  if (bodyScrollLocked) {
+    return;
+  }
+
+  lockBodyScroll();
+  bodyScrollLocked = true;
+}
+
+function deactivateVocabularyView(): void {
+  if (bodyScrollLocked) {
+    unlockBodyScroll();
+    bodyScrollLocked = false;
+  }
+
+  session.endReveal();
+}
+
+onMounted(activateVocabularyView);
+onActivated(activateVocabularyView);
+onDeactivated(deactivateVocabularyView);
+onBeforeUnmount(deactivateVocabularyView);
 </script>
 
 <template>
@@ -74,6 +91,7 @@ onBeforeUnmount(() => {
         :draft-marked-keys="session.draftMarkedKeys.value"
         :all-visible-draft-marked="session.allVisibleDraftMarked.value"
         :revealed-entry-id="session.revealedEntryId.value"
+        :is-loading="session.isLoadingVocabulary.value"
         @update:word-column-visible="session.wordColumnVisible.value = $event"
         @update:word-practice-visible="session.wordPracticeVisible.value = $event"
         @update:combined-column-visible="session.combinedColumnVisible.value = $event"

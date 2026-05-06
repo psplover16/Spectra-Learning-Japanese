@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { KeepAlive, onMounted } from 'vue';
 import { RouterView } from 'vue-router';
+import { preloadPrimaryRouteComponentsOnIdle } from '@/app/routePreload';
 import RouteTabs from '@/shared/components/RouteTabs.vue';
 import ToastBanner from '@/shared/components/ToastBanner.vue';
 import { createPracticeSession, providePracticeSession } from '@/modules/practice/composables/usePracticeSession';
@@ -9,6 +11,10 @@ const session = createPracticeSession();
 providePracticeSession(session);
 
 const { toast, confirmUpdate, dismissToast } = usePwaLifecycle();
+
+onMounted(() => {
+  preloadPrimaryRouteComponentsOnIdle();
+});
 </script>
 
 <template>
@@ -24,8 +30,12 @@ const { toast, confirmUpdate, dismissToast } = usePwaLifecycle();
         <RouteTabs />
       </header>
 
-      <main class="flex-1">
-        <RouterView />
+      <main data-testid="app-main" class="flex-1">
+        <RouterView v-slot="{ Component, route }">
+          <KeepAlive>
+            <component :is="Component" :key="route.path" />
+          </KeepAlive>
+        </RouterView>
       </main>
     </div>
 
