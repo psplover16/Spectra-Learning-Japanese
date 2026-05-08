@@ -144,7 +144,7 @@ src/
 │  │  ├─ composables/
 │  │  │  └─ usePwaLifecycle.ts (提供全域 PWA lifecycle service；在元件 mounted 時註冊 service，並暴露 main.ts 可呼叫的 launch update check)
 │  │  ├─ services/
-│  │  │  └─ pwaLifecycleService.ts (PWA 更新邏輯核心；呼叫 registerSW、保存 registration、啟動時主動 update check、控制更新提示、延後更新與清快取)
+│  │  │  └─ pwaLifecycleService.ts (PWA 更新邏輯核心；呼叫 registerSW、保存 registration、啟動時主動 update check、控制更新提示、延後更新，並保留 Workbox 管理的離線快取)
 │  │  └─ types/
 │  │     └─ pwa.ts (PWA ToastState 型別定義)
 │  │
@@ -220,7 +220,7 @@ tests/
 ├─ e2e/ (Playwright 端到端測試)
 │  ├─ app-shell.smoke.spec.ts (整個網站 shell 與基本進站流程 smoke test；驗證四主路由導覽、文法等級切換、N5 direct URL 與持久化)
 │  ├─ grammar-change-rules.spec.ts (375px 下 `/grammar` 的展開流程、主要文法表格可見性與不破版驗證)
-│  ├─ pwa-offline-route-cache.spec.ts (production preview 專用 PWA 離線快取測試；需設定 `PLAYWRIGHT_PWA=1`，驗證已訪問 `/vocabulary` 後離線回訪仍可 render route shell)
+│  ├─ pwa-offline-route-cache.spec.ts (production preview 專用 PWA 離線快取測試；需設定 `PLAYWRIGHT_PWA=1`，驗證更新 reload 後離線回訪 `/n5-grammar` 與 `/vocabulary` 仍可 render route shell 與 lazy learning data assets)
 │  ├─ practice-layout.smoke.spec.ts (375px 下 `/practice` 首屏、表格可讀性與無水平捲動 smoke test)
 │  ├─ practice-exam-flow.spec.ts (從選字到開始測驗的完整流程測試，含 modal 題目列存在驗證)
 │  ├─ n5-grammar-layout.spec.ts (375px 下 `/n5-grammar` 的展開流程、主要群組可見性、不破版與 N5 section sticky header 接續黏頂驗證)
@@ -293,7 +293,7 @@ index.html
 - `AppShell.vue` 使用 RouterView slot 搭配 KeepAlive 保留已訪問的主要路由 instance，範圍包含 `/practice`、`/grammar`、`/vocabulary`、`/n1-grammar`、`/n2-grammar`、`/n3-grammar`、`/n4-grammar`、`/n5-grammar`。
 - 被 KeepAlive 的 route 需處理 activated/deactivated 行為：`VocabularyView.vue` 成對管理 body scroll lock，`useVocabularySession.ts` 清掉 pending reveal timer，`PracticeView.vue` 清掉延遲 scroll timer，`N5GrammarView.vue` 在重新啟用時同步 localStorage 完成狀態。
 - `VocabularyView.vue` 與 `N5GrammarView.vue` 都採 shell-first：先 render 控制列、表格/loading row 或 N5 loading section，再分段 dynamic import 單字 stage 或 N5 文法資料。
-- PWA 驗證方式包含 `npm run build` 檢查 500 KB chunk 警戒線、`npx playwright test tests/e2e/route-switching-performance.spec.ts --project=chromium` 驗證主要路由切換，以及 production preview 下設定 `PLAYWRIGHT_PWA=1` 執行 `tests/e2e/pwa-offline-route-cache.spec.ts` 驗證已訪問 `/vocabulary` 後離線回訪。
+- PWA 驗證方式包含 `npm run build` 檢查 500 KB chunk 警戒線、`npx playwright test tests/e2e/route-switching-performance.spec.ts --project=chromium` 驗證主要路由切換，以及 production preview 下設定 `PLAYWRIGHT_PWA=1` 執行 `tests/e2e/pwa-offline-route-cache.spec.ts` 驗證更新 reload 後離線回訪 `/n5-grammar` 與 `/vocabulary` 時，route shell 與 lazy learning data assets 都可從快取 render。
 
 ## 公開資產與 PWA Icon 責任
 
@@ -308,6 +308,7 @@ index.html
 - `src/app/main.ts` 在 Vue app mount 後呼叫一次 `triggerLaunchUpdateCheck()`，讓已安裝 PWA App 每次啟動都會主動要求 service worker registration 更新檢查。
 - `src/modules/pwa/composables/usePwaLifecycle.ts` 持有單一 PWA lifecycle service，避免 AppShell toast 狀態與 main.ts 啟動檢查各自建立不同 service。
 - `src/modules/pwa/services/pwaLifecycleService.ts` 保存 Workbox 回傳的 `ServiceWorkerRegistration`，呼叫 `registration.update()`；若 registration 尚未到位會保留一次 launch check request，待 `onRegisteredSW` 回來後補跑。
+- `confirmUpdate()` 只移除 `pwaDeferredUpdateStorageKey` 並呼叫 `updateServiceWorker(true)`；它不手動清空全部 CacheStorage，避免刪除 Workbox precache 中仍需離線使用的 app shell、route chunks、N5 文法與單字資料 chunks。舊版 precache 由 Workbox `cleanupOutdatedCaches()` 依生命週期清理。
 - `src/shared/version/appVersion.ts` 是前端版本號單一來源；正式 build 讀取 `__APP_VERSION__`，該值由 `vite.config.ts` 於 build-time 組成 `package.json#version + Git commit count`，測試或未注入時 fallback 為 `0.0.0-dev`。
 - `src/shared/components/AppVersionLabel.vue` 只渲染版本字串，不包含更新檢查、副作用或互動 UI。
 - `PracticeView.vue` 將 `AppVersionLabel` 放在 Practice 頁面所有非 overlay 內容之後的全寬版號列，靠右對齊整個頁面內容寬度；它不屬於右欄 `practice-reference-sections`，也不是 fixed viewport 元素。

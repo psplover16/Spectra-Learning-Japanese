@@ -29,15 +29,6 @@ export function createPwaLifecycleService() {
     toast.value = { ...defaultToastState };
   }
 
-  async function clearCacheStorage(): Promise<void> {
-    if (typeof window === 'undefined' || !('caches' in window)) {
-      return;
-    }
-
-    const keys = await window.caches.keys();
-    await Promise.all(keys.map((key) => window.caches.delete(key)));
-  }
-
   async function confirmUpdate(): Promise<void> {
     if (!updateServiceWorker) {
       dismissToast();
@@ -45,7 +36,6 @@ export function createPwaLifecycleService() {
     }
 
     window.localStorage.removeItem(pwaDeferredUpdateStorageKey);
-    await clearCacheStorage();
     await updateServiceWorker(true);
     dismissToast();
   }
