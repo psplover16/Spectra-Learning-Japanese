@@ -48,7 +48,7 @@ describe('pwaLifecycleService', () => {
     expect(window.localStorage.getItem(pwaDeferredUpdateStorageKey)).toBe('true');
   });
 
-  it('按下立即更新會清除 cache 並呼叫 update service worker', async () => {
+  it('按下立即更新會保留 CacheStorage 並呼叫 update service worker', async () => {
     const service = createPwaLifecycleService();
     service.register();
 
@@ -56,6 +56,8 @@ describe('pwaLifecycleService', () => {
     await service.confirmUpdate();
 
     expect(window.localStorage.getItem(pwaDeferredUpdateStorageKey)).toBeNull();
+    expect(window.caches.keys).not.toHaveBeenCalled();
+    expect(window.caches.delete).not.toHaveBeenCalled();
     expect(pwaRegisterMock.updateServiceWorker).toHaveBeenCalledWith(true);
   });
 
