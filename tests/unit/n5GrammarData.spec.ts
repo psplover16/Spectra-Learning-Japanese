@@ -1,5 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { n5GrammarSourceCoverage, particleSectionIds, sortedN5GrammarSections } from '@/modules/n5Grammar/data/grammarNotes';
+import { sections as particlesSections } from '@/modules/n5Grammar/data/sections/particles';
+import { sections as fundamentalsSections } from '@/modules/n5Grammar/data/sections/fundamentals';
+import { sections as sentencePatternsSections } from '@/modules/n5Grammar/data/sections/sentence-patterns';
+import { sections as expressionsSections } from '@/modules/n5Grammar/data/sections/expressions';
+import { sections as honorificsSections } from '@/modules/n5Grammar/data/sections/honorifics';
+
+describe('N5 sections 子檔 category 一致性', () => {
+  it('particles.ts 內所有 section.category 都是 particles', () => {
+    expect(particlesSections.length).toBeGreaterThan(0);
+    expect(particlesSections.every((s) => s.category === 'particles')).toBe(true);
+  });
+
+  it('fundamentals.ts 內所有 section.category 都是 fundamentals', () => {
+    expect(fundamentalsSections.length).toBeGreaterThan(0);
+    expect(fundamentalsSections.every((s) => s.category === 'fundamentals')).toBe(true);
+  });
+
+  it('sentence-patterns.ts 內所有 section.category 都是 sentence-patterns', () => {
+    expect(sentencePatternsSections.length).toBeGreaterThan(0);
+    expect(sentencePatternsSections.every((s) => s.category === 'sentence-patterns')).toBe(true);
+  });
+
+  it('expressions.ts 為空陣列（N5 預留結構）', () => {
+    expect(expressionsSections).toEqual([]);
+  });
+
+  it('honorifics.ts 內所有 section.category 都是 honorifics', () => {
+    expect(honorificsSections.length).toBeGreaterThan(0);
+    expect(honorificsSections.every((s) => s.category === 'honorifics')).toBe(true);
+  });
+});
 
 function getSection(sectionId: string) {
   const section = sortedN5GrammarSections.find((entry) => entry.id === sectionId);
@@ -155,7 +186,7 @@ describe('n5GrammarData', () => {
   });
 
   it('助詞群組固定排在最後，順序與來源筆記一致', () => {
-    const actualParticleIds = sortedN5GrammarSections.filter((section) => section.category === 'particle').map((section) => section.id);
+    const actualParticleIds = sortedN5GrammarSections.filter((section) => section.category === 'particles').map((section) => section.id);
     const lastSectionIds = sortedN5GrammarSections.slice(-particleSectionIds.length).map((section) => section.id);
 
     expect(actualParticleIds).toEqual([...particleSectionIds]);
@@ -225,7 +256,7 @@ describe('015 particle-to（助詞と）', () => {
     const section = sortedN5GrammarSections.find((s) => s.id === 'particle-to');
     expect(section).toBeDefined();
     expect(section!.order).toBe(97);
-    expect(section!.category).toBe('particle');
+    expect(section!.category).toBe('particles');
   });
 
   it('particle-to 的 sharedNotes 含 to-noun-listing 且內容非空', () => {
@@ -253,7 +284,7 @@ describe('015 particle-de（助詞で）', () => {
     const section = sortedN5GrammarSections.find((s) => s.id === 'particle-de');
     expect(section).toBeDefined();
     expect(section!.order).toBe(98);
-    expect(section!.category).toBe('particle');
+    expect(section!.category).toBe('particles');
     const note = section!.sharedNotes.find((n) => n.id === 'de-with-mo');
     expect(note).toBeDefined();
     expect(note!.content.length).toBeGreaterThan(0);
@@ -276,11 +307,11 @@ describe('015 US3 排列順序與來源覆蓋', () => {
     expect(ids.slice(-4)).toEqual(['particle-to', 'particle-de', 'particle-kara', 'particle-made']);
   });
 
-  it('sortedN5GrammarSections 中所有 particle 類別排在所有 core 類別之後，且 particle-to order 小於 particle-de', () => {
+  it('sortedN5GrammarSections 中所有 particles 類別排在所有非 particles 類別之後，且 particle-to order 小於 particle-de', () => {
     const sections = sortedN5GrammarSections;
-    const lastCoreIndex = sections.map((s) => s.category).lastIndexOf('core');
-    const firstParticleIndex = sections.map((s) => s.category).indexOf('particle');
-    expect(firstParticleIndex).toBeGreaterThan(lastCoreIndex);
+    const lastNonParticlesIndex = sections.findLastIndex((s) => s.category !== 'particles');
+    const firstParticleIndex = sections.findIndex((s) => s.category === 'particles');
+    expect(firstParticleIndex).toBeGreaterThan(lastNonParticlesIndex);
 
     const to = sections.find((s) => s.id === 'particle-to')!;
     const de = sections.find((s) => s.id === 'particle-de')!;
@@ -299,9 +330,9 @@ describe('015 US3 排列順序與來源覆蓋', () => {
   });
 });
 
-describe('016 邀約與變化表現 core sections', () => {
-  it('core sections 依 v16 整理順序排列，且助詞仍排在最後', () => {
-    const coreSections = sortedN5GrammarSections.filter((section) => section.category === 'core');
+describe('016 邀約與變化表現 非 particles sections', () => {
+  it('非 particles sections 依 v16 整理順序排列，且助詞仍排在最後', () => {
+    const coreSections = sortedN5GrammarSections.filter((section) => section.category !== 'particles');
 
     expect(coreSections.map((section) => section.id)).toEqual([
       'core-term-usage-overview',
@@ -424,14 +455,14 @@ describe('017 v16 N5 文法整理', () => {
     expect(topic!.examples.map((example) => example.japanese)).toContain('料理ができました。');
   });
 
-  it('を、で、から、まで 都是助詞群組，且助詞仍排在所有 core 後方', () => {
+  it('を、で、から、まで 都是助詞群組，且助詞仍排在所有非 particles sections 後方', () => {
     const targetIds = ['particle-wo', 'particle-de', 'particle-kara', 'particle-made'];
-    const lastCoreOrder = Math.max(...sortedN5GrammarSections.filter((section) => section.category === 'core').map((section) => section.order));
+    const lastNonParticlesOrder = Math.max(...sortedN5GrammarSections.filter((section) => section.category !== 'particles').map((section) => section.order));
 
     for (const id of targetIds) {
       const section = getSection(id);
-      expect(section.category).toBe('particle');
-      expect(section.order).toBeGreaterThan(lastCoreOrder);
+      expect(section.category).toBe('particles');
+      expect(section.order).toBeGreaterThan(lastNonParticlesOrder);
       expect(section.topics.length).toBeGreaterThan(0);
     }
 

@@ -320,6 +320,46 @@ index.html
 - `N5GrammarSectionCard.vue` 的完成 checkbox 以外層 hit area wrapper 放大手機點擊/觸控範圍；checkbox input 視覺尺寸、樣式與「是否已學習」語意維持不變，且 hit area 的互動不會觸發 section 展開/收合。
 - section 在 checkbox 切換後會立即於兩個 zone 間移動；每個 zone 內仍依 `sortedN5GrammarSections` 的原始順序呈現。
 
+## N1~N5 文法資料分類規範
+
+每個 JLPT 級別的 grammar module 使用一致的 5 大 category union 分類其 section 資料；資料以 `src/modules/n<L>Grammar/data/sections/<category>.ts` 一檔一 category 方式組織。
+
+### 5 大 category 定義
+
+| category | 涵蓋內容 | 判斷依據 |
+|---|---|---|
+| `particles` | 助詞（は、が、を、より、ながら、ばかりに 等） | 主題本質為「助詞」即放此 |
+| `fundamentals` | 詞類補助（指示詞、疑問詞、數字、時間、副詞、接續詞） | 不屬助詞但屬「詞類層」基礎內容 |
+| `sentence-patterns` | 句型結構（敬體、條件、連接、文末表現、邀約、狀態變化等） | 講「怎麼造句／句型結構」 |
+| `expressions` | 推測、傳聞、慣用句、書面/古典語法 | 表達特定語意但不屬上述四類 |
+| `honorifics` | 敬體、尊敬語、謙讓語、丁寧語等敬語體系 | 涉及禮貌等級／敬語體系 |
+
+### 模糊邊界處理
+
+- 「敬體句型」優先 `sentence-patterns`（重點是「句型」）
+- 「敬語動詞」優先 `honorifics`（重點是「敬語體系」）
+- 既混合句型結構與敬語的內容（如「敬體變化速覽」）依「主要學習目標」歸類
+
+### 新增 section 流程
+
+1. 看主題本質 → 對照上表決定 category
+2. 開啟對應 `src/modules/n<L>Grammar/data/sections/<category>.ts`
+3. 在該檔的 `sections` 陣列 push 新 section（`category` 欄位需與檔名 category 一致）
+4. 若 section 是助詞且需出現在 `particle-...` ID 列表，更新 `particles.ts` 的 `particleSectionIds` const
+5. 跑 `npm run typecheck`（TypeScript 強制 type union）+ `npm run test:unit`（測試強制檔案內容 category 一致性）
+
+### 三層強制保護
+
+- **Type 強制**：`N<L>GrammarCategory` type union 限定 5 個值，編譯期擋下錯誤值
+- **測試強制**：`tests/unit/n<L>GrammarData.spec.ts` 內每個 sections 子檔對應一條一致性測試
+- **文件規範**：本章節為新增 section 的 SOP
+
+### 未來 N4/N3/N2/N1 沿用
+
+- 各級獨立 module（`src/modules/n4Grammar/`、`src/modules/n3Grammar/` 等），不抽 `grammar-shared/`
+- 各級獨立定義 type union（如 `N4GrammarCategory`），值域同樣為 5 大 category
+- 各級的 sections 子檔結構與 N5 對稱，保留 `expressions.ts` 等空檔以維持結構一致
+
 ## Icon 使用規範
 
 - 全站 icon 統一透過 `unplugin-icons` + iconify 集合引入；Vite 與 Vitest 的 plugins 都已註冊 `Icons({ compiler: 'vue3' })`，TypeScript 的 `unplugin-icons/types/vue` 已加入 `tsconfig.app.json` 的 `types`。

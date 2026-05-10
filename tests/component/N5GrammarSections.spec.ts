@@ -30,18 +30,18 @@ describe('N5GrammarSections', () => {
   it('敬體變化速覽預設收合，展開後顯示 compare table 與 12 組儲存格例句', async () => {
     const { wrapper } = await mountLoadedN5GrammarView();
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
-    const body = wrapper.find('[data-testid="n5-grammar-body-polite-overview"]');
+    const findBody = () => wrapper.find('[data-testid="n5-grammar-body-polite-overview"]');
 
     expect(wrapper.get('[data-testid="n5-grammar-title-core-term-usage-overview"]').text()).toBe('核心詞類用法總覽');
     expect(wrapper.get('[data-testid="n5-grammar-title-polite-overview"]').text()).toBe('敬體變化速覽');
     expect(wrapper.get('[data-testid="n5-grammar-title-sentence-basics"]').text()).toBe('敬體句型：現在型與詞類基礎');
     expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(body.attributes('style')).toContain('display: none;');
+    expect(findBody().exists()).toBe(false);
 
     await toggle.trigger('click');
 
     expect(toggle.attributes('aria-expanded')).toBe('true');
-    expect(body.attributes('style') ?? '').not.toContain('display: none;');
+    expect(findBody().exists()).toBe(true);
     const politeOverview = wrapper.get('[data-testid="n5-grammar-section-polite-overview"]');
 
     expect(politeOverview.find('[data-testid="n5-grammar-compare-table-polite-overview"]').exists()).toBe(true);
@@ -104,14 +104,14 @@ describe('N5GrammarSections', () => {
 
     for (const id of targetIds) {
       const toggle = wrapper.get(`[data-testid="n5-grammar-toggle-${id}"]`);
-      const body = wrapper.get(`[data-testid="n5-grammar-body-${id}"]`);
+      const body = wrapper.find(`[data-testid="n5-grammar-body-${id}"]`);
 
       expect(toggle.attributes('aria-expanded')).toBe('false');
-      expect(body.attributes('style')).toContain('display: none;');
+      expect(body.exists()).toBe(false);
     }
 
     expect(wrapper.get('[data-testid="n5-grammar-toggle-question-words"]').attributes('aria-expanded')).toBe('false');
-    expect(wrapper.get('[data-testid="n5-grammar-body-question-words"]').attributes('style')).toContain('display: none;');
+    expect(wrapper.find('[data-testid="n5-grammar-body-question-words"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="n5-grammar-toggle-core-term-usage-overview"]').trigger('click');
     await wrapper.get('[data-testid="n5-grammar-toggle-dekiru-ability"]').trigger('click');
@@ -172,7 +172,7 @@ describe('N5GrammarSections', () => {
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
     const completionHitArea = wrapper.get('[data-testid="n5-grammar-completion-hit-area-sentence-basics"]');
-    const body = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
+    const body = wrapper.find('[data-testid="n5-grammar-body-sentence-basics"]');
 
     expect(toggle.text()).not.toContain('▼');
     expect(toggle.text()).not.toContain('▲');
@@ -180,41 +180,41 @@ describe('N5GrammarSections', () => {
     expect(checkbox.classes()).toEqual(['n5-grammar-section-completion']);
     expect(checkbox.attributes('aria-label')).toBe('標記 敬體句型：現在型與詞類基礎 為已學完');
     expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(body.attributes('style')).toContain('display: none;');
+    expect(body.exists()).toBe(false);
 
     await completionHitArea.trigger('click');
 
     const completedToggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
     const completedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
-    const completedBody = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
+    const completedBody = wrapper.find('[data-testid="n5-grammar-body-sentence-basics"]');
 
     expect((completedCheckbox.element as HTMLInputElement).checked).toBe(true);
     expect(completedToggle.attributes('aria-expanded')).toBe('false');
     expect(completedToggle.attributes('aria-disabled')).toBe('true');
-    expect(completedBody.attributes('style')).toContain('display: none;');
+    expect(completedBody.exists()).toBe(false);
   });
 
   it('展開與收合控制不會切換完成 checkbox', async () => {
     const { wrapper } = await mountLoadedN5GrammarView();
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
-    const body = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
+    const findBody = () => wrapper.find('[data-testid="n5-grammar-body-polite-overview"]');
 
     expect((checkbox.element as HTMLInputElement).checked).toBe(false);
     expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(body.attributes('style')).toContain('display: none;');
+    expect(findBody().exists()).toBe(false);
 
     await toggle.trigger('click');
 
     expect((checkbox.element as HTMLInputElement).checked).toBe(false);
     expect(toggle.attributes('aria-expanded')).toBe('true');
-    expect(body.attributes('style') ?? '').not.toContain('display: none;');
+    expect(findBody().exists()).toBe(true);
 
     await toggle.trigger('click');
 
     expect((checkbox.element as HTMLInputElement).checked).toBe(false);
     expect(toggle.attributes('aria-expanded')).toBe('false');
-    expect(body.attributes('style')).toContain('display: none;');
+    expect(findBody().exists()).toBe(false);
   });
 
   it('會從 localStorage 還原完成狀態，並在變更後寫回 snapshot', async () => {
@@ -232,12 +232,12 @@ describe('N5GrammarSections', () => {
 
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-sentence-basics"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-sentence-basics"]');
-    const body = wrapper.get('[data-testid="n5-grammar-body-sentence-basics"]');
+    const body = wrapper.find('[data-testid="n5-grammar-body-sentence-basics"]');
 
     expect((checkbox.element as HTMLInputElement).checked).toBe(true);
     expect(toggle.attributes('aria-expanded')).toBe('false');
     expect(toggle.attributes('aria-disabled')).toBe('true');
-    expect(body.attributes('style')).toContain('display: none;');
+    expect(body.exists()).toBe(false);
 
     await checkbox.trigger('click');
     const snapshot = JSON.parse(window.localStorage.getItem(n5GrammarCompletionStorageKey) ?? 'null') as {
@@ -324,40 +324,38 @@ describe('N5GrammarSections', () => {
     const header = wrapper.get('[data-testid="n5-grammar-header-polite-overview"]');
     const toggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const checkbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
-    const body = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
+    const findBody = () => wrapper.find('[data-testid="n5-grammar-body-polite-overview"]');
 
     expect(header.classes()).not.toContain('is-expanded');
     await toggle.trigger('click');
     expect(toggle.attributes('aria-expanded')).toBe('true');
     expect(header.classes()).toContain('is-expanded');
-    expect(body.attributes('style') ?? '').not.toContain('display: none;');
+    expect(findBody().exists()).toBe(true);
 
     await checkbox.trigger('click');
 
     const completedHeader = wrapper.get('[data-testid="n5-grammar-header-polite-overview"]');
     const completedToggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const completedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
-    const completedBody = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
 
     expect((completedCheckbox.element as HTMLInputElement).checked).toBe(true);
     expect(completedToggle.attributes('aria-expanded')).toBe('false');
     expect(completedToggle.attributes('aria-disabled')).toBe('true');
     expect(completedHeader.classes()).toContain('is-completed');
     expect(completedHeader.classes()).not.toContain('is-expanded');
-    expect(completedBody.attributes('style')).toContain('display: none;');
+    expect(findBody().exists()).toBe(false);
 
     await completedToggle.trigger('click');
     expect(completedToggle.attributes('aria-expanded')).toBe('false');
-    expect(completedBody.attributes('style')).toContain('display: none;');
+    expect(findBody().exists()).toBe(false);
 
     await completedCheckbox.trigger('click');
     const unfinishedToggle = wrapper.get('[data-testid="n5-grammar-toggle-polite-overview"]');
     const unfinishedCheckbox = wrapper.get('[data-testid="n5-grammar-completion-polite-overview"]');
-    const unfinishedBody = wrapper.get('[data-testid="n5-grammar-body-polite-overview"]');
 
     expect((unfinishedCheckbox.element as HTMLInputElement).checked).toBe(false);
     expect(unfinishedToggle.attributes('aria-disabled')).toBeUndefined();
     expect(unfinishedToggle.attributes('aria-expanded')).toBe('false');
-    expect(unfinishedBody.attributes('style')).toContain('display: none;');
+    expect(findBody().exists()).toBe(false);
   });
 });

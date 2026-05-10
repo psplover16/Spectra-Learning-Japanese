@@ -90,7 +90,7 @@ function toggleCompleted(event: Event) {
     </div>
 
     <div
-      v-show="contentVisible"
+      v-if="contentVisible"
       :id="`n5-grammar-body-${section.id}`"
       :data-testid="`n5-grammar-body-${section.id}`"
       class="n5-grammar-section-body"
