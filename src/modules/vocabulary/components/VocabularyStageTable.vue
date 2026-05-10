@@ -147,6 +147,7 @@ function handleRowClick(entry: VocabularyEntry) {
               <input
                 data-testid="vocabulary-bulk-mark-checkbox"
                 type="checkbox"
+                aria-label="勾選或取消勾選目前顯示單字"
                 title="勾選或取消勾選目前顯示單字"
                 :checked="props.allVisibleDraftMarked"
                 @change="emit('bulk-toggle-marked', ($event.target as HTMLInputElement).checked)"
@@ -217,6 +218,7 @@ function handleRowClick(entry: VocabularyEntry) {
               <input
                 :data-testid="`vocabulary-mark-checkbox-${entry.id}`"
                 type="checkbox"
+                :aria-label="`標記單字 ${entry.text ?? entry.id}`"
                 :checked="isDraftMarked(entry.markKey)"
                 @pointerdown.stop
                 @click.stop

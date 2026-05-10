@@ -41,9 +41,10 @@ function renderKana(cell: KanaCell): string {
               <button
                 type="button"
                 class="practice-kana-header-button flex w-full flex-col items-center justify-center gap-1 whitespace-nowrap"
+                :aria-pressed="session.isColumnChecked(column.key) ? 'true' : 'false'"
                 @click="session.toggleColumn(column.key, !session.isColumnChecked(column.key))"
               >
-                <input class="pointer-events-none h-3.5 w-3.5" type="checkbox" :checked="session.isColumnChecked(column.key)" />
+                <span aria-hidden="true" class="practice-kana-checkbox-visual" :class="{ 'is-checked': session.isColumnChecked(column.key) }"></span>
                 <span>{{ column.label }}</span>
               </button>
             </th>
@@ -55,9 +56,10 @@ function renderKana(cell: KanaCell): string {
               <button
                 type="button"
                 class="practice-kana-header-button flex w-full flex-col items-center justify-center gap-1 whitespace-nowrap"
+                :aria-pressed="session.isRowChecked(row.rowKey) ? 'true' : 'false'"
                 @click="session.toggleRow(row.rowKey, !session.isRowChecked(row.rowKey))"
               >
-                <input class="pointer-events-none h-3.5 w-3.5" type="checkbox" :checked="session.isRowChecked(row.rowKey)" />
+                <span aria-hidden="true" class="practice-kana-checkbox-visual" :class="{ 'is-checked': session.isRowChecked(row.rowKey) }"></span>
                 <span>{{ row.label }}</span>
               </button>
             </th>
@@ -71,14 +73,16 @@ function renderKana(cell: KanaCell): string {
                 v-if="cell && !isHiddenArchaic(cell)"
                 type="button"
                 class="practice-kana-button flex min-h-[58px] w-full flex-col items-center justify-center gap-1 whitespace-nowrap"
+                :aria-pressed="cell.selectable !== false ? (session.isKanaChecked(cell.id) ? 'true' : 'false') : undefined"
+                :aria-disabled="cell.selectable === false ? 'true' : undefined"
                 @click="cell.selectable === false ? undefined : toggleCell(cell)"
               >
-                <input
+                <span
                   v-if="cell.selectable !== false"
-                  class="pointer-events-none h-3.5 w-3.5"
-                  type="checkbox"
-                  :checked="session.isKanaChecked(cell.id)"
-                />
+                  aria-hidden="true"
+                  class="practice-kana-checkbox-visual"
+                  :class="{ 'is-checked': session.isKanaChecked(cell.id) }"
+                ></span>
                 <div class="practice-kana-text-stack">
                   <div class="practice-kana-main-text font-semibold">{{ renderKana(cell) }}</div>
                   <div class="practice-kana-romaji-text text-ink/70">{{ cell.romaji }}</div>
