@@ -22,6 +22,7 @@
 - 修正 iPhone notch 下 sticky header 被瀏海遮蓋。
 - 補齊 PWA 離線回訪契約（navigationPreload + navigateFallback）。
 - 與 `fix-pwa-update-cache-retention` 新 spec 的「Workbox normal lifecycle」對齊（cleanupOutdatedCaches）。
+- **保留全站文本與 UI 樣式視覺一致性**：本提案以結構/打包/PWA 設定為主，不變更可見文本內容；非 iPhone notch 機種、非字型相關場景的視覺輸出須與既有 dev 同畫素或人眼無感差異。對使用者可見的差異（iPhone notch 安全區延伸、字型 fallback、icon 渲染）須在 PR 內附 before/after 視覺對照證據。
 
 **Non-Goals:**
 
