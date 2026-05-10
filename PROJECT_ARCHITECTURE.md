@@ -320,6 +320,18 @@ index.html
 - `N5GrammarSectionCard.vue` 的完成 checkbox 以外層 hit area wrapper 放大手機點擊/觸控範圍；checkbox input 視覺尺寸、樣式與「是否已學習」語意維持不變，且 hit area 的互動不會觸發 section 展開/收合。
 - section 在 checkbox 切換後會立即於兩個 zone 間移動；每個 zone 內仍依 `sortedN5GrammarSections` 的原始順序呈現。
 
+## Icon 使用規範
+
+- 全站 icon 統一透過 `unplugin-icons` + iconify 集合引入；Vite 與 Vitest 的 plugins 都已註冊 `Icons({ compiler: 'vue3' })`，TypeScript 的 `unplugin-icons/types/vue` 已加入 `tsconfig.app.json` 的 `types`。
+- 預設集合：`@iconify-json/fa6-solid`（已安裝為 devDependency）。
+- 新增 icon 流程：
+  1. 到 https://icones.js.org 找名稱（搜尋 `set/name`，例如 `fa6-solid/xmark`）
+  2. 確認該集合的 `@iconify-json/<set>` 已安裝；未安裝則 `npm i -D @iconify-json/<set>`
+  3. 在 `.vue` 檔內 `import IconName from '~icons/<set>/<name>'`，當 component 用：`<IconName aria-hidden="true" />`（裝飾性 icon），或加上 `aria-label` 取代外層 button 的 a11y 名稱（語義性 icon）
+- 禁止：直接 inline `<svg>` path（除非 iconify 集合內真的找不到）。
+- 禁止：重新引入 `@fortawesome/*` 整套依賴（已於 `optimize-startup-bundle-and-pwa-meta` 移除）。
+- 視覺一致性：替換既有 icon 時須在 PR 內附 before/after 截圖對照，並確認 `width`、`height`、顏色與既有版本人眼無感差異。
+
 ## 一句話總結
 
 - `src/`：真正的產品邏輯與畫面實作。

@@ -66,7 +66,11 @@ describe('ExamModal', () => {
     expect(actionButtons[0]?.text()).toContain('我不清楚');
     expect(actionButtons[1]?.text()).toContain('下一步');
 
-    await wrapper.find('button[aria-label="關閉練習"]').trigger('click');
+    const closeButton = wrapper.find('button[aria-label="關閉練習"]');
+    expect(closeButton.exists()).toBe(true);
+    expect(closeButton.element.tagName).toBe('BUTTON');
+
+    await closeButton.trigger('click');
 
     expect(confirmSpy).toHaveBeenCalledOnce();
     expect(wrapper.emitted('confirmClose')).toHaveLength(1);

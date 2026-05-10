@@ -5,7 +5,21 @@
 :root {
   color: #2f1f18;
   background: #f6f0e8;
-  font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    "Microsoft JhengHei UI",
+    "PingFang TC",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 html,
@@ -19,6 +33,10 @@ body {
   min-height: 100vh;
   background: #f6f0e8;
   color: #2f1f18;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 
 button,
@@ -472,7 +490,8 @@ textarea {
   }
 
   .n5-grammar-section-header {
-    @apply sticky top-0 border-b border-gray-300 bg-neutral-50 transition-colors;
+    @apply sticky border-b border-gray-300 bg-neutral-50 transition-colors;
+    top: var(--safe-top);
     z-index: 1;
   }
 

@@ -27,7 +27,7 @@
 **Non-Goals:**
 
 - 不引入 web font（Noto Sans TC self-host 不做）。
-- 不啟用 Workbox `runtimeCaching`（無 user-generated 圖片需求）。
+- 不啟用 Workbox `runtimeCaching` for **images**（無 user-generated 圖片需求）。註：navigation handler 的 runtimeCaching 是 Workbox 啟用 `navigationPreload` 的 API 約束，必須伴隨；本提案僅加 minimal navigation NetworkFirst handler（cacheName: 'navigation'、networkTimeoutSeconds: 3），不擴及其他 runtime 資源。
 - N5 拆檔、icon 壓縮、CSS 樣式拆分皆屬後續變更。
 - 不引入 SSR/SSG、不換 router、不改單字資料載入機制。
 
@@ -116,7 +116,7 @@
 **Interface / 設定形狀**：
 
 - vite.config.ts 的 build 區塊新增 target 為 es2020 與 rollupOptions.output.manualChunks 為 vendor-vue 一桶。
-- vite.config.ts 的 VitePWA workbox 區塊新增 navigationPreload、navigateFallback、navigateFallbackDenylist、cleanupOutdatedCaches 四個欄位。
+- vite.config.ts 的 VitePWA workbox 區塊新增 navigationPreload、navigateFallback、navigateFallbackDenylist、cleanupOutdatedCaches 四個欄位，以及 minimal runtimeCaching 一條（urlPattern 比對 navigation request、handler NetworkFirst、cacheName 'navigation'、networkTimeoutSeconds 3）— 此 runtimeCaching 僅作為 navigationPreload 的 API 約束配對，不處理其他 runtime 資源。
 - vite.config.ts 的 plugins 陣列新增 Icons compiler vue3。
 - tsconfig.app.json 的 compilerOptions.types 加入 unplugin-icons/types/vue。
 - package.json 移除三筆 fortawesome dependency；新增 devDep unplugin-icons 與 @iconify-json/fa6-solid。

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, watch } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faXmark } from '@fortawesome/free-solid-svg-icons';
+import IconXmark from '~icons/fa6-solid/xmark';
 import BaseButton from '@/shared/components/BaseButton.vue';
 import type { ExamModalQuestionCard } from '@/modules/exam/types/exam';
 import { lockBodyScroll, unlockBodyScroll } from '@/shared/utils/bodyScrollLock';
@@ -97,7 +96,7 @@ onBeforeUnmount(() => {
             aria-label="關閉練習"
             @click="requestClose"
           >
-            <FontAwesomeIcon :icon="faXmark" />
+            <IconXmark aria-hidden="true" />
           </button>
         </div>
 
