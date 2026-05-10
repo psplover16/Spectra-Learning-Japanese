@@ -43,7 +43,7 @@ Spectra-Learning-Japanese/
 ├─ tsconfig.app.json (前端 app TypeScript 設定)
 ├─ tsconfig.json (TypeScript 基礎設定)
 ├─ tsconfig.node.json (Node / 工具腳本 TypeScript 設定)
-├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入；以 package version + Git commit count 組成版本字串，並保留 500 KB chunk 警戒線設定)
+├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入；以 package version + Git commit count 組成版本字串，並保留 500 KB chunk 警戒線設定；含 manualChunks vendor-vue、target es2020、unplugin-icons、vite-plugin-compression（gzip + brotli pre-compression）、條件啟用 rollup-plugin-visualizer（mode === 'analyze'）；Workbox 設定 navigationPreload + navigateFallback + cleanupOutdatedCaches + 最小 navigation runtimeCaching)
 └─ vitest.config.ts (Vitest 設定：jsdom、setup、排除 e2e)
 ```
 
@@ -56,11 +56,6 @@ src/
 │  ├─ main.ts (Vue 啟動入口；createApp(AppShell).use(router).mount('#app') 後觸發一次 PWA launch update check)
 │  ├─ routePreload.ts (主要路由 component lazy loader registry；集中定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 的 dynamic import，支援 idle preload、hover/focus/touchstart navigation intent preload，並以 loading/loaded 狀態去重)
 │  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 與對應 route meta，component 來源統一引用 `routeComponentLoaders`)
-│
-├─ assets/ (靜態素材)
-│  ├─ hero.png (專案使用的圖片素材)
-│  ├─ vue.svg (Vue 預設圖示素材)
-│  └─ vite.svg (Vite 預設圖示素材)
 │
 ├─ modules/ (依功能切分的業務模組)
 │  ├─ exam/ (測驗流程模組：出題、答題、標記不熟、結果保存)
@@ -297,11 +292,11 @@ index.html
 
 ## 公開資產與 PWA Icon 責任
 
-- 根目錄 `public/` 是正式公開靜態資產來源，包含 `public/vite.ico` 與 `public/icons/*.png`。
+- 根目錄 `public/` 是正式公開靜態資產來源，包含 `public/favicon.ico`（多尺寸 16+32 ICO）與 `public/icons/*.png`（已用 oxipng + pngquant 兩階段壓縮）。
 - `_private/_private_fileAssets/v1/public` 僅保留為原始參考素材位置，不再作為正式 build 的公開來源。
 - `vite.config.ts` 使用 Vite 標準 `public/` 目錄與 PWA 設定輸出 favicon、manifest 與安裝圖示，並以 `define.__APP_VERSION__` 注入 `package.json` 的 version 加上 Git commit count，例如 `0.0.1+36`；若 Git metadata 無法解析，build-time 字串 fallback 為 `<package-version>+0`。
 - `src/shared/config/publicAssets.ts` 是 favicon 與 PWA icon 檔名的單一來源，供 Vite 設定與測試共用。
-- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`vite.ico`、`icons/*.png` 與 `package version + Git commit count` 應用版本字串都真的進入可發布產物。
+- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`favicon.ico`、`icons/*.png` 與 `package version + Git commit count` 應用版本字串都真的進入可發布產物。
 
 ## PWA 更新與版本顯示責任
 

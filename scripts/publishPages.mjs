@@ -40,6 +40,10 @@ async function emptyDirectory(directoryPath) {
   return entries;
 }
 
+function isPrecompressedArtifact(filePath) {
+  return filePath.endsWith('.gz') || filePath.endsWith('.br');
+}
+
 async function copyDirectoryContents(sourceDirectoryPath, targetDirectoryPath) {
   await mkdir(targetDirectoryPath, { recursive: true });
 
@@ -50,13 +54,18 @@ async function copyDirectoryContents(sourceDirectoryPath, targetDirectoryPath) {
   }
 
   for (const entry of entries) {
+    if (isPrecompressedArtifact(entry)) {
+      continue;
+    }
+
     await cp(path.join(sourceDirectoryPath, entry), path.join(targetDirectoryPath, entry), {
       force: true,
-      recursive: true
+      recursive: true,
+      filter: (sourcePath) => !isPrecompressedArtifact(sourcePath)
     });
   }
 
-  return entries;
+  return entries.filter((entry) => !isPrecompressedArtifact(entry));
 }
 
 async function isUnsafeSourceIndexHtml(indexPath) {

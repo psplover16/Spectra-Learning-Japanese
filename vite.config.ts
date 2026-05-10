@@ -5,6 +5,8 @@ import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import Icons from 'unplugin-icons/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import viteCompression from 'vite-plugin-compression';
+import { visualizer } from 'rollup-plugin-visualizer';
 import {
   faviconFileName,
   pwaIconDescriptors,
@@ -121,8 +123,11 @@ export default defineConfig(({ mode }) => {
             }
           ]
         }
-      })
-    ],
+      }),
+      viteCompression({ algorithm: 'gzip', ext: '.gz', threshold: 1024 }),
+      viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 1024 }),
+      mode === 'analyze' && visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true })
+    ].filter(Boolean) as ReturnType<typeof vue>[],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
