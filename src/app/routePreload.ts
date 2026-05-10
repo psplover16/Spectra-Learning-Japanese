@@ -25,14 +25,17 @@ export const primaryRoutePaths = [
   '/n5-grammar'
 ] as const satisfies readonly PrimaryRoutePath[];
 
+const grammarPlaceholderLoader: RouteComponentLoader = () =>
+  import('@/modules/grammar/views/GrammarPlaceholderView.vue');
+
 export const routeComponentLoaders: Record<PrimaryRoutePath, RouteComponentLoader> = {
   '/practice': () => import('@/modules/practice/views/PracticeView.vue'),
   '/grammar': () => import('@/modules/grammar/views/GrammarView.vue'),
   '/vocabulary': () => import('@/modules/vocabulary/views/VocabularyView.vue'),
-  '/n1-grammar': () => import('@/modules/grammar/views/N1GrammarView.vue'),
-  '/n2-grammar': () => import('@/modules/grammar/views/N2GrammarView.vue'),
-  '/n3-grammar': () => import('@/modules/grammar/views/N3GrammarView.vue'),
-  '/n4-grammar': () => import('@/modules/grammar/views/N4GrammarView.vue'),
+  '/n1-grammar': grammarPlaceholderLoader,
+  '/n2-grammar': grammarPlaceholderLoader,
+  '/n3-grammar': grammarPlaceholderLoader,
+  '/n4-grammar': grammarPlaceholderLoader,
   '/n5-grammar': () => import('@/modules/n5Grammar/views/N5GrammarView.vue')
 };
 
