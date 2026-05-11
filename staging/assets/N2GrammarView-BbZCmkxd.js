@@ -1,1 +1,0 @@
-import{P as a,c as r,b as t,o as s}from"./index-CBrN6RQE.js";const c={},o={"data-testid":"n2-grammar-placeholder-view",class:"grammar-placeholder-view section-card"};function n(l,e){return s(),r("section",o,[...e[0]||(e[0]=[t("h1",{class:"grammar-placeholder-title"},"N2文法內容準備中",-1)])])}const d=a(c,[["render",n]]);export{d as default};
