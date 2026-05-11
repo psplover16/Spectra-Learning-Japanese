@@ -5,4 +5,12 @@ import { triggerLaunchUpdateCheck } from '@/modules/pwa/composables/usePwaLifecy
 import '@/styles/main.css';
 
 createApp(AppShell).use(router).mount('#app');
-void triggerLaunchUpdateCheck();
+
+const scheduleIdle =
+  typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function'
+    ? window.requestIdleCallback.bind(window)
+    : (callback: IdleRequestCallback): number => window.setTimeout(callback, 0);
+
+scheduleIdle(() => {
+  void triggerLaunchUpdateCheck();
+});

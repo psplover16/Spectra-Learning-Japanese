@@ -3,7 +3,10 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import Icons from 'unplugin-icons/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import viteCompression from 'vite-plugin-compression';
+import { visualizer } from 'rollup-plugin-visualizer';
 import {
   faviconFileName,
   pwaIconDescriptors,
@@ -75,10 +78,19 @@ export default defineConfig(({ mode }) => {
       __APP_VERSION__: JSON.stringify(appVersion)
     },
     build: {
-      chunkSizeWarningLimit: 500
+      chunkSizeWarningLimit: 500,
+      target: 'es2020',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router']
+          }
+        }
+      }
     },
     plugins: [
       vue(),
+      Icons({ compiler: 'vue3' }),
       VitePWA({
         registerType: 'prompt',
         includeAssets: [faviconFileName, ...pwaIconFileNames],
@@ -95,10 +107,27 @@ export default defineConfig(({ mode }) => {
           }))
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,json}']
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,webmanifest}'],
+          navigationPreload: true,
+          navigateFallback: `${appBasePath}index.html`,
+          navigateFallbackDenylist: [/^\/api\//],
+          cleanupOutdatedCaches: true,
+          runtimeCaching: [
+            {
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'navigation',
+                networkTimeoutSeconds: 3
+              }
+            }
+          ]
         }
-      })
-    ],
+      }),
+      viteCompression({ algorithm: 'gzip', ext: '.gz', threshold: 1024 }),
+      viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 1024 }),
+      mode === 'analyze' && visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true })
+    ].filter(Boolean) as ReturnType<typeof vue>[],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))

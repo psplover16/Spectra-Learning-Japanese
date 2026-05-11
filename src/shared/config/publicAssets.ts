@@ -1,6 +1,6 @@
 export const publicAssetSourceDir = 'public' as const;
 
-export const faviconFileName = 'vite.ico' as const;
+export const faviconFileName = 'favicon.ico' as const;
 
 export const pwaIconDescriptors = [
   { src: 'icons/180.png', sizes: '180x180', type: 'image/png' },

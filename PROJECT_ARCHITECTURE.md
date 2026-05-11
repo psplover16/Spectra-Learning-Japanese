@@ -43,7 +43,7 @@ Spectra-Learning-Japanese/
 ├─ tsconfig.app.json (前端 app TypeScript 設定)
 ├─ tsconfig.json (TypeScript 基礎設定)
 ├─ tsconfig.node.json (Node / 工具腳本 TypeScript 設定)
-├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入；以 package version + Git commit count 組成版本字串，並保留 500 KB chunk 警戒線設定)
+├─ vite.config.ts (Vite 建置、alias、PWA、public assets、build-time app version 注入；以 package version + Git commit count 組成版本字串，並保留 500 KB chunk 警戒線設定；含 manualChunks vendor-vue、target es2020、unplugin-icons、vite-plugin-compression（gzip + brotli pre-compression）、條件啟用 rollup-plugin-visualizer（mode === 'analyze'）；Workbox 設定 navigationPreload + navigateFallback + cleanupOutdatedCaches + 最小 navigation runtimeCaching)
 └─ vitest.config.ts (Vitest 設定：jsdom、setup、排除 e2e)
 ```
 
@@ -56,11 +56,6 @@ src/
 │  ├─ main.ts (Vue 啟動入口；createApp(AppShell).use(router).mount('#app') 後觸發一次 PWA launch update check)
 │  ├─ routePreload.ts (主要路由 component lazy loader registry；集中定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 的 dynamic import，支援 idle preload、hover/focus/touchstart navigation intent preload，並以 loading/loaded 狀態去重)
 │  └─ router.ts (路由表；定義 /practice、/grammar、/vocabulary、/n1-grammar～/n5-grammar 與對應 route meta，component 來源統一引用 `routeComponentLoaders`)
-│
-├─ assets/ (靜態素材)
-│  ├─ hero.png (專案使用的圖片素材)
-│  ├─ vue.svg (Vue 預設圖示素材)
-│  └─ vite.svg (Vite 預設圖示素材)
 │
 ├─ modules/ (依功能切分的業務模組)
 │  ├─ exam/ (測驗流程模組：出題、答題、標記不熟、結果保存)
@@ -297,11 +292,11 @@ index.html
 
 ## 公開資產與 PWA Icon 責任
 
-- 根目錄 `public/` 是正式公開靜態資產來源，包含 `public/vite.ico` 與 `public/icons/*.png`。
+- 根目錄 `public/` 是正式公開靜態資產來源，包含 `public/favicon.ico`（多尺寸 16+32 ICO）與 `public/icons/*.png`（已用 oxipng + pngquant 兩階段壓縮）。
 - `_private/_private_fileAssets/v1/public` 僅保留為原始參考素材位置，不再作為正式 build 的公開來源。
 - `vite.config.ts` 使用 Vite 標準 `public/` 目錄與 PWA 設定輸出 favicon、manifest 與安裝圖示，並以 `define.__APP_VERSION__` 注入 `package.json` 的 version 加上 Git commit count，例如 `0.0.1+36`；若 Git metadata 無法解析，build-time 字串 fallback 為 `<package-version>+0`。
 - `src/shared/config/publicAssets.ts` 是 favicon 與 PWA icon 檔名的單一來源，供 Vite 設定與測試共用。
-- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`vite.ico`、`icons/*.png` 與 `package version + Git commit count` 應用版本字串都真的進入可發布產物。
+- `tests/unit/publicAssets.spec.ts` 會驗證 `public/` 來源素材存在，並以暫時 build 輸出確認 `index.html`、`manifest.webmanifest`、`favicon.ico`、`icons/*.png` 與 `package version + Git commit count` 應用版本字串都真的進入可發布產物。
 
 ## PWA 更新與版本顯示責任
 
@@ -319,6 +314,58 @@ index.html
 - 已 render 的 zone 只負責分區與間距，不改變 `N5GrammarSectionCard` 的 checkbox 語意、內容 renderer、storage 格式或原始資料排序。
 - `N5GrammarSectionCard.vue` 的完成 checkbox 以外層 hit area wrapper 放大手機點擊/觸控範圍；checkbox input 視覺尺寸、樣式與「是否已學習」語意維持不變，且 hit area 的互動不會觸發 section 展開/收合。
 - section 在 checkbox 切換後會立即於兩個 zone 間移動；每個 zone 內仍依 `sortedN5GrammarSections` 的原始順序呈現。
+
+## N1~N5 文法資料分類規範
+
+每個 JLPT 級別的 grammar module 使用一致的 5 大 category union 分類其 section 資料；資料以 `src/modules/n<L>Grammar/data/sections/<category>.ts` 一檔一 category 方式組織。
+
+### 5 大 category 定義
+
+| category | 涵蓋內容 | 判斷依據 |
+|---|---|---|
+| `particles` | 助詞（は、が、を、より、ながら、ばかりに 等） | 主題本質為「助詞」即放此 |
+| `fundamentals` | 詞類補助（指示詞、疑問詞、數字、時間、副詞、接續詞） | 不屬助詞但屬「詞類層」基礎內容 |
+| `sentence-patterns` | 句型結構（敬體、條件、連接、文末表現、邀約、狀態變化等） | 講「怎麼造句／句型結構」 |
+| `expressions` | 推測、傳聞、慣用句、書面/古典語法 | 表達特定語意但不屬上述四類 |
+| `honorifics` | 敬體、尊敬語、謙讓語、丁寧語等敬語體系 | 涉及禮貌等級／敬語體系 |
+
+### 模糊邊界處理
+
+- 「敬體句型」優先 `sentence-patterns`（重點是「句型」）
+- 「敬語動詞」優先 `honorifics`（重點是「敬語體系」）
+- 既混合句型結構與敬語的內容（如「敬體變化速覽」）依「主要學習目標」歸類
+
+### 新增 section 流程
+
+1. 看主題本質 → 對照上表決定 category
+2. 開啟對應 `src/modules/n<L>Grammar/data/sections/<category>.ts`
+3. 在該檔的 `sections` 陣列 push 新 section（`category` 欄位需與檔名 category 一致）
+4. 若 section 是助詞且需出現在 `particle-...` ID 列表，更新 `particles.ts` 的 `particleSectionIds` const
+5. 跑 `npm run typecheck`（TypeScript 強制 type union）+ `npm run test:unit`（測試強制檔案內容 category 一致性）
+
+### 三層強制保護
+
+- **Type 強制**：`N<L>GrammarCategory` type union 限定 5 個值，編譯期擋下錯誤值
+- **測試強制**：`tests/unit/n<L>GrammarData.spec.ts` 內每個 sections 子檔對應一條一致性測試
+- **文件規範**：本章節為新增 section 的 SOP
+
+### 未來 N4/N3/N2/N1 沿用
+
+- 各級獨立 module（`src/modules/n4Grammar/`、`src/modules/n3Grammar/` 等），不抽 `grammar-shared/`
+- 各級獨立定義 type union（如 `N4GrammarCategory`），值域同樣為 5 大 category
+- 各級的 sections 子檔結構與 N5 對稱，保留 `expressions.ts` 等空檔以維持結構一致
+
+## Icon 使用規範
+
+- 全站 icon 統一透過 `unplugin-icons` + iconify 集合引入；Vite 與 Vitest 的 plugins 都已註冊 `Icons({ compiler: 'vue3' })`，TypeScript 的 `unplugin-icons/types/vue` 已加入 `tsconfig.app.json` 的 `types`。
+- 預設集合：`@iconify-json/fa6-solid`（已安裝為 devDependency）。
+- 新增 icon 流程：
+  1. 到 https://icones.js.org 找名稱（搜尋 `set/name`，例如 `fa6-solid/xmark`）
+  2. 確認該集合的 `@iconify-json/<set>` 已安裝；未安裝則 `npm i -D @iconify-json/<set>`
+  3. 在 `.vue` 檔內 `import IconName from '~icons/<set>/<name>'`，當 component 用：`<IconName aria-hidden="true" />`（裝飾性 icon），或加上 `aria-label` 取代外層 button 的 a11y 名稱（語義性 icon）
+- 禁止：直接 inline `<svg>` path（除非 iconify 集合內真的找不到）。
+- 禁止：重新引入 `@fortawesome/*` 整套依賴（已於 `optimize-startup-bundle-and-pwa-meta` 移除）。
+- 視覺一致性：替換既有 icon 時須在 PR 內附 before/after 截圖對照，並確認 `width`、`height`、顏色與既有版本人眼無感差異。
 
 ## 一句話總結
 

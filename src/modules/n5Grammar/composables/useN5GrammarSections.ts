@@ -5,7 +5,25 @@ export type N5GrammarSectionsLoader = () => Promise<{
   sortedN5GrammarSections: N5GrammarSection[];
 }>;
 
-const defaultSectionsLoader: N5GrammarSectionsLoader = () => import('@/modules/n5Grammar/data/grammarNotes');
+const defaultSectionsLoader: N5GrammarSectionsLoader = async () => {
+  const [particles, fundamentals, sentencePatterns, expressions, honorifics] = await Promise.all([
+    import('@/modules/n5Grammar/data/sections/particles'),
+    import('@/modules/n5Grammar/data/sections/fundamentals'),
+    import('@/modules/n5Grammar/data/sections/sentence-patterns'),
+    import('@/modules/n5Grammar/data/sections/expressions'),
+    import('@/modules/n5Grammar/data/sections/honorifics')
+  ]);
+  const merged: N5GrammarSection[] = [
+    ...fundamentals.sections,
+    ...honorifics.sections,
+    ...sentencePatterns.sections,
+    ...expressions.sections,
+    ...particles.sections
+  ];
+  return {
+    sortedN5GrammarSections: [...merged].sort((left, right) => left.order - right.order)
+  };
+};
 
 export function useN5GrammarSections(loadSectionsModule: N5GrammarSectionsLoader = defaultSectionsLoader) {
   const sections = ref<N5GrammarSection[]>([]);

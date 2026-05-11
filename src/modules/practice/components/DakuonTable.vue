@@ -34,9 +34,10 @@ function toggleCell(cell: KanaCell): void {
                 v-if="cell"
                 type="button"
                 class="practice-kana-button flex min-h-[58px] w-full flex-col items-center justify-center gap-1 whitespace-nowrap"
+                :aria-pressed="session.isKanaChecked(cell.id) ? 'true' : 'false'"
                 @click="toggleCell(cell)"
               >
-                <input class="pointer-events-none h-3.5 w-3.5" type="checkbox" :checked="session.isKanaChecked(cell.id)" />
+                <span aria-hidden="true" class="practice-kana-checkbox-visual" :class="{ 'is-checked': session.isKanaChecked(cell.id) }"></span>
                 <div class="practice-kana-text-stack">
                   <div class="practice-kana-main-text font-semibold">{{ cell.hiragana }} / {{ cell.katakana }}</div>
                   <div class="practice-kana-romaji-text text-ink/70">{{ cell.romaji }}</div>

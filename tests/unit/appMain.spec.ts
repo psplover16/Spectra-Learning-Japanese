@@ -31,12 +31,21 @@ describe('app main bootstrap', () => {
     triggerLaunchUpdateCheck.mockClear();
   });
 
-  it('掛載應用後觸發一次 PWA 啟動更新檢查', async () => {
-    await import('@/app/main');
+  it('掛載應用後於 idle 階段觸發一次 PWA 啟動更新檢查', async () => {
+    vi.useFakeTimers();
+    try {
+      await import('@/app/main');
 
-    expect(createApp).toHaveBeenCalledTimes(1);
-    expect(use).toHaveBeenCalledTimes(1);
-    expect(mount).toHaveBeenCalledWith('#app');
-    expect(triggerLaunchUpdateCheck).toHaveBeenCalledTimes(1);
+      expect(createApp).toHaveBeenCalledTimes(1);
+      expect(use).toHaveBeenCalledTimes(1);
+      expect(mount).toHaveBeenCalledWith('#app');
+      expect(triggerLaunchUpdateCheck).not.toHaveBeenCalled();
+
+      await vi.runAllTimersAsync();
+
+      expect(triggerLaunchUpdateCheck).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

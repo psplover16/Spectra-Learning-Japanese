@@ -5,7 +5,21 @@
 :root {
   color: #2f1f18;
   background: #f6f0e8;
-  font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    "Microsoft JhengHei UI",
+    "PingFang TC",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 html,
@@ -19,6 +33,10 @@ body {
   min-height: 100vh;
   background: #f6f0e8;
   color: #2f1f18;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 
 button,
@@ -26,6 +44,33 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+.practice-kana-checkbox-visual {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  border: 1px solid #2f1f18;
+  background: #ffffff;
+  border-radius: 2px;
+  position: relative;
+}
+
+.practice-kana-checkbox-visual.is-checked {
+  background: #2f1f18;
+}
+
+.practice-kana-checkbox-visual.is-checked::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 3px;
+  height: 7px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 @layer components {
@@ -472,7 +517,8 @@ textarea {
   }
 
   .n5-grammar-section-header {
-    @apply sticky top-0 border-b border-gray-300 bg-neutral-50 transition-colors;
+    @apply sticky border-b border-gray-300 bg-neutral-50 transition-colors;
+    top: var(--safe-top);
     z-index: 1;
   }
 

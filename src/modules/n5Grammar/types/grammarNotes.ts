@@ -47,13 +47,20 @@ export interface N5GrammarTableExampleGroup {
   note?: string;
 }
 
+export type N5GrammarCategory =
+  | 'particles'
+  | 'fundamentals'
+  | 'sentence-patterns'
+  | 'expressions'
+  | 'honorifics';
+
 export interface N5GrammarSection {
   id: string;
   title: string;
   description: string;
   presentationMode: N5GrammarPresentationMode;
   order: number;
-  category: 'core' | 'particle';
+  category: N5GrammarCategory;
   topics: N5GrammarTopic[];
   sharedNotes: N5GrammarSharedNote[];
   table?: N5GrammarCompareTable;

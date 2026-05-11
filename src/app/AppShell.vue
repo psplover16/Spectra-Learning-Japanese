@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { KeepAlive, onMounted } from 'vue';
+import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import { preloadPrimaryRouteComponentsOnIdle } from '@/app/routePreload';
 import RouteTabs from '@/shared/components/RouteTabs.vue';
