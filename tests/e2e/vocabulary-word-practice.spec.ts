@@ -237,6 +237,33 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
 
   await expect(headerBulkMarkCheckbox(page)).toBeChecked();
   await page.getByTestId('vocabulary-save-marks-button').click();
+  // Allow the async IndexedDB write chain to settle before reload.
+  await page.waitForFunction(async () => {
+    return new Promise<boolean>((resolve) => {
+      const req = indexedDB.open('vocabulary');
+      req.onsuccess = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('marks')) {
+          db.close();
+          resolve(false);
+          return;
+        }
+        const tx = db.transaction('marks', 'readonly');
+        const getAll = tx.objectStore('marks').getAll();
+        getAll.onsuccess = () => {
+          db.close();
+          // Filter out the meta record (id starts with __meta:)
+          const marks = (getAll.result as Array<{ id: string }>).filter((r) => !r.id.startsWith('__meta:'));
+          resolve(marks.length > 0);
+        };
+        getAll.onerror = () => {
+          db.close();
+          resolve(false);
+        };
+      };
+      req.onerror = () => resolve(false);
+    });
+  });
 
   await page.reload();
   await expectCountSummaryAbsent(page);
@@ -244,6 +271,33 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await page.getByTestId('vocabulary-search-input').fill('早上');
   await expectOnlyRow(page, ['あさ', '朝', '早上']);
   await expect(firstVisibleMarkCheckbox(page)).toBeChecked();
+
+  // Per vocabulary-mark-persistence spec: marks persist in the IndexedDB mark store
+  // across reloads. Verify the record id and that localStorage is NOT used.
+  const indexedDbMarkIds = await page.evaluate(() => {
+    return new Promise<string[]>((resolve) => {
+      const req = indexedDB.open('vocabulary');
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction('marks', 'readonly');
+        const getAll = tx.objectStore('marks').getAll();
+        getAll.onsuccess = () => {
+          db.close();
+          const ids = (getAll.result as Array<{ id: string }>)
+            .map((r) => r.id)
+            .filter((id) => !id.startsWith('__meta:'));
+          resolve(ids);
+        };
+        getAll.onerror = () => {
+          db.close();
+          resolve([]);
+        };
+      };
+      req.onerror = () => resolve([]);
+    });
+  });
+  expect(indexedDbMarkIds).toContain('あさ|朝');
+  expect(await page.evaluate(() => window.localStorage.getItem('vocabulary-mark-snapshot'))).toBeNull();
 
   await checkboxInput(page, 'vocabulary-filter-show-marked-only').check();
   await expectOnlyRow(page, ['あさ', '朝', '早上']);
@@ -260,6 +314,72 @@ test('375px 下 JLPT level 篩選與既有單字互動可並用', async ({ page 
   await vocabularyRows(page).first().dispatchEvent('pointerup');
   await expect(combinedContent).toHaveClass(/vocabulary-hidden-content/);
   expect(consoleErrors).toEqual([]);
+});
+
+test('migration: localStorage v2 snapshot 在啟動時被搬到 IndexedDB 且不再寫 localStorage', async ({ page }) => {
+  // Land on root, seed pre-migration state, then navigate into vocabulary.
+  // The seeded localStorage v2 snapshot represents a returning user from the
+  // pre-IndexedDB era.
+  await gotoApp(page, '/');
+
+  // Pre-conditions: clear both stores and seed legacy localStorage data.
+  await page.evaluate(() => {
+    window.localStorage.removeItem('vocabulary-mark-snapshot');
+    return new Promise<void>((resolve) => {
+      const req = indexedDB.deleteDatabase('vocabulary');
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+      req.onblocked = () => resolve();
+    });
+  });
+  await page.evaluate(() => {
+    window.localStorage.setItem(
+      'vocabulary-mark-snapshot',
+      JSON.stringify({
+        version: 2,
+        markedKeys: ['あさ|朝'],
+        updatedAt: '2026-01-01T00:00:00.000Z'
+      })
+    );
+  });
+
+  // Reload triggers main.ts boot, which fires migrateMarksFromLocalStorage().
+  await page.reload();
+
+  // Wait for migration to complete: IndexedDB has the record and localStorage is cleared.
+  await page.waitForFunction(async () => {
+    const ls = window.localStorage.getItem('vocabulary-mark-snapshot');
+    if (ls !== null) return false;
+    return new Promise<boolean>((resolve) => {
+      const req = indexedDB.open('vocabulary');
+      req.onsuccess = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('marks')) {
+          db.close();
+          resolve(false);
+          return;
+        }
+        const getAll = db.transaction('marks', 'readonly').objectStore('marks').getAll();
+        getAll.onsuccess = () => {
+          db.close();
+          const marks = (getAll.result as Array<{ id: string }>).filter((r) => r.id === 'あさ|朝');
+          resolve(marks.length === 1);
+        };
+        getAll.onerror = () => {
+          db.close();
+          resolve(false);
+        };
+      };
+      req.onerror = () => resolve(false);
+    });
+  });
+
+  // Navigate to vocabulary and confirm the marked row shows as marked after migration.
+  await page.goto('/vocabulary');
+  await selectOnlyJlptLevel(page, 'N5');
+  await page.getByTestId('vocabulary-search-input').fill('早上');
+  await expectOnlyRow(page, ['あさ', '朝', '早上']);
+  await expect(firstVisibleMarkCheckbox(page)).toBeChecked();
 });
 
 test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ context, page }) => {

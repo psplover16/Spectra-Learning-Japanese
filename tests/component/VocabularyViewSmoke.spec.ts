@@ -1,8 +1,30 @@
 import { nextTick } from 'vue';
 import { flushPromises, type VueWrapper } from '@vue/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import VocabularyView from '@/modules/vocabulary/views/VocabularyView.vue';
+import { __resetWarnOnce, readAllMarks } from '@/modules/vocabulary/storage/vocabularyMarksDb';
 import { mountWithPracticeSession } from './testUtils';
+
+async function indexedDbHasMarks(): Promise<boolean> {
+  return (await readAllMarks()).length > 0;
+}
+
+/**
+ * Wait until the IndexedDB mark store has at least N records (or 0 if expected = 0).
+ * The async save chain (event → composable → storage → 3 IndexedDB transactions)
+ * does not settle in a single `flushPromises()` cycle.
+ */
+async function waitForIndexedDbMarkCount(expected: number, maxAttempts = 50): Promise<void> {
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const count = (await readAllMarks()).length;
+    if (count === expected) return;
+    await flushPromises();
+    await nextTick();
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  }
+}
 
 const jlptLevels = ['N1', 'N2', 'N3', 'N4', 'N5'] as const;
 
@@ -100,6 +122,12 @@ function appearsBefore(first: Element, second: Element) {
 }
 
 describe('VocabularyViewSmoke', () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    window.localStorage.clear();
+    __resetWarnOnce();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
@@ -194,15 +222,19 @@ describe('VocabularyViewSmoke', () => {
 
     await markCheckbox.setValue(true);
     await wrapper.get('[data-testid="vocabulary-save-marks-button"]').trigger('click');
+    await waitForIndexedDbMarkCount(1);
+    await nextTick();
 
-    expect(window.localStorage.getItem('vocabulary-mark-snapshot')).not.toBeNull();
+    expect(await indexedDbHasMarks()).toBe(true);
+    expect(window.localStorage.getItem('vocabulary-mark-snapshot')).toBeNull();
     expect(wrapper.html()).toContain('vocabulary-marked-row');
     expect((wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]').element as HTMLInputElement).checked).toBe(true);
 
     await wrapper.get('[data-testid="vocabulary-bulk-mark-checkbox"]').setValue(false);
 
     expect((firstVisibleVocabularyRow(wrapper).get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
-    expect(window.localStorage.getItem('vocabulary-mark-snapshot')).not.toBeNull();
+    // Header bulk toggle SHALL NOT write to the mark store; IndexedDB marks remain unchanged
+    expect(await indexedDbHasMarks()).toBe(true);
     expect(wrapper.html()).toContain('vocabulary-marked-row');
   });
 
@@ -240,7 +272,16 @@ describe('VocabularyViewSmoke', () => {
 
     await wrapper.get('[data-testid="vocabulary-filter-show-marked-only"] input').setValue(false);
     await wrapper.get('[data-testid="vocabulary-save-marks-button"]').trigger('click');
+    await waitForIndexedDbMarkCount(1);
+    // Allow the composable's persistedMarkedKeys reactive update (after await chain)
+    // to propagate to the filter computed.
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    await nextTick();
     await wrapper.get('[data-testid="vocabulary-filter-show-marked-only"] input').setValue(true);
+    await flushPromises();
+    await nextTick();
 
     expect(wrapper.find('[data-testid="vocabulary-row-1"]').exists()).toBe(true);
     expect(wrapper.html()).toContain('vocabulary-marked-row');
@@ -299,6 +340,8 @@ describe('VocabularyViewSmoke', () => {
     expect(wrapper.find('[data-testid="exam-modal"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="vocabulary-unsaved-marks-hint"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('尚未儲存');
+    // Mark store SHALL remain empty when the user did not save during the quiz flow
+    expect(await indexedDbHasMarks()).toBe(false);
     expect(window.localStorage.getItem('vocabulary-mark-snapshot')).toBeNull();
   });
 });

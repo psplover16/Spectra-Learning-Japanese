@@ -38,6 +38,7 @@
     "chrome-launcher": "^1.2.1",
     "eslint": "^9.38.0",
     "eslint-plugin-vue": "^10.5.1",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^16.4.0",
     "jsdom": "^27.0.1",
     "lighthouse": "^13.3.0",

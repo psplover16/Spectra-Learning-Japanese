@@ -1,6 +1,8 @@
 import { defineComponent, nextTick } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { createPracticeSession, providePracticeSession } from '@/modules/practice/composables/usePracticeSession';
 import { useVocabularySession, type UseVocabularySessionOptions } from '@/modules/vocabulary/composables/useVocabularySession';
 import {
@@ -9,6 +11,12 @@ import {
   type VocabularyJlptLevel
 } from '@/modules/vocabulary/types/vocabulary';
 import { vocabularyMarksStorageKey } from '@/shared/config/storageKeys';
+import {
+  __resetWarnOnce,
+  putMarks,
+  readAllMarks,
+  writeUpdatedAt
+} from '@/modules/vocabulary/storage/vocabularyMarksDb';
 
 type VocabularySession = ReturnType<typeof useVocabularySession>;
 
@@ -48,8 +56,9 @@ function rawVocabularyEntry(
   };
 }
 
-function storedMarkedKeys() {
-  return JSON.parse(window.localStorage.getItem(vocabularyMarksStorageKey) ?? '{}').markedKeys as string[] | undefined;
+async function storedMarkedKeys(): Promise<string[]> {
+  const records = await readAllMarks();
+  return records.map((r) => r.id);
 }
 
 function mountVocabularySession(options?: UseVocabularySessionOptions) {
@@ -86,6 +95,12 @@ function mountVocabularySession(options?: UseVocabularySessionOptions) {
 }
 
 describe('useVocabularySession', () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    window.localStorage.clear();
+    __resetWarnOnce();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     window.localStorage.clear();
@@ -105,12 +120,11 @@ describe('useVocabularySession', () => {
 
     expect(session.draftMarkedKeys.value.has(markedEntry.markKey)).toBe(true);
     expect(session.hasUnsavedMarkChanges.value).toBe(true);
-    expect(session.saveMarks()).toBe(true);
+    expect(await session.saveMarks()).toBe(true);
     expect(session.persistedMarkedKeys.value.has(markedEntry.markKey)).toBe(true);
-    expect(JSON.parse(window.localStorage.getItem(vocabularyMarksStorageKey) ?? '{}')).toMatchObject({
-      version: 2,
-      markedKeys: [markedEntry.markKey]
-    });
+    expect(await storedMarkedKeys()).toEqual([markedEntry.markKey]);
+    // localStorage SHALL NOT be used as the primary mark store after migration
+    expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBeNull();
 
     session.showMarkedOnly.value = true;
     await nextTick();
@@ -122,10 +136,10 @@ describe('useVocabularySession', () => {
     await nextTick();
     session.toggleMarked(markedEntry.markKey, false);
 
-    expect(session.saveMarks()).toBe(true);
+    expect(await session.saveMarks()).toBe(true);
     expect(session.persistedMarkedKeys.value.size).toBe(0);
     expect(session.draftMarkedKeys.value.size).toBe(0);
-    expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBeNull();
+    expect(await storedMarkedKeys()).toEqual([]);
 
     wrapper.unmount();
   });
@@ -239,13 +253,13 @@ describe('useVocabularySession', () => {
     await nextTick();
 
     expect(session.visibleEntries.value.map((entry) => entry.markKey)).toEqual([visibleKey]);
-    expect(session.saveMarks()).toBe(true);
-    expect(storedMarkedKeys()?.sort()).toEqual([hiddenKey, visibleKey].sort());
+    expect(await session.saveMarks()).toBe(true);
+    expect((await storedMarkedKeys()).sort()).toEqual([hiddenKey, visibleKey].sort());
 
     session.persistedMarkedKeys.value = new Set([visibleKey, hiddenKey]);
     session.draftMarkedKeys.value = new Set<string>();
-    expect(session.saveMarks()).toBe(true);
-    expect(storedMarkedKeys()).toEqual([hiddenKey]);
+    expect(await session.saveMarks()).toBe(true);
+    expect(await storedMarkedKeys()).toEqual([hiddenKey]);
 
     wrapper.unmount();
   });
@@ -267,12 +281,9 @@ describe('useVocabularySession', () => {
 
     const visibleKey = 'alpha|ALPHA';
     const hiddenKey = 'beta|BETA';
-    const persistedSnapshot = JSON.stringify({
-      version: 2,
-      markedKeys: [hiddenKey],
-      updatedAt: '2026-05-04T00:00:00.000Z'
-    });
-    window.localStorage.setItem(vocabularyMarksStorageKey, persistedSnapshot);
+    // Pre-populate the IndexedDB mark store (post-migration baseline)
+    await putMarks([{ id: hiddenKey }]);
+    await writeUpdatedAt('2026-05-04T00:00:00.000Z');
     session.persistedMarkedKeys.value = new Set([hiddenKey]);
     session.draftMarkedKeys.value = new Set([hiddenKey]);
     session.searchText.value = 'alpha';
@@ -286,7 +297,8 @@ describe('useVocabularySession', () => {
     expect(session.draftMarkedKeys.value.has(visibleKey)).toBe(true);
     expect(session.draftMarkedKeys.value.has(hiddenKey)).toBe(true);
     expect(session.persistedMarkedKeys.value).toEqual(new Set([hiddenKey]));
-    expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBe(persistedSnapshot);
+    // Header bulk toggle SHALL NOT write to the mark store
+    expect(await storedMarkedKeys()).toEqual([hiddenKey]);
     expect(session.allVisibleDraftMarked.value).toBe(true);
 
     session.bulkToggleVisibleDraftMarks(false);
@@ -294,7 +306,7 @@ describe('useVocabularySession', () => {
     expect(session.draftMarkedKeys.value.has(visibleKey)).toBe(false);
     expect(session.draftMarkedKeys.value.has(hiddenKey)).toBe(true);
     expect(session.persistedMarkedKeys.value).toEqual(new Set([hiddenKey]));
-    expect(window.localStorage.getItem(vocabularyMarksStorageKey)).toBe(persistedSnapshot);
+    expect(await storedMarkedKeys()).toEqual([hiddenKey]);
     expect(session.allVisibleDraftMarked.value).toBe(false);
     expect(alertSpy).not.toHaveBeenCalled();
     expect(window.confirm).not.toHaveBeenCalledWith('確定要清除目前顯示單字的註記嗎？');

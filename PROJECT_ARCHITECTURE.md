@@ -147,18 +147,23 @@ src/
 │     ├─ components/
 │     │  ├─ VocabularyControlBar.vue (單字頁控制區；提供搜尋、N1～N5 individual checkbox、JLPT row 右側開始測驗、action row 左側練習/註記篩選與右側儲存註記，不顯示未儲存提示且不提供 JLPT 全部勾選)
 │     │  ├─ VocabularyCountSummary.vue (舊單字數量摘要元件；單字頁目前不再渲染可見筆數文字)
-│     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、loading row、共用欄位顯示、目前可見範圍 draft 註記批次勾選/取消與長按揭露事件，header checkbox 不直接寫入 localStorage)
+│     │  └─ VocabularyStageTable.vue (單字表格；處理單一可捲動 table、loading row、共用欄位顯示、目前可見範圍 draft 註記批次勾選/取消與長按揭露事件，header checkbox 不直接寫入 IndexedDB mark store)
 │     ├─ composables/
 │     │  ├─ useVocabularyExamSession.ts (單字測驗獨立 session；從開始當下的可見且已勾選單字建立 snapshot，依 text/kanji 義項分組出題，結算時只更新 draftMarkedKeys)
 │     │  └─ useVocabularySession.ts (單字頁狀態管理；集中持有 JLPT level、stage lazy import 載入/錯誤狀態、`/practice` 勾選、搜尋條件、註記草稿／持久化、目前可見範圍儲存、draft-only 批次勾選與長按揭露；以 N5→N1 分段載入讓 shell 先出現，並在 KeepAlive deactivated 時清理 pending reveal timer)
 │     ├─ data/
-│     │  └─ jpWords_N1.ts ～ jpWords_N5.ts (依 JLPT stage 拆分的 raw 單字資料；runtime 由 `useVocabularySession` 依 checkbox lazy import 對應檔案，測試也由這五份資料聚合全量檢查)
+│     │  ├─ jpWords_N1.ts ～ jpWords_N5.ts (依 JLPT stage 拆分的 raw 單字資料；以 tuple 陣列 `[text, romanization, kanji, meaning]` + 檔內 `STAGE` 常數儲存，import 時透過 `vocabularyEntryMapper.toEntry()` 還原為 `RawVocabularyEntry`；runtime 由 `useVocabularySession` 依 checkbox lazy import 對應檔案，測試也由這五份資料聚合全量檢查)
+│     │  └─ vocabularyEntryMapper.ts (將 tuple 還原為 `RawVocabularyEntry` 的純函式 `toEntry(tuple, stage)`；`stage` 從呼叫端傳入，不寫入 tuple)
 │     ├─ storage/
-│     │  └─ vocabularyMarksStorage.ts (單字註記 localStorage 存取與格式驗證)
+│     │  ├─ vocabularyMarksDb.ts (單字註記 IndexedDB 原生包裝；資料庫 `vocabulary`、object store `marks`、keyPath `id`、含 `readAllMarks` / `putMarks` / `clearMarks` / `readUpdatedAt` / `writeUpdatedAt` 五個 async 函式；IndexedDB 不可用時 graceful degrade 為 in-memory + 一次 console.warn)
+│     │  ├─ vocabularyMarksMigration.ts (一次性 localStorage → IndexedDB 搬遷；先寫後刪、idempotent 重試，v1 numeric id 需要 dictionary 才能 resolve)
+│     │  └─ vocabularyMarksStorage.ts (async 公開介面 `readVocabularyMarksSnapshot` / `writeVocabularyMarksSnapshot` / `clearVocabularyMarksSnapshot` / `prefetchVocabularyMarks`；後端為 IndexedDB mark store，保留 dictionary pruning 與重複 key 去除)
 │     ├─ types/
 │     │  └─ vocabulary.ts (JLPT level、單字資料、顯示欄位、篩選條件與註記快照型別)
 │     ├─ utils/
 │     │  └─ vocabularyFilters.ts (單字字種轉換、JLPT/search/註記/練習條件的單一路徑篩選、N5→N1 顯示排序與顯示內容導出)
+│
+│  注：vocabulary marks 自此變更後存於 IndexedDB（資料庫 `vocabulary`、object store `marks`、keyPath `id`、`id` 為 natural key `${text}|${kanji}`）。應用啟動時於 `main.ts` best-effort 觸發 `migrateMarksFromLocalStorage()` 與 `prefetchVocabularyMarks()`；useVocabularySession 的 hydration 會再呼叫 migration 一次以處理 v1 需要 dictionary 才能 resolve 的情境。原 `vocabulary-mark-snapshot` localStorage key 於 migration 成功後清除。
 │     └─ views/
 │        └─ VocabularyView.vue (單字頁畫面；組裝不含數量摘要的控制列、lazy-loaded 單表格字典、搜尋篩選、註記、長按揭露與單字測驗 ExamModal 串接；無可見單字時隱藏開始測驗，有可見單字但無可見註記時保留 disabled，並在 KeepAlive activated/deactivated 成對管理 body scroll lock)
 │
@@ -241,7 +246,11 @@ tests/
 │  ├─ usePracticeSession.spec.ts (練習狀態管理測試)
 │  ├─ vocabularyData.spec.ts (單字資料測試；驗證 stage 分檔筆數、正規化後筆數、id、N1～N5 stage 值域、v16 補充詞條唯一性與整併後代表詞)
 │  ├─ vocabularyFilters.spec.ts (單字過濾邏輯測試；驗證 JLPT level、搜尋、註記、字母條件與 N5→N1 排序的單一路徑疊加規則)
-│  ├─ vocabularyMarksStorage.spec.ts (單字註記 storage 測試；驗證格式驗證與壞資料清除)
+│  ├─ vocabularyEntryMapper.spec.ts (tuple → RawVocabularyEntry mapper 測試；覆蓋一般情境、`meaning` 含換行、`stage` 隨參數變動)
+│  ├─ vocabularyMarksDb.spec.ts (IndexedDB 包裝測試；happy path 與 IndexedDB 不可用降級路徑)
+│  ├─ vocabularyMarksMigration.spec.ts (localStorage → IndexedDB 一次性搬遷測試；含 v1 / v2 搬遷、idempotent 重試與 IndexedDB 已非空 no-op)
+│  ├─ vocabularyMarksStorage.spec.ts (單字註記 storage 公開介面測試；async API、dictionary pruning、重複 key 去除、format 驗證)
+│  ├─ vocabularyTupleRegression.spec.ts (jpWords_N1～N5 tuple 化前後 deep-equal snapshot 護欄；任一欄位順序錯位即 fail)
 │  └─ vocabularyStageTestData.ts (單字測試專用聚合入口；從 `jpWords_N1.ts`～`jpWords_N5.ts` 組出全量 raw/normalized/stage groups，避免保留 runtime 外的 all-in-one 資料檔)
 └─ setup.ts (Vitest 共用初始化；載入 `jest-dom` matcher)
 ```
