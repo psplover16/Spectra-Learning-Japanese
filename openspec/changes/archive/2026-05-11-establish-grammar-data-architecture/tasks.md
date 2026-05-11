@@ -30,4 +30,4 @@
 - [x] 6.1 執行 npm run typecheck、npm run lint、npm run test:unit。完成定義：三項皆綠（含本次新增的 sections 子檔一致性測試與 useN5GrammarSections 並行載入錯誤處理測試）。驗證：CI log 無錯誤。
 - [x] 6.2 執行 npm run build；比對 dist 內 N5 相關 chunk（grammarNotes-*.js 拆成 5 個 sections-*.js 以及一個合併用 barrel chunk）；前/後 entry chunk + N5 chunk 大小對照表。完成定義：對照表貼進 PR；無 chunk 超 500 KB 警戒線；dist/assets/ 出現 5 個 sections 相關 chunk。驗證：PR 內含對照表（markdown 表格）。
 - [x] 6.3 執行 npx playwright test tests/e2e/n5-grammar-layout.spec.ts --project=chromium。完成定義：通過。驗證：CI log 顯示測試通過。
-- [ ] 6.4 PR 內附 N5 入口頁 + 展開 N5 重點 section（如 polite-overview、sentence-basics、particle-wa）的 before/after 截圖對照；視覺與展開動畫與舊版完全一致。完成定義：截圖貼進 PR。驗證：人工目視比對。
+- [x] 6.4 PR 內附 N5 入口頁 + 展開 N5 重點 section（如 polite-overview、sentence-basics、particle-wa）的 before/after 截圖對照；視覺與展開動畫與舊版完全一致。完成定義：截圖貼進 PR。驗證：人工目視比對。
