@@ -85,6 +85,7 @@ src/
 │  │  ├─ data/
 │  │  │  └─ changeRules.ts (文法頁 11 個 section 的靜態資料來源；集中管理標題、payload 與穩定 id)
 │  │  ├─ storage/
+│  │  │  ├─ grammarBookmarkStorage.ts (跨等級「閱讀位置書籤」localStorage 存取；以 `duotify.grammar.bookmark` 保存 version 1 snapshot、依 N1–N5 分組之 byLevel map，每等級至多一筆 `{ sectionId, updatedAt }`；提供 read/write/clear API 與 corrupt JSON 自動清除)
 │  │  │  └─ grammarLevelStorage.ts (文法等級 localStorage 存取；只保存 level value，驗證設定與 route，並清除壞資料)
 │  │  ├─ types/
 │  │  │  └─ changeRules.ts (文法表格資料型別定義，例如 section、比較列、活用表、可選例句組與詞性變化結構)
@@ -235,7 +236,10 @@ tests/
 │  ├─ appVersion.spec.ts (appVersion 單一來源測試；驗證 build-time 注入值可包含 Git commit count 與 fallback)
 │  ├─ changeRulesData.spec.ts (文法頁靜態資料測試；驗證 section 數量、id 唯一性與關鍵 payload 完整度)
 │  ├─ viteConfigAppVersion.spec.ts (Vite app version helper 測試；驗證 package version + Git commit count 格式與 Git metadata fallback)
+│  ├─ grammarBookmarkStorage.spec.ts (跨等級閱讀位置書籤 storage 測試；驗證單一 key + byLevel map 隔離性、單一書籤覆蓋、empty sectionId 拒絕、corrupt JSON / 錯 schema 自動清除、寫入失敗不拋例外)
 │  ├─ grammarLevelStorage.spec.ts (文法等級偏好 storage 測試；驗證只保存 value、合法還原、無效值與壞 JSON 清除)
+│  ├─ N5GrammarSectionCard.spec.ts (N5 文法 section card 元件測試；驗證書籤按鈕渲染、outline / solid 兩種狀態、點擊 emit、finished zone 不渲染書籤)
+│  ├─ N5GrammarView.spec.ts (N5 文法 view 整合測試；驗證書籤跨 session 還原、單一書籤覆蓋、點實心清除、勾已讀自動清書籤、finished 區隱藏書籤按鈕)
 │  ├─ n5GrammarData.spec.ts (N5 文法靜態資料測試；驗證核心區塊排序、12 組儲存格例句、v16 來源覆蓋、助詞排序與重點字欄位)
 │  ├─ n5GrammarCompletionStorage.spec.ts (N5 文法完成註記 storage 測試；驗證 version 1 snapshot 寫入讀回、完成 id 快照、空資料與 invalid payload 清除)
 │  ├─ pwaLifecycleService.spec.ts (PWA 更新流程與 toast 狀態測試)

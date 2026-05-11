@@ -11,8 +11,16 @@ import {
   readCompletedN5GrammarSectionIds,
   writeCompletedN5GrammarSectionIds
 } from '@/modules/n5Grammar/storage/n5GrammarCompletionStorage';
+import {
+  clearGrammarBookmark,
+  readGrammarBookmark,
+  writeGrammarBookmark
+} from '@/modules/grammar/storage/grammarBookmarkStorage';
+
+const bookmarkLevel = 'N5' as const;
 
 const completedSectionIds = ref<Set<string>>(new Set());
+const bookmarkedSectionId = ref<string | null>(null);
 const { sections, hasSections, isLoading, loadError, loadSections } = useN5GrammarSections();
 const unfinishedSections = computed<N5GrammarSection[]>(() =>
   sections.value.filter((section) => !completedSectionIds.value.has(section.id))
@@ -25,15 +33,27 @@ function syncCompletedSectionIds(): void {
   completedSectionIds.value = new Set(readCompletedN5GrammarSectionIds());
 }
 
+function syncBookmarkedSectionId(): void {
+  bookmarkedSectionId.value = readGrammarBookmark(bookmarkLevel)?.sectionId ?? null;
+}
+
 onMounted(() => {
   syncCompletedSectionIds();
+  syncBookmarkedSectionId();
   void loadSections();
 });
 
-onActivated(syncCompletedSectionIds);
+onActivated(() => {
+  syncCompletedSectionIds();
+  syncBookmarkedSectionId();
+});
 
 function isSectionCompleted(sectionId: string): boolean {
   return completedSectionIds.value.has(sectionId);
+}
+
+function isSectionBookmarked(sectionId: string): boolean {
+  return bookmarkedSectionId.value === sectionId;
 }
 
 function updateSectionCompleted(sectionId: string, completed: boolean): void {
@@ -47,6 +67,24 @@ function updateSectionCompleted(sectionId: string, completed: boolean): void {
 
   completedSectionIds.value = nextCompletedSectionIds;
   writeCompletedN5GrammarSectionIds([...nextCompletedSectionIds]);
+
+  if (completed && bookmarkedSectionId.value === sectionId) {
+    clearGrammarBookmark(bookmarkLevel);
+    bookmarkedSectionId.value = null;
+  }
+}
+
+function updateSectionBookmarked(sectionId: string, bookmarked: boolean): void {
+  if (bookmarked) {
+    writeGrammarBookmark(bookmarkLevel, sectionId);
+    bookmarkedSectionId.value = sectionId;
+    return;
+  }
+
+  if (bookmarkedSectionId.value === sectionId) {
+    clearGrammarBookmark(bookmarkLevel);
+    bookmarkedSectionId.value = null;
+  }
 }
 </script>
 
@@ -74,8 +112,11 @@ function updateSectionCompleted(sectionId: string, completed: boolean): void {
         :key="section.id"
         :section="section"
         :completed="isSectionCompleted(section.id)"
+        :bookmarked="isSectionBookmarked(section.id)"
+        :show-bookmark="true"
         :default-expanded="defaultExpandedSectionIds.includes(section.id)"
         @update:completed="updateSectionCompleted(section.id, $event)"
+        @update:bookmarked="updateSectionBookmarked(section.id, $event)"
       >
         <N5GrammarCompareTable
           v-if="section.presentationMode === 'compare-table'"
@@ -104,6 +145,8 @@ function updateSectionCompleted(sectionId: string, completed: boolean): void {
         :key="section.id"
         :section="section"
         :completed="isSectionCompleted(section.id)"
+        :bookmarked="false"
+        :show-bookmark="false"
         :default-expanded="defaultExpandedSectionIds.includes(section.id)"
         @update:completed="updateSectionCompleted(section.id, $event)"
       >

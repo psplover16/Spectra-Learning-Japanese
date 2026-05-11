@@ -539,6 +539,31 @@ textarea {
     right: -0.375rem;
   }
 
+  .n5-grammar-section-bookmark-hit-area {
+    @apply absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-amber-700 transition-colors hover:text-amber-800;
+    left: -0.375rem;
+  }
+
+  .n5-grammar-section-bookmark-hit-area.is-bookmarked {
+    @apply text-amber-700;
+  }
+
+  .n5-grammar-section-bookmark-icon {
+    @apply h-4 w-4;
+  }
+
+  .n5-grammar-section-bookmark-outline-stack {
+    @apply relative inline-flex h-4 w-4 items-center justify-center;
+  }
+
+  .n5-grammar-section-bookmark-icon-fill {
+    @apply absolute inset-0 h-4 w-4 text-white;
+  }
+
+  .n5-grammar-section-bookmark-icon-border {
+    @apply relative;
+  }
+
   .n5-grammar-section-completion {
     @apply h-4 w-4 cursor-pointer accent-emerald-700;
   }
@@ -974,7 +999,7 @@ textarea {
   }
 
   .n5-grammar-section-toggle {
-    padding-left: 0.625rem;
+    padding-left: 2rem;
     padding-right: 2rem;
   }
 
@@ -984,6 +1009,10 @@ textarea {
 
   .n5-grammar-section-completion-hit-area {
     right: -0.25rem;
+  }
+
+  .n5-grammar-section-bookmark-hit-area {
+    left: -0.25rem;
   }
 }
 
