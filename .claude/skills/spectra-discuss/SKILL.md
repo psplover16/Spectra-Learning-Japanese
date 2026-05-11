@@ -1,7 +1,7 @@
 ---
 name: spectra-discuss
 description: "Have a focused discussion about a topic and reach a conclusion"
-effort: high
+effort: max
 disallowedTools: [Edit, Write]
 license: MIT
 compatibility: Requires spectra CLI.
