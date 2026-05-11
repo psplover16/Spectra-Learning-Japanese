@@ -34,4 +34,4 @@
 - [x] 6.1 執行 npm run typecheck、npm run lint、npm run test:unit。完成定義：三項皆綠。驗證：CI log 無錯誤、無 lint warning 退化。
 - [x] 6.2 執行 npm run build；比對 dist 內 .js 與 .css 各檔的 gzip 大小，以及 entry chunk + vendor-vue chunk 大小，產出前/後對照表。完成定義：對照表貼進 PR；無 chunk 超 500KB 警戒線；vendor-vue chunk 出現於 dist/assets/。驗證：PR 內含對照表（markdown 表格或截圖）。
 - [x] 6.3 執行 PLAYWRIGHT_PWA=1 npx playwright test tests/e2e/pwa-offline-route-cache.spec.ts、npx playwright test tests/e2e/route-switching-performance.spec.ts、tests/e2e/practice-layout.smoke.spec.ts、tests/e2e/n5-grammar-layout.spec.ts。完成定義：四項 e2e 全綠。驗證：CI log 顯示測試通過。
-- [ ] 6.4 在 npm run preview 上跑 Lighthouse 抓 Performance / PWA / Best Practices 三分數，與 main 基線比對；同時在 iPhone notch 機型模擬器人工檢查三處 sticky header 不被瀏海遮蓋。完成定義：分數對比表 + 模擬器截圖貼進 PR。驗證：PR 含 Lighthouse 報告連結或截圖、含 iPhone 模擬器三張 sticky header 截圖。
+- [x] 6.4 在 npm run preview 上跑 Lighthouse 抓 Performance / PWA / Best Practices 三分數，與 main 基線比對；同時在 iPhone notch 機型模擬器人工檢查三處 sticky header 不被瀏海遮蓋。完成定義：分數對比表 + 模擬器截圖貼進 PR。驗證：PR 含 Lighthouse 報告連結或截圖、含 iPhone 模擬器三張 sticky header 截圖。
