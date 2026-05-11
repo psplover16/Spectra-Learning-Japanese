@@ -1,6 +1,7 @@
 ---
 name: spectra-verify
 description: "Verify implementation matches artifacts"
+effort: medium
 context: fork
 agent: Explore
 disallowedTools: [Edit, Write]

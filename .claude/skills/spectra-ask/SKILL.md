@@ -1,6 +1,7 @@
 ---
 name: spectra-ask
 description: "Query openspec/documents and answer questions"
+effort: medium
 context: fork
 agent: Explore
 disallowedTools: [Edit, Write]
