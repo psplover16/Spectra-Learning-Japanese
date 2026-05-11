@@ -1,444 +1,553 @@
-本專案優化討論清單
-====================
+================================================================================
+日語學習 PWA — 優化討論（保持相同功能與 UI 前提下）
+================================================================================
 
-目標：讀取速度更順暢、體積更小、執行更快。
-依「投入產出比（ROI）」排序，越前面越值得先做。
-範疇限定在 src/、vite.config.ts、index.html、tailwind.config.ts、public/ 等專案層級設定，不動 openspec 規格內容。
+討論主題：檢查本專案，在保持相同功能及 UI，目前還有沒有可以優化的？
+討論模式：/spectra:discuss（assumptions mode）
+日期：2026-05-11
+分支：feature/spectra-skill-effort-config
+
+本文件由 discuss mode 產出，僅作為「捕捉思考」之用，未實作任何程式碼。
+若要落地任何優化，請另行用 `/spectra:propose` 建立變更提案。
 
 
-────────────────────────────────────
-A. 高優先級（最高 ROI，建議優先處理）
-────────────────────────────────────
+================================================================================
+PART 0 — 前置盤點（已完成的優化，不要重做）
+================================================================================
 
-A1. FontAwesome 三個套件只為了一個 ✕ 圖示 → 體積最大且立即可改
-- 現況：
-  - dependencies 載入 `@fortawesome/fontawesome-svg-core`、`@fortawesome/free-solid-svg-icons`、`@fortawesome/vue-fontawesome` 三套。
-  - 全專案僅 `src/modules/exam/components/ExamModal.vue` 使用，且只用 `faXmark` 一個圖示。
-- 影響：即使 tree-shaking 也仍會把 wrapper、icon definition 與 svg-core runtime 帶進 bundle，估計可省 30~80KB（gzip 前）。
-- 建議擇一：
-  1. 直接以 inline SVG 取代（最小、零依賴）：
-     `<svg viewBox="0 0 384 512" aria-hidden="true"><path d="M376.6 ..."/></svg>`
-  2. 或保留 FontAwesome 但改為直接 import 單一圖示 SVG：
-     `import xmarkSvg from '@fortawesome/free-solid-svg-icons/faXmark.svg?raw';`
-- 順手：移除 package.json 三個 fortawesome 依賴，縮短 install 時間。
+過去兩週的 git log 顯示，這個專案已經被優化過至少 3 輪，最近的 commits 涵蓋：
 
-A2. Vite build 缺少 vendor chunk 切分策略
-- 現況：`vite.config.ts` 沒有設定 `build.rollupOptions.output.manualChunks`。
-- 影響：所有 node_modules（vue、vue-router、fortawesome、workbox-window）都和應用程式碼混在同一個 entry chunk，第一次進站下載量偏大；之後改 src 也會讓使用者重新下載 vendor。
-- 建議：
-  ```ts
-  build: {
-    chunkSizeWarningLimit: 500,
-    target: 'es2020',          // 配合現代瀏覽器再縮一點 polyfill
+  - optimize-startup-bundle-and-pwa-meta（啟動體積與 PWA meta）
+  - optimize-static-assets（靜態資產壓縮、favicon、scaffold 清理）
+  - improve-route-switching-performance（路由切換效能）
+  - fix-pwa-update-cache-retention（PWA 更新快取保留）
+  - improve-vocabulary-leveling-and-performance（單字效能）
+
+實際在 codebase 觀察到「已做完」的事：
+
+  [✓] 路由全部懶載入 + idle preload（src/app/routePreload.ts）
+  [✓] 單字資料 per-level dynamic import，產出 5 個獨立 chunk
+      （src/modules/vocabulary/composables/useVocabularySession.ts:18-24）
+  [✓] N1-N4 grammar 共用 placeholder（每個 chunk 僅 350 bytes）
+  [✓] Service Worker 註冊延後到 idle 階段
+      （src/app/main.ts:9-16；commit cf3c594 "perf: defer Workbox SW"）
+  [✓] gzip + brotli 雙壓縮已配置（vite.config.ts:127-128）
+  [✓] build target = es2020，沒拉 legacy polyfill 進來
+  [✓] unplugin-icons 整個專案只在 1 個檔（ExamModal.vue）用到 1 個 icon
+  [✓] TypeScript strict + noUncheckedIndexedAccess + noUnusedLocals 都打開
+  [✓] questionDeck (81 KB) 不在 entry chunk，由 exam composable 懶載入
+
+實際 build 產物大小（dist/assets/，最後 build 日期 2026-05-08）：
+
+  | chunk 名稱                | 大小       | 角色                                |
+  |---------------------------|-----------|-------------------------------------|
+  | grammarNotes-*.js         | 130 KB ★  | N5 文法 5 個 section 合成單一 chunk |
+  | index-*.js                | 120 KB    | 入口 + Vue/Router vendor            |
+  | questionDeck-*.js         |  81 KB    | 題庫核心邏輯（懶載入）              |
+  | index-*.css               |  45 KB    | Tailwind 編譯後完整 CSS             |
+  | GrammarView-*.js          |  37 KB    | 變化規則頁                          |
+  | jpWords_N5-*.js           |  34 KB    | N5 單字資料                         |
+  | jpWords_N4-*.js           |  31 KB    | N4 單字資料                         |
+  | PracticeView-*.js         |  29 KB    | 五十音練習頁                        |
+  | VocabularyView-*.js       |  21 KB    | 單字練習頁                          |
+  | jpWords_N3-*.js           |  16 KB    | N3 單字資料                         |
+  | N5GrammarView-*.js        |  15 KB    | N5 文法頁殼                         |
+  | jpWords_N2-*.js           |  11 KB    | N2 單字資料                         |
+  | workbox-window.*.js       |   6 KB    | Service Worker runtime              |
+  | jpWords_N1-*.js           |   3 KB    | N1 單字資料                         |
+  | N1~N4GrammarView-*.js     |   0.35 KB | placeholder（共用內容）             |
+
+★ = 最大的非 vendor chunk，本次討論的主要目標之一。
+
+
+================================================================================
+PART 1 — 候選優化 #1：單字資料 tuple 化（最高確定性）
+================================================================================
+
+【收益】約 15-20 KB（gzip 後，5 個 N 級加總）
+
+【現狀】
+
+src/modules/vocabulary/data/jpWords_N5.ts 開頭：
+
+    import type { RawVocabularyEntry } from '@/modules/vocabulary/types/vocabulary';
+
+    const jpWords_N5: RawVocabularyEntry[] = [
+      {
+        text: "あさ",
+        romanization: "a-sa",
+        kanji: "朝",
+        meaning: "早上",
+        stage: "N5",
+      },
+      ...
+    ];
+
+每筆 entry 重複 5 個 key 名稱（text / romanization / kanji / meaning / stage），
+而 stage 永遠等於 "N5"（在 jpWords_N5.ts 裡），可從檔名 / import path 推導，
+是純冗餘資訊。
+
+【優化策略】
+
+把資料改為 tuple，順序 = [text, romanization, kanji, meaning]：
+
+    const jpWords_N5_raw: ReadonlyArray<readonly [string, string, string, string]> = [
+      ["あさ", "a-sa", "朝", "早上"],
+      ["ばん", "ba-n", "晩", "晚上"],
+      ...
+    ];
+
+    // 在 useVocabularySession.ts 或一個專屬 mapper 裡轉回 object：
+    function toEntry(tuple: readonly [string, string, string, string]): RawVocabularyEntry {
+      return {
+        text: tuple[0],
+        romanization: tuple[1],
+        kanji: tuple[2],
+        meaning: tuple[3],
+        stage: "N5",  // 由 importer 決定
+      };
+    }
+
+    export const jpWords_N5 = jpWords_N5_raw.map(toEntry);
+
+UI、Storage、Filter 邏輯完全不變，因為 `jpWords_N5` 對外仍是 `RawVocabularyEntry[]`。
+
+【估算】
+
+  - jpWords_N5.ts source：47 KB → tuple 化後估 30 KB
+  - 重複 key "text:" 5 chars × ~700 筆 = 3.5 KB raw 節省
+  - 5 個 key 合計 ~20 chars × 700 筆 = 14 KB raw 節省
+  - 5 個檔合計 source：~130 KB → ~85 KB
+
+  gzip 對重複字串擅長，所以實際 wire 節省會打折，但仍估有：
+    - 每檔 gzip 節省 2-4 KB
+    - 5 檔合計 15-20 KB gzip 節省
+
+【風險】
+
+  - 低。runtime mapper 寫錯 → TypeScript 型別系統會擋下
+  - 既有 vitest 對 vocabulary 的測試會立刻 fail
+  - 不影響 UI、不影響 storage、不影響 filter
+
+【實作步驟（之後若要落地）】
+
+  1. 在 src/modules/vocabulary/types/vocabulary.ts 加 tuple 型別
+  2. 寫一個 toEntry mapper（含單元測試）
+  3. 把 5 個 jpWords_N*.ts 改寫為 tuple 形式
+  4. 在 useVocabularySession 的 loaders 套用 mapper
+  5. 跑 vitest + e2e 確認 vocab 頁面行為一致
+  6. 對比 dist/assets/jpWords_N*.js 與 .gz 檔大小，記錄實測收益
+
+
+================================================================================
+PART 2 — 候選優化 #2：grammarNotes 130 KB chunk 分階段載入
+================================================================================
+
+【收益】約 90-100 KB 從「進頁面立即載」延後到 idle，FCP/LCP 改善
+【風險】此條若實作不慎會違反「保持相同 UI」
+
+【現狀】
+
+src/modules/n5Grammar/composables/useN5GrammarSections.ts:8-22：
+
+    const defaultSectionsLoader: N5GrammarSectionsLoader = async () => {
+      const [particles, fundamentals, sentencePatterns, expressions, honorifics] =
+        await Promise.all([
+          import('@/modules/n5Grammar/data/sections/particles'),
+          import('@/modules/n5Grammar/data/sections/fundamentals'),
+          import('@/modules/n5Grammar/data/sections/sentence-patterns'),
+          import('@/modules/n5Grammar/data/sections/expressions'),
+          import('@/modules/n5Grammar/data/sections/honorifics')
+        ]);
+      const merged: N5GrammarSection[] = [
+        ...fundamentals.sections,
+        ...honorifics.sections,
+        ...sentencePatterns.sections,
+        ...expressions.sections,
+        ...particles.sections
+      ];
+      return {
+        sortedN5GrammarSections: [...merged].sort((l, r) => l.order - r.order)
+      };
+    };
+
+5 個檔案永遠透過 Promise.all 一起載 → Vite 看到「總是一起載」就把它們合進
+同一個 chunk：grammarNotes-*.js = 130 KB。
+
+【UI 行為觀察】
+
+src/modules/n5Grammar/views/N5GrammarView.vue:54-126 顯示：
+
+  - 頁面進入時，先顯示「文法資料載入中」section-card
+  - 等 loadSections() 完成才把全部 section 渲染出來
+  - 渲染後分成 "unfinished" 與 "finished" 兩個 zone
+  - N5GrammarSectionCard 有 default-expanded prop，只有 defaultExpandedSectionIds
+    內的 section 預設展開，其他預設收合
+
+也就是說：使用者進入 N5 文法頁時，看到的是一個「載入中」狀態，然後一次顯示
+全部 section（多數收合、預設展開的會打開）。
+
+【優化策略 A：嚴守 UI 不變（保守版）】
+
+不動。理由：
+
+  - 當前 UI 是「一次 loading → 一次顯示全部」
+  - 分階段載會變成「loading → 部分顯示 → 又有新 section 出現」
+  - 嚴格判定為 UI 變化（即使是漸進式增強）
+
+收益：0
+
+【優化策略 B：UI 接近不變（積極版）】
+
+把 5 個 section 拆成兩波：
+
+  Wave 1（進頁面立即載）：
+    - fundamentals + honorifics（基礎 + 敬語，預設展開最常見）
+    - 合計約 1233 行 source，估 build 後 ~50 KB
+
+  Wave 2（fundamentals 顯示完，requestIdleCallback 拉剩下 3 個）：
+    - particles + sentence-patterns + expressions
+    - 合計約 2574 行 source，估 build 後 ~80 KB
+
+實作要點：
+
+  - useN5GrammarSections 提供兩階段：loadCore() 與 loadDeferred()
+  - loadCore 結束 → isLoading = false，sections 已有 fundamentals + honorifics
+  - 在 onMounted 後 requestIdleCallback 觸發 loadDeferred
+  - loadDeferred 完成後，把後面的 3 個 sections push 進 sections.value
+
+UI 影響：
+
+  - 進頁面瞬間看到的 section 數量會「先少後多」
+  - 若使用者進頁面就立刻 scroll 找 particles → 可能看到尚未出現
+  - 嚴格說：這是 UI 變化
+
+收益：FCP/LCP 視覺改善 30-50%、TTI 略改善（看設備）
+
+【優化策略 C：欺騙式 chunk 拆分（中庸版）】
+
+維持 Promise.all 介面，但用 Vite manualChunks 強制把每個 section 拆成獨立 chunk：
+
+    // vite.config.ts
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-vue': ['vue', 'vue-router'],
-          // 若 fortawesome 暫時還在，獨立切出：
-          'vendor-icons': [
-            '@fortawesome/fontawesome-svg-core',
-            '@fortawesome/free-solid-svg-icons',
-            '@fortawesome/vue-fontawesome'
-          ]
+          'n5-fundamentals': [
+            'src/modules/n5Grammar/data/sections/fundamentals.ts'
+          ],
+          // ...其他 4 個 section 各一個 chunk
         }
       }
     }
-  }
-  ```
-- 預期：vendor 長期快取命中率↑、應用程式更新時使用者只下載小 chunk。
-
-A3. Workbox 設定可再精緻化（PWA 體驗最大化）
-- 現況：vite.config.ts 的 `workbox` 只有 `globPatterns`。
-- 建議補上：
-  ```ts
-  workbox: {
-    globPatterns: ['**/*.{js,css,html,ico,png,svg,json,webmanifest}'],
-    cleanupOutdatedCaches: true,
-    navigationPreload: true,
-    navigateFallback: appBasePath + 'index.html',
-    navigateFallbackDenylist: [/^\/api\//],   // 即便目前沒 API，預先保護
-    runtimeCaching: [
-      {
-        urlPattern: ({ request }) => request.destination === 'image',
-        handler: 'CacheFirst',
-        options: {
-          cacheName: 'duotify-images',
-          expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 }
-        }
-      }
-    ]
-  }
-  ```
-- 重點：
-  - `cleanupOutdatedCaches`：避免歷次版本快取殘留撐大裝置儲存。
-  - `navigationPreload`：讓 SW 啟動同時就送 navigation request，PWA 啟動感更快。
-  - `navigateFallback`：補強離線回訪 SPA route 的 shell 行為，與目前 `route-switching-performance` 規格相容。
-
-A4. index.html 太精簡，缺少效能 / PWA meta
-- 現況：`<head>` 只有 charset、icon、viewport、title 共 4 行。
-- 解決方案：直接以下整段取代 `index.html` 的 `<head>` 內容
-  ```html
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-    <!-- SEO / 分享 -->
-    <title>Duotify 日語學習 PWA</title>
-    <meta name="description" content="Duotify 日語學習 PWA：假名練習、文法、單字、N5 學習" />
-    <meta name="color-scheme" content="light" />
-    <meta name="theme-color" content="#b45a32" />
-
-    <!-- iOS PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Duotify" />
-    <link rel="apple-touch-icon" href="/icons/180.png" />
-
-    <!-- favicon（B5b 同步替換完成後再改成 favicon.ico）-->
-    <link rel="icon" href="/vite.ico" />
-
-    <!-- 入口 -->
-    <script type="module" src="/src/app/main.ts"></script>
-  </head>
-  ```
-- 注意：
-  - `viewport-fit=cover` 是為了支援有 notch / 圓角的 iPhone PWA 全螢幕。
-  - `<script>` 從 `<body>` 搬到 `<head>` 並保持 `type="module"`，瀏覽器仍是 defer 行為，但能更早建立 module graph。
-  - 若日後做 B1 方案 2（self-host Noto Sans TC），於此處補 `<link rel="preload" as="font">`。
-- 影響：
-  - SEO / 分享預覽 / iOS PWA 體驗一次補齊。
-  - `theme-color` 同步到 manifest 之外，第一次啟動時 Android Chrome 會更穩。
-
-
-────────────────────────────────────
-B. 中優先級（值得安排，但需配合驗證）
-────────────────────────────────────
-
-B1. 字型策略未明確
-- 現況：`src/styles/main.css` 設 `font-family: "Noto Sans TC", "Segoe UI", sans-serif;`，但專案未引入 Noto Sans TC web font。經 grep 確認全 src 無 `@font-face`、無 fontsource。
-- 影響：在沒裝 Noto Sans TC 的裝置（多數 Windows 預設沒裝），實際走第二順位 Segoe UI。意圖不明確。
-- 解決方案（擇一）：
-
-  方案 1（推薦，最省事）：放棄 Noto，改成意圖清楚的系統字型 stack
-  改 `src/styles/main.css` 第 8 行：
-  ```css
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    "Hiragino Sans",
-    "Hiragino Kaku Gothic ProN",
-    "Microsoft JhengHei UI",
-    "PingFang TC",
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
-  ```
-  - 中文/日文/英文都用各 OS 原生字型，零下載、零 FOUT。
-  - 對「日語學習 PWA」這類純文字應用最划算。
-
-  方案 2：真的要用 Noto Sans TC → self-host 子集化
-  ```bash
-  npm install @fontsource/noto-sans-tc
-  ```
-  在 `src/styles/main.css` 最上方加：
-  ```css
-  @import "@fontsource/noto-sans-tc/400.css";
-  @import "@fontsource/noto-sans-tc/700.css";
-  ```
-  並補 `font-display: swap`：
-  ```css
-  @font-face { font-display: swap; }   /* fontsource 已預設，但顯式宣告較安全 */
-  ```
-  並在 `index.html` 對首屏權重加 preload（檔名以實際 build 為準）：
-  ```html
-  <link rel="preload" href="/assets/noto-sans-tc-latin-400.woff2" as="font" type="font/woff2" crossorigin />
-  ```
-  - 缺點：Noto Sans TC 全集 ~2MB，即使子集化中文常用字仍 200~500KB，會拖長首次下載。
-  - 若不能放棄，務必走 `unicode-range` 子集，且只 preload latin/常用 CJK 一段。
-
-B2. N5 文法資料 `grammarNotes.ts` 約 176KB（最大單檔）
-- 現況：已由 `useN5GrammarSections` 動態 import，shell-first 載入（OK）。
-- 建議：
-  - 確認 build 後實際 chunk 大小是否仍 < 500KB 警戒線。
-  - 若想再壓：依 v11~v16 章節再切多個檔案，由 composable 依當前可見 section 漸進載入；好處是進入頁先解析較少 JS，缺點是要稍動 type/聚合。
-  - 或保留現狀 + 在 idle 時 prefetch，讓瀏覽器空檔就抓好。
-
-B3. 路由 preload 與 KeepAlive 的實際成本還沒看見
-- 現況：`AppShell.vue` 在 mounted 後 idle preload 主要 route component（架構文件已述）。
-- 建議：
-  - 加入 `rollup-plugin-visualizer`（dev only）量化 preload 收益與 chunk 分布：
-    ```ts
-    import { visualizer } from 'rollup-plugin-visualizer';
-    plugins: [..., mode === 'analyze' && visualizer({ filename: 'dist/stats.html', gzipSize: true, brotliSize: true })]
-    ```
-  - 跑 `vite build --mode analyze` 看 chunk graph，再決定要不要進一步 split。
-
-B4. 預先壓縮（pre-compression）
-- 現況：未啟用。
-- 建議：加入 `vite-plugin-compression` 同時產 `.gz` 與 `.br`：
-  ```ts
-  import viteCompression from 'vite-plugin-compression';
-  plugins: [
-    ...,
-    viteCompression({ algorithm: 'gzip', ext: '.gz' }),
-    viteCompression({ algorithm: 'brotliCompress', ext: '.br' })
-  ]
-  ```
-- 注意：GitHub Pages 不支援自選編碼回應 `.br`，但若日後改 Cloudflare Pages / Netlify / Vercel 就直接受惠；GitHub Pages 仍會 on-the-fly gzip。
-
-B5. PWA icons 體積
-- 現況（已驗證為 8-bit RGBA non-interlaced PNG）：
-  - `public/icons/512.png` ≈ 148KB（512×512）
-  - `public/icons/192.png` ≈ 32KB（192×192）
-  - `public/icons/180.png` ≈ 28KB（180×180）
-- 解決方案：
-
-  Step 1（無損壓縮，先做）：
-  ```bash
-  # 安裝 oxipng（任一）
-  npm install -g oxipng
-  # 或 cargo install oxipng
-  # 或 scoop install oxipng
-
-  # 對所有 PWA icon 做最強無損壓縮，原檔備份
-  oxipng -o max --strip safe -i 0 -p public/icons/512.png
-  oxipng -o max --strip safe -i 0 -p public/icons/192.png
-  oxipng -o max --strip safe -i 0 -p public/icons/180.png
-  ```
-  預期：512 從 148KB → 約 90~110KB，省 ~30%。
-
-  Step 2（有損壓縮，視覺允許再做）：
-  ```bash
-  npm install -g pngquant-bin
-  pngquant --quality 80-95 --strip --force --output public/icons/512.png public/icons/512.png
-  pngquant --quality 80-95 --strip --force --output public/icons/192.png public/icons/192.png
-  pngquant --quality 80-95 --strip --force --output public/icons/180.png public/icons/180.png
-  ```
-  預期：512 再從 ~100KB → 50~70KB；icon 在裝置桌面不容易看出色階差異。
-
-  Step 3（可選）：補 maskable icon
-  - 重新匯出一張 maskable 安全區（safe zone 80%）的 512.png 命名為 `512-maskable.png`。
-  - 在 `vite.config.ts` 的 `pwaIconDescriptors` 補一筆：
-    ```ts
-    { src: 'icons/512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-    ```
-  - 效果：Android 安裝後 icon 不會被裁切成圓形時邊緣留白。
-
-  驗收：build 後 `dist/icons/*.png` 容量比較表貼回 PR。
-
-B5b. favicon `public/vite.ico` 過大（新發現）
-- 現況：`public/vite.ico` 是 256×256 的 PNG-in-ICO，超過實際 favicon 需求；`index.html` 引用 `/vite.ico`。
-- 影響：每次冷啟動瀏覽器都會抓這顆 favicon，雖然會被快取但首次仍是純浪費。
-- 解決方案：
-  ```bash
-  # 用既有 192.png 縮成 32×32 + 16×16 的多尺寸 ico
-  # （任一工具：ImageMagick / png-to-ico / 線上 realfavicongenerator）
-  magick public/icons/192.png -define icon:auto-resize=64,48,32,16 public/favicon.ico
-  ```
-  並改 `index.html`：
-  ```html
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" /> <!-- 可選 -->
-  ```
-  順手把 `public/vite.ico` 移除，並更新 `src/shared/config/publicAssets.ts` 的 `faviconFileName`。
-  注意：`tests/unit/publicAssets.spec.ts` 有驗證 favicon 是否存在於 build 輸出，要同步改。
-
-B6. 未使用的 scaffolding 素材
-- 現況（已用 grep 驗證 src/ 內無任何引用）：
-  - `src/assets/vue.svg`（1KB）→ Vite scaffold 殘留
-  - `src/assets/vite.svg`（12KB）→ Vite scaffold 殘留
-  - `src/assets/hero.png`（44KB）→ 沒有 import / `<img src>` / CSS url() 引用
-- 解決方案：
-
-  Step 1（直接刪除三個檔案）：
-  ```bash
-  git rm src/assets/vue.svg src/assets/vite.svg src/assets/hero.png
-  ```
-
-  Step 2（驗證沒踩到雷）：
-  ```bash
-  npm run typecheck
-  npm run lint
-  npm run test:unit
-  npm run build       # 確認 build 沒有抱怨缺資產
-  ```
-
-  Step 3（順手評估整個 src/assets/）：
-  - 刪掉三個檔案後 `src/assets/` 變空目錄；可一併 `rmdir src/assets`。
-  - 若 PROJECT_ARCHITECTURE.md 第 60~63 行還列著這三張圖，順手更新文件。
-
-  Step 4（若日後真的要放圖）：
-  - 入站圖片 < 4KB 用 SVG 行內或 `import xxx?inline`。
-  - 大過 8KB 一律走 `public/` 或 `import xxx?url` + `loading="lazy" decoding="async"`。
-  - 照片類資產轉 WebP 或 AVIF（省 30~60%）。
-
-
-────────────────────────────────────
-C. 低優先級（小幅但 nice-to-have）
-────────────────────────────────────
-
-C1. `build.target` 顯式宣告
-- Vite 7 預設 target 偏保守，可改 `'es2020'` 或更新，省下不必要的 polyfill 與 helper（配合 A2 一次設定即可）。
-
-C2. CSS 路由特化集中過多在 `main.css`
-- 現況：`src/styles/main.css` 裡塞了 `/practice`、`/grammar`、`/vocabulary`、`/n5-grammar` 多個 route-specific 樣式。
-- 風險：所有路由都得載入完整 CSS，且修改某 route 樣式時 cache 全失效。
-- 建議：把 route-specific 區塊搬進對應 view 的 `<style scoped>` 或 `style.css`，由 Vue/Vite 自動以 route component 切分。
-- 注意：要小心 selector 範圍，避免破壞 `RouteOwnership.spec.ts` 既有的 negative ownership 規則（N5 不外溢的測試）。
-
-C3. main.ts 啟動順序
-- 現況：
-  ```ts
-  createApp(AppShell).use(router).mount('#app');
-  void triggerLaunchUpdateCheck();
-  ```
-- 建議：把 `triggerLaunchUpdateCheck()` 包在 `requestIdleCallback` / `setTimeout(..., 0)` 內，徹底讓首屏 paint 不被 PWA registration 阻擋（雖然目前已 fire-and-forget，但可再保險）。
-
-C4. TypeScript 增量編譯
-- `npm run build` 目前是 `vue-tsc --noEmit -p tsconfig.app.json && vite build`，已先 typecheck 再 build。
-- 可考慮以 `vue-tsc --build`（incremental）+ `tsbuildinfo` 加速 CI 第二次 build；本機 dev 沒影響。
-
-C5. 圖片載入屬性
-- 全專案若有 `<img>`，建議統一加 `loading="lazy"` 與 `decoding="async"`（hero/icon 區除外）。
-- N5 / 文法表格目前看起來純文字 + svg，影響不大，但養成規範比較不會出意外。
-
-C6. 觀察指標自動化
-- 加入 Lighthouse CI 或在 e2e 蒐集 `performance.getEntriesByType('navigation')` 的 TTFB / FCP / LCP，建立基線。
-- 配合現有 `route-switching-performance.spec.ts`，可逐步追蹤改動是否真的提升。
-
-
-────────────────────────────────────
-不建議或暫時不做
-────────────────────────────────────
-
-D1. SSR / SSG
-- 此專案是 PWA 學習工具，主流量是「重複造訪 + 離線」，不是冷啟動 SEO 路線。SSR/SSG 投入大但對核心 KPI 幫助有限，跳過。
-
-D2. 換成另一個 router / state 函式庫
-- 目前 vue-router + composable 已足夠；引入 pinia / tanstack-router 在這個規模會是純成本。
-
-D3. 把 jpWords_N1.ts ~ N5.ts 改成 JSON 由 fetch 載入
-- 現況靜態 import 已可被 lazy-split，效能差不多，但會讓型別防護消失，反而是退步。維持現況。
-
-
-────────────────────────────────────
-建議實作順序（最少改動 → 最大效果）
-────────────────────────────────────
-
-第一波（單一 PR，<半天）：
-  - A1 移除 FontAwesome、改 inline SVG
-  - A2 加 manualChunks + target
-  - A3 補完 Workbox 設定
-  - A4 補 index.html meta
-  - 量測：build 後比對 dist 目錄 gzip 後總體積、Lighthouse Performance/PWA 分數
-
-第二波（依量測決定）：
-  - B1 字型決策（推薦走方案 1，零下載）
-  - B3 visualizer 接上後再決定要不要做 B2（N5 章節再切）
-  - B4 pre-compression（若部署平台有支援 br）
-  - B5 PWA icons 壓縮（oxipng → pngquant）
-  - B5b favicon 替換成 32×32 多尺寸 ico
-
-第三波（純清理）：
-  - B6 移除 scaffold 殘留（vue.svg / vite.svg / hero.png）並更新 PROJECT_ARCHITECTURE.md
-  - C2 CSS 拆 route 樣式（要搭配既有測試一起跑）
-  - C3 / C4 / C5 / C6 養成規範
-
-
-────────────────────────────────────
-憲法合規性檢查（必讀，動工前先處理）
-────────────────────────────────────
-
-本檔目前是「探索性討論」，不是 Spectra change proposal。依照 `constitution.md` 與 `openspec/config.yaml`，下列項目在轉成正式變更前必須補齊。
-
-【流程強制】
-- 憲法 Workflow：「Every meaningful change MUST be traceable to a specification or explicit maintenance task」。本檔列的每一項要動工前都應走 `/spectra-propose`，產出 `openspec/changes/<id>/{proposal.md,design.md,tasks.md}` 與必要的 spec delta，不能直接改 code。
-- 憲法 V：任何更動「repository structure, file responsibilities, shared modules, route composition, test structure, or deployment structure」必須在同一個 work item 更新 `PROJECT_ARCHITECTURE.md`。
-
-【依規格回寫，逐項檢查】
-
-A1（移除 FontAwesome）
-- 屬於內部重構：`ExamModal` 對外行為（關閉、emit、a11y）應維持不變，可不回寫 spec。
-- 但 `tests/component/ExamModal.spec.ts` 必須在 PR 內驗證關閉鈕仍可被 a11y 名稱定位（避免從 `aria-label="關閉"` 退化為純圖示）。
-- bundlephobia 不適用（是移除依賴）。
-
-A2（manualChunks + `target: 'es2020'`）
-- 「行動優先」場景需驗證：iOS Safari ≥14、Android Chrome ≥85 對 es2020 全支援，OK；但仍須在 design.md 內記錄目標瀏覽器矩陣（憲法 IV 要求量化效能影響）。
-- 純 build 設定，無 spec 行為變更。
-
-A3（Workbox `cleanupOutdatedCaches` / `navigationPreload` / `navigateFallback`）
-- ⚠️ 高風險：`openspec/specs/pwa-update-check-on-launch/spec.md` 與最近合併的 `fix-pwa-update-cache-retention`（commit `972e41d`）對「更新時保留離線快取」有明確契約。
-  `cleanupOutdatedCaches: true` 預設會清掉前一版本 precache，可能與該 spec 的「保留」要求衝突。
-- 動工前必做：
-  1. 讀 `openspec/specs/pwa-update-check-on-launch/spec.md` 與該變更歸檔的 design.md，確認 cleanup 行為是否被允許。
-  2. 若需放行 → 同一 work item 更新該 spec；若不允許 → 改用更精準的 cache versioning，或拿掉 cleanupOutdatedCaches。
-- `tests/e2e/pwa-offline-route-cache.spec.ts` 是這條路徑的回歸守門員，必跑。
-
-A4（index.html meta + `viewport-fit=cover`）
-- `viewport-fit=cover` 影響 iPhone notch 區的 layout，是使用者可見變更 → 應在 PR 內加 e2e 驗證手機 375px 下不破版（既有 `practice-layout.smoke.spec.ts` / `n5-grammar-layout.spec.ts` 涵蓋；確認可以通過或補一條）。
-- `<meta theme-color>` 與現有 `manifest.theme_color: '#b45a32'` 須一致，避免雙來源漂移。
-
-B1（字型策略）
-- 方案 1（系統字型 stack）：使用者可見 → 須在 PR 加 visual diff 證據，並在 spec 任何提到字型的地方回寫（grep 後沒找到，可豁免）。
-- 方案 2（self-host Noto Sans TC）：
-  - 加新依賴 `@fontsource/noto-sans-tc` → 憲法效能：「>30 KB（gzip 後）須在 design 寫理由」。子集化 woff2 通常 20~80KB/weight，多 weight 就會超標 → 必須在 design.md 寫理由。
-  - bundlephobia 檢查：`@fontsource/noto-sans-tc` 主套件本身約 1.2MB（包含所有 woff2），雖然 import 才打包但仍須註明預期載入量。
-
-B2（N5 章節再切）
-- 改動 `useN5GrammarSections` 載入時序 → 是行為變更（首次可見時間、loading shell 時長）→ 須回寫 `openspec/specs/route-switching-performance/spec.md` 或 N5 對應 spec。
-
-B3（rollup-plugin-visualizer）
-- 純 devDependency、`mode === 'analyze'` 才啟用 → 不入 production bundle，無 spec 影響，但仍需 bundlephobia 紀錄（visualizer 本體 ~50KB，devDep OK）。
-
-B4（vite-plugin-compression）
-- 純 build-time、產 .gz / .br 副檔，不改 runtime → 無 spec 影響。
-- 注意：`scripts/publishPages.mjs` 同步到 `gh-pages` 時要不要保留 `.gz/.br`？目前 GitHub Pages 不認，可能變成無用檔案撐大 repo。動工前確認 publish 腳本邏輯。
-
-B5 / B5b（icons / favicon）
-- B5 純資產壓縮 → 無 spec 影響，但 `tests/unit/publicAssets.spec.ts` 必跑。
-- B5b 改 favicon 檔名 → 變動 `src/shared/config/publicAssets.ts` 與 `index.html`；屬於「shared modules / file responsibilities」更動 → 同一 work item 更新 `PROJECT_ARCHITECTURE.md`（第 30/41 行 vite.ico 描述）與 `tests/unit/publicAssets.spec.ts`。
-- 工具安裝建議改本地 devDep 或 `npx`（`npx oxipng-bin`），避免 `npm install -g` 污染全域。
-
-B6（刪 scaffold 素材）
-- 屬於「file responsibilities」變更 → 必須更新 `PROJECT_ARCHITECTURE.md` 第 60~63 行（已在 discuss.txt B6 Step 3 提及）。
-- 純清理，無 spec 影響。
-
-C2（CSS route 拆分）
-- ⚠️ 高風險：`tests/component/RouteOwnership.spec.ts` 驗證 N5 內容不外溢、`PracticeViewSmoke.spec.ts` 驗證指定 class，拆分時 selector scope 可能改變 →
-  - 拆分前先確認所有 route-specific class 仍可被測試找到。
-  - 任何顯示行為差異（即使視覺像素相同）都算 UX 變更 → 須有手動驗證紀錄。
-
-C3（`requestIdleCallback` 包 launch update check）
-- ⚠️ 直接影響 `tests/unit/appMain.spec.ts`：「驗證 mount 後觸發一次 PWA launch update check」會因為 idle 包裝而非同步觸發，測試斷言需同步調整（或加 fake timer）。
-- 屬於 PWA 啟動行為變更 → 動工前讀 `pwa-update-check-on-launch/spec.md`，確認是否需 spec 回寫。
-
-【漏掉沒提到的】
-- 我之前沒在每項「明確量化效能預期前/後」（憲法 IV）→ 第一波 PR 內必須補：build 後比 `dist/**/*.js` gzip 總和、Lighthouse Performance/PWA 分數。
-- 我之前沒寫每項的「正向/反向所有權」（憲法 VI）→ 例如 A1 FontAwesome 只在 ExamModal 出現（正向）、不在其他模組殘留（反向）；轉成 tasks.md 時要明文寫。
-
-【反模式自我檢查】（憲法 config 的「不做什麼」）
-- ✅ 沒引入 jQuery / Bootstrap / UI Kit。
-- ✅ 沒加任何需要伺服器的功能（fontsource 是 self-host 靜態檔）。
-- ✅ 沒加 analytics / 遙測 / 帳號要求。
-- ✅ 沒為了便利硬套共用樣式（C2 是反向：拆分而非合併）。
-- ✅ 沒為「未來擴充」預先抽象（manualChunks 是針對現有依賴的具體分塊）。
-
-【建議下一步】
-1. 跟我確認本檔哪些項目要走 `/spectra-propose` 立案。
-2. 若 A3 的 cleanupOutdatedCaches 與既有快取保留 spec 衝突，先決定是哪一邊讓步（spec 改 / 設定改）。
-3. 第一波 PR 動工前，本檔可保留為 `_private/` 內的探索筆記，正式內容遷入 proposal.md / design.md。
-
-
-────────────────────────────────────
-驗證 checklist（每波都要跑）
-────────────────────────────────────
-
-1. `npm run typecheck`
-2. `npm run lint`
-3. `npm run test:unit`
-4. `npm run build` → 留意 500KB chunk 警戒線、dist gzip 後總大小
-5. `npm run preview` → 開 DevTools Application 面板看 SW 與快取
-6. `npx playwright test tests/e2e/route-switching-performance.spec.ts --project=chromium`
-7. `PLAYWRIGHT_PWA=1 npx playwright test tests/e2e/pwa-offline-route-cache.spec.ts`
-8. Lighthouse 跑 production preview 抓 Performance / PWA / Best Practices 分數對比
+
+結果：grammarNotes 130 KB 變成 5 個小 chunk，仍然 Promise.all 一起載。
+
+UI 影響：零（行為完全一致）
+收益：幾乎零（瀏覽器仍然並行下載 5 個 chunk，總 wire 大小一樣）
+但有副效益：未來若改成分階段，已準備好 chunk
+
+【建議】
+
+  - 若你嚴守「保持相同 UI」→ 不要做（策略 A）
+  - 若你接受「漸進式顯示」是可接受的 UX 增強 → 做策略 B
+  - 若你想保留未來彈性、不立刻拿到收益也行 → 做策略 C
+
+我傾向不在此次優化動這條，除非你明確接受策略 B 的 UI 細微變化。
+
+
+================================================================================
+PART 3 — 候選優化 #3：main.css 內全域類別模組化
+================================================================================
+
+【收益】2-5 KB gzip（初始 CSS 縮減）
+【風險】中（Tailwind @apply 跨檔解析需驗證）
+
+【現狀】
+
+src/styles/main.css 共 1054 行，結構：
+
+  - line 1-48：CSS reset + root variables
+  - line 49-75：練習頁的 50 音 checkbox 視覺
+  - line 76-889：@layer components（870 行，所有自訂 utility）
+  - line 890-1053：響應式 @media queries
+
+「@layer components」內可粗分為：
+
+  - app-shell-*           （骨架，全頁共用）
+  - surface-card / section-card / table-shell（共用容器）
+  - kana-* / practice-*   （只在 PracticeView 用）
+  - route-*               （導覽元件，全頁共用）
+  - grammar-*             （只在 GrammarView 用）
+  - n5-grammar-*          （只在 N5GrammarView 用，line 515-710 = 195 行）
+  - vocabulary-*          （只在 VocabularyView 用，line 712-888 = 177 行）
+  - detail-pill / exam-modal-* （exam 相關，在 ExamModal）
+
+問題：所有 .vocabulary-*、.grammar-*、.n5-grammar-* 都被打包在
+index-*.css (45 KB) 主檔，但這些 class 只有當對應路由載入時才用得到。
+
+【優化策略】
+
+把 main.css 拆成多個檔，並由對應的 view 元件 import：
+
+  src/styles/
+    main.css                  ← 只留全域 + reset + variables + 跨頁共用
+    routes/
+      practice.css            ← .practice-* + .kana-*
+      grammar.css             ← .grammar-*
+      n5-grammar.css          ← .n5-grammar-*
+      vocabulary.css          ← .vocabulary-*
+    components/
+      exam-modal.css          ← .exam-modal-* + .detail-pill
+
+然後在每個 View 元件加：
+
+    <script setup lang="ts">
+    import '@/styles/routes/vocabulary.css';
+    // ...
+    </script>
+
+Vite 會把 import 的 CSS 抽到對應 chunk 的 CSS 旁邊，初始 CSS 就只剩共用部分。
+
+【估算】
+
+  - 初始 CSS 45 KB → 估縮減至 25-30 KB
+  - gzip 後節省約 2-5 KB（CSS 重複性高，gzip 壓縮率不錯）
+
+【風險】
+
+  - Tailwind @apply 跨檔解析：每個拆出去的 CSS 都會經過 PostCSS + Tailwind
+    處理，理論上 @apply 仍能找到對應 utility，但需實測
+  - 順序問題：原本 main.css 線性順序變多檔後，cascade 優先級可能變
+  - 開發體驗：找一個 class 從一個檔變要找好幾個檔
+
+【建議】
+
+  - 收益偏小，風險偏高（破壞既有 styling 的可能性實際存在）
+  - 比較划算的替代：寫個 dead-class 掃描 script
+    （grep src/**/*.vue 看哪些 class 完全沒被引用，先刪死碼）
+  - 不建議在此輪實作
+
+
+================================================================================
+PART 4 — 候選優化 #4：vocabularyMarks 持久層改 IndexedDB
+================================================================================
+
+【收益】不確定（取決於使用者實際標記量）
+【風險】中（複雜度上升、async API 滲透）
+
+【現狀】
+
+src/shared/utils/storageGuard.ts:13-38 顯示所有 storage 都是 localStorage：
+
+    export function readJsonStorage<T>(key, validate): T | null {
+      const storage = getLocalStorage();
+      if (!storage) return null;
+      const rawValue = storage.getItem(key);
+      if (!rawValue) return null;
+      try {
+        const parsed = JSON.parse(rawValue);
+        if (validate(parsed)) return parsed;
+      } catch { /* ignore */ }
+      storage.removeItem(key);
+      return null;
+    }
+
+CLAUDE.md 寫「IndexedDB（大量學習資料、字卡）」但實作仍 localStorage。
+
+【何時 localStorage 會變慢】
+
+  - JSON.parse / stringify 是 sync 阻塞主執行緒
+  - localStorage 整個 quota ~5-10 MB
+  - 一次操作通常 <1ms（小資料），但 50 KB+ 資料可能 5-20ms
+  - 50ms+ 才是使用者明顯感覺得到的卡頓門檻
+
+vocabularyMarksStorage 存的應該是「標記過的單字 ID list」。N5 約 700 字，
+全標也才 700 個 ID（< 10 KB JSON），sync I/O 完全 ok。
+
+【建議】
+
+  - 不做。除非你實機量測有 marks 操作的明顯卡頓
+  - CLAUDE.md 自己寫「使用者明顯感覺到的卡頓視為 bug」，目前沒這個 bug
+  - 如果未來要做，建議只挑「大資料項」遷移（例如未來若有 SRS 排程資料），
+    其他繼續用 localStorage
+
+
+================================================================================
+PART 5 — 整體判斷
+================================================================================
+
+【現狀評估】
+
+這個專案已被優化過 2-3 輪，剩下的優化是「邊際收益」而非「黑洞」。
+從 git log 可以看到密集的 perf-related commits，作者已經很認真在處理效能。
+
+【可立刻做且 ROI 明確的事】
+
+  排名 1：Part 1（單字 tuple 化）
+    - 收益：15-20 KB gzip
+    - 風險：低
+    - UI 變化：零
+    - 工作量：1-2 小時（含測試）
+
+【ROI 邊緣的事】
+
+  排名 2：Part 2 策略 C（manualChunks 拆 grammarNotes）
+    - 收益：~0（但結構彈性 +1）
+    - 風險：低
+    - UI 變化：零
+    - 工作量：30 分鐘
+    - 適合：你想為未來鋪路時做
+
+【不建議在「保持 UI」前提下做】
+
+  - Part 2 策略 B（分階段載 N5 sections）：有 UI 邊際變化
+  - Part 3（CSS 模組化）：風險高、收益低
+  - Part 4（IndexedDB 遷移）：沒有實際痛點，做了等於白工
+
+【更值得花的時間（不在本次討論範疇但建議考慮）】
+
+  - 用 Lighthouse / Web Vitals 量測實機真實表現，看「真的有問題」的點
+  - 加入 build size 守門員（CI 卡 dist/ 總體大小回升）
+  - 補測試覆蓋率，而不是再榨 KB
+
+
+================================================================================
+PART 6 — 下一步建議（已決策）
+================================================================================
+
+【最終決策】採用 Part 1 + Part 4，合併為單一變更提案。
+
+選擇路徑：
+
+  Part 1：單字資料 tuple 化
+  Part 2 策略 C：不採用
+  Part 3：不採用
+  Part 4：vocabularyMarks 改 IndexedDB
+
+(Part 2 / Part 3 的分析保留在本文件作為「為何不做」的歷史紀錄。)
+
+
+================================================================================
+PART 6.1 — Part 4 motivation 補充
+================================================================================
+
+使用者已釐清 Part 4 的動機：「為未來資料量預設」。
+
+這意味著當前 vocab marks 規模（< 10 KB JSON）並非問題本身，而是要為以下
+可預見的擴張先把儲存層底子打好：
+
+  - 未來可能加入 SRS（間隔重複）排程資料：每字一筆，含下次複習時間、
+    熟練度、答對／答錯歷史 → 預估每字 100-200 bytes，N5+N4+N3 約 3000
+    字時，5-10 MB localStorage quota 上限會撞到
+  - 未來可能加入個別字卡的學習紀錄（每次練習時間、答題時間）→ 隨用量
+    線性成長
+  - 未來可能加入跨設備同步暫存區（離線寫入、上線時批次同步）
+
+由於以上都是「目前沒做、未來想做」的事，現在動儲存層的目的是：
+
+  - 避免「先用 localStorage 撐到撞牆才大改」的高風險路徑
+  - 提早把 sync I/O 改為 async API，後續加 SRS 不必再重構業務層
+  - 對齊 CLAUDE.md 的技術棧宣稱（IndexedDB 用於大量學習資料）
+
+(本動機要寫進 proposal.md 的「Why now」段落。)
+
+
+================================================================================
+PART 6.2 — 提案範疇
+================================================================================
+
+【建議提案名稱】
+
+  optimize-vocabulary-data-format-and-storage
+
+或更貼近語意的：
+
+  compact-vocab-data-and-migrate-marks-storage
+
+(實際名稱可在 /spectra:propose 時決定。)
+
+【涵蓋範圍】
+
+  變更 1：單字資料 tuple 化（Part 1）
+    - 範疇：src/modules/vocabulary/data/jpWords_N*.ts 全部 5 檔
+    - 介面：useVocabularySession.ts 內 loaders 加 mapper
+    - 對外行為：零變化（型別、UI、Storage 都不動）
+    - 收益：15-20 KB gzip 節省
+
+  變更 2：vocabularyMarksStorage 遷移到 IndexedDB（Part 4）
+    - 範疇：src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+    - 介面：read/write API 從 sync 變 async（呼叫端要 await）
+    - 對外行為：marks 持久化機制改變，UI 流程不變但讀取時機需處理
+    - 連帶：可能需要一次性「localStorage → IndexedDB」的資料遷移邏輯
+    - 收益：為未來資料量擴張先準備好儲存層
+
+【不在範疇】
+
+  - Part 2 grammarNotes chunk 拆分（任何策略）
+  - Part 3 CSS 模組化
+  - 其他 storage（grammarLevelStorage / n5GrammarCompletionStorage /
+    latestUnknownResultStorage）：本提案不一併遷，待未來個別評估
+  - storageGuard.ts：暫不重寫（IndexedDB 包裝可獨立寫，不必影響
+    localStorage 用戶）
+
+【決策性質】
+
+  - 變更 1：純資料格式優化（pure refactor），對外行為零變化
+  - 變更 2：架構變動 + 為未來鋪路（forward-looking），有 API surface
+    變化（sync → async）
+
+  兩者放同一個提案的理由：都聚焦 vocabulary 模組，可一次性 review、
+  一次性 test、降低 review fatigue。
+
+  兩者分開上線的可行性：技術上可，但增加 PR 數量、coordination 成本。
+  使用者已決定合併處理。
+
+
+================================================================================
+詞彙漂移（vocabulary drift）
+================================================================================
+
+本次討論未發現 openspec/LANGUAGE.md 規範詞彙的偏離（檔案不存在，靜默通過）。
+
+
+================================================================================
+討論結論
+================================================================================
+
+【Decision】
+  採用 Part 1（單字 tuple 化）+ Part 4（marks 改 IndexedDB），
+  合併為單一變更提案。
+
+【Rationale】
+  - Part 1：低風險、確定收益（15-20 KB gzip）、零 UI 影響
+  - Part 4：當下無痛點，但為未來 SRS / 學習紀錄 / 同步暫存區的資料量
+    擴張先準備好儲存層，避免「撐到撞牆才大改」的風險路徑。亦對齊
+    CLAUDE.md 的技術棧宣稱。
+  - 合併原因：同屬 vocabulary 模組，review / test / 上線可共用 setup。
+
+【Trade-off acknowledged】
+  Part 4 在「保持相同 UI」前提下並非最高 ROI 選擇（原分析建議不做）。
+  使用者明確以 forward-looking 為由覆蓋此建議。proposal motivation
+  必須明確說明這個前向性動機，否則之後 reviewer 會疑惑「現在沒問題
+  為什麼要動」。
+
+【Capture to】
+  - 本文件 discuss.txt：已捕捉決策（Part 6 與本結論段）
+  - openspec/changes/<change-name>/proposal.md：要寫 Why / What / Why now，
+    Why now 段必須引述 Part 4 motivation
+  - openspec/changes/<change-name>/design.md：要寫兩個變更的技術方案，
+    特別是 Part 4 的 IndexedDB schema、migration 策略、async API 影響面
+  - openspec/changes/<change-name>/tasks.md：拆 2 小時內可完成的任務
+  - 可能新增 openspec/specs/vocabulary-marks-storage/spec.md（如果尚未
+    有此 capability spec）
+
+【下一步指令】
+  /spectra:propose <change-name>
+
+  建議 change-name：optimize-vocabulary-data-format-and-storage
+
+
+================================================================================
+（文件結束）
+================================================================================

@@ -10,6 +10,21 @@ export interface RawVocabularyEntry {
   stage: VocabularyJlptLevel;
 }
 
+/**
+ * Compact storage shape for a vocabulary entry in `jpWords_N*.ts` data files.
+ *
+ * Order matters and is checked at compile time via named tuple elements.
+ * `stage` is intentionally NOT part of the tuple — it is provided by the data
+ * file (per its JLPT level) when the tuple is expanded into `RawVocabularyEntry`
+ * via `toEntry()` in `data/vocabularyEntryMapper.ts`.
+ */
+export type VocabularyEntryTuple = readonly [
+  text: string,
+  romanization: string,
+  kanji: string,
+  meaning: string
+];
+
 export interface VocabularyEntry {
   id: number;
   markKey: string;

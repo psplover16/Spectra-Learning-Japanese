@@ -128,13 +128,13 @@ tests:
 ---
 ### Requirement: Stored mark keys are pruned against the current dictionary
 
-The vocabulary mark persistence system SHALL validate stored version 2 `markedKeys` against the current dictionary key set each time marks are loaded. Keys that do not exist in the current dictionary MUST be removed from the loaded snapshot and from localStorage.
+The vocabulary mark persistence system SHALL validate stored mark keys against the current dictionary key set each time marks are loaded. Keys that do not exist in the current dictionary MUST be removed from the loaded snapshot and from the mark store. The mark store SHALL be the IndexedDB `marks` object store described in the storage backend requirement; for legacy startups before migration completes, the mark store SHALL be the localStorage marks snapshot.
 
 #### Scenario: Missing dictionary keys are removed silently
 
-- **WHEN** localStorage contains a version 2 snapshot with one key that exists in the current dictionary and one key that does not exist
+- **WHEN** the mark store contains one key that exists in the current dictionary and one key that does not exist
 - **THEN** loading marks returns only the existing key
-- **AND** localStorage is rewritten without the missing key
+- **AND** the mark store is rewritten without the missing key
 - **AND** no user-facing notification is shown
 
 ##### Example: pruning stored keys
@@ -159,9 +159,9 @@ The vocabulary mark persistence system SHALL validate stored version 2 `markedKe
 
 #### Scenario: Duplicate stored keys are collapsed
 
-- **WHEN** localStorage contains the same version 2 key more than once
+- **WHEN** the mark store contains the same key more than once
 - **THEN** loading marks preserves the first occurrence of that key
-- **AND** localStorage is rewritten with only one copy of that key
+- **AND** the mark store is rewritten with only one copy of that key
 
 ##### Example: duplicate key pruning
 
@@ -171,35 +171,35 @@ The vocabulary mark persistence system SHALL validate stored version 2 `markedKe
 
 
 <!-- @trace
-source: refactor-vocabulary-marks-storage-key
-updated: 2026-05-03
+source: optimize-vocabulary-data-format-and-storage
+updated: 2026-05-11
 code:
-  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
-  - src/modules/vocabulary/components/VocabularyStageTable.vue
-  - _private/n4.csv
-  - _private/n5.csv
-  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - src/modules/vocabulary/storage/vocabularyMarksDb.ts
+  - tests/unit/__snapshots__/vocabularyTupleRegression.spec.ts.snap
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - package.json
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - bash.exe.stackdump
   - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/modules/vocabulary/data/vocabularyEntryMapper.ts
+  - src/modules/vocabulary/storage/vocabularyMarksMigration.ts
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/app/main.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
   - src/modules/vocabulary/types/vocabulary.ts
-  - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/modules/vocabulary/data/jpWords_N1.ts～jpWords_N5.ts
-  - _private/筆記.md
-  - _private/n3.csv
-  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
-  - _private/n2.csv
-  - _private/discuss.txt
-  - _private/n1.csv
-  - src/modules/vocabulary/views/VocabularyView.vue
-  - _private/propose.md
+  - src/modules/vocabulary/data/jpWords_N3.ts
 tests:
-  - tests/unit/vocabularyFilters.spec.ts
-  - tests/component/VocabularyStageTable.spec.ts
-  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
-  - tests/unit/vocabularyMarksStorage.spec.ts
-  - tests/unit/vocabularyMeaningFormat.spec.ts
-  - tests/unit/vocabularyData.spec.ts
+  - tests/component/VocabularyViewSmoke.spec.ts
   - tests/component/useVocabularySession.spec.ts
-  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/vocabularyMarksDb.spec.ts
+  - tests/unit/vocabularyEntryMapper.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/unit/vocabularyTupleRegression.spec.ts
+  - tests/unit/vocabularyMarksMigration.spec.ts
+  - tests/unit/appMain.spec.ts
 -->
 
 ---
@@ -267,7 +267,7 @@ tests:
 ---
 ### Requirement: Saving vocabulary marks merges only visible entries
 
-The vocabulary save-marks action SHALL persist a merge of currently visible vocabulary row keys into the existing version 2 localStorage mark snapshot. The system MUST capture the visible row key scope at the moment the user invokes save. For each key in that scope, the system SHALL write the key when draft marks contain it and SHALL remove the key when draft marks do not contain it. The system SHALL preserve every persisted key that is outside that scope. The visible row key scope MUST reflect active search, selected JLPT levels, marked-only state, practice mode state, loaded vocabulary data, and any other filter that affects the rows currently shown on the page.
+The vocabulary save-marks action SHALL persist a merge of currently visible vocabulary row keys into the existing mark snapshot in the mark store. The system MUST capture the visible row key scope at the moment the user invokes save. For each key in that scope, the system SHALL write the key when draft marks contain it and SHALL remove the key when draft marks do not contain it. The system SHALL preserve every persisted key that is outside that scope. The visible row key scope MUST reflect active search, selected JLPT levels, marked-only state, practice mode state, loaded vocabulary data, and any other filter that affects the rows currently shown on the page. The mark store SHALL be the IndexedDB `marks` object store after migration completes.
 
 #### Scenario: Saving checked visible entry preserves hidden persisted entry
 
@@ -275,8 +275,8 @@ The vocabulary save-marks action SHALL persist a merge of currently visible voca
 - **AND** the current visible row scope contains only `A(stage=N1)`
 - **AND** draft marks contain `A(stage=N1)`
 - **AND** the user invokes save marks
-- **THEN** localStorage contains the key for `A(stage=N1)`
-- **AND** localStorage still contains the key for `B(stage=N5)`
+- **THEN** the mark store contains the key for `A(stage=N1)`
+- **AND** the mark store still contains the key for `B(stage=N5)`
 
 #### Scenario: Saving unchecked visible entry removes only that visible entry
 
@@ -284,61 +284,53 @@ The vocabulary save-marks action SHALL persist a merge of currently visible voca
 - **AND** the current visible row scope contains only `A(stage=N1)`
 - **AND** draft marks do not contain `A(stage=N1)`
 - **AND** the user invokes save marks
-- **THEN** localStorage does not contain the key for `A(stage=N1)`
-- **AND** localStorage still contains the key for `B(stage=N5)`
+- **THEN** the mark store does not contain the key for `A(stage=N1)`
+- **AND** the mark store still contains the key for `B(stage=N5)`
 
 #### Scenario: Visible scope follows active filters
 
 - **WHEN** search text, selected JLPT levels, marked-only state, or practice mode changes the visible vocabulary rows
 - **AND** the user invokes save marks
-- **THEN** only keys for rows visible after those filters are applied are merged into localStorage
+- **THEN** only keys for rows visible after those filters are applied are merged into the mark store
 - **AND** persisted keys for filtered-out rows remain unchanged
 
 
 <!-- @trace
-source: vocabulary-quiz-followup-adjustments
-updated: 2026-05-04
+source: optimize-vocabulary-data-format-and-storage
+updated: 2026-05-11
 code:
-  - src/modules/exam/types/exam.ts
-  - src/modules/vocabulary/data/jpWords.ts
-  - PROJECT_ARCHITECTURE.md
+  - src/modules/vocabulary/storage/vocabularyMarksDb.ts
+  - tests/unit/__snapshots__/vocabularyTupleRegression.spec.ts.snap
   - src/modules/vocabulary/data/jpWords_N5.ts
-  - src/modules/vocabulary/views/VocabularyView.vue
-  - _private/筆記.md
-  - src/modules/vocabulary/components/VocabularyStageTable.vue
-  - scripts/vocabulary/checkVocabularyMeaningFormat.mjs
-  - src/modules/vocabulary/data/jpWords_N2.ts
-  - src/modules/vocabulary/composables/useVocabularySession.ts
-  - scripts/vocabulary/checkVocabularyMeaningFormat.d.mts
-  - src/modules/vocabulary/utils/vocabularyFilters.ts
-  - src/styles/main.css
-  - src/modules/exam/components/ExamModal.vue
-  - src/modules/vocabulary/components/VocabularyControlBar.vue
   - src/modules/vocabulary/data/jpWords_N4.ts
-  - src/modules/vocabulary/data/jpWords_N3.ts
-  - src/modules/vocabulary/composables/useVocabularyExamSession.ts
+  - package.json
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - bash.exe.stackdump
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/modules/vocabulary/data/vocabularyEntryMapper.ts
+  - src/modules/vocabulary/storage/vocabularyMarksMigration.ts
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/app/main.ts
   - src/modules/vocabulary/data/jpWords_N1.ts
-  - _private/propose.md
-  - tests/unit/vocabularyStageTestData.ts
-  - _private/discuss.txt
+  - src/modules/vocabulary/types/vocabulary.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
 tests:
-  - tests/unit/vocabularyNaAdjectiveMarkers.spec.ts
-  - tests/component/VocabularyStageTable.spec.ts
-  - tests/component/VocabularyControlBar.spec.ts
-  - tests/unit/vocabularyMeaningFormat.spec.ts
   - tests/component/VocabularyViewSmoke.spec.ts
-  - tests/unit/vocabularyData.spec.ts
-  - tests/e2e/vocabulary-word-practice.spec.ts
-  - tests/unit/useVocabularyExamSession.spec.ts
-  - tests/unit/vocabularyGodanVerbMarkers.spec.ts
   - tests/component/useVocabularySession.spec.ts
-  - tests/component/ExamModal.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/vocabularyMarksDb.spec.ts
+  - tests/unit/vocabularyEntryMapper.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/unit/vocabularyTupleRegression.spec.ts
+  - tests/unit/vocabularyMarksMigration.spec.ts
+  - tests/unit/appMain.spec.ts
 -->
 
 ---
 ### Requirement: Table header bulk toggles visible draft vocabulary marks
 
-The table header mark checkbox SHALL control only the draft mark state for currently visible vocabulary row keys. The vocabulary session MUST capture the current visible row key scope at the moment the header checkbox changes. When the header checkbox is checked, the vocabulary session SHALL add every key in that scope to `draftMarkedKeys`. When the header checkbox is unchecked, the vocabulary session SHALL remove every key in that scope from `draftMarkedKeys`. The vocabulary session SHALL preserve every draft key outside that scope. The header checkbox SHALL NOT show a delete confirmation, SHALL NOT write localStorage, and SHALL NOT update `persistedMarkedKeys`. The persisted snapshot SHALL change only when the user invokes the save-marks action.
+The table header mark checkbox SHALL control only the draft mark state for currently visible vocabulary row keys. The vocabulary session MUST capture the current visible row key scope at the moment the header checkbox changes. When the header checkbox is checked, the vocabulary session SHALL add every key in that scope to `draftMarkedKeys`. When the header checkbox is unchecked, the vocabulary session SHALL remove every key in that scope from `draftMarkedKeys`. The vocabulary session SHALL preserve every draft key outside that scope. The header checkbox SHALL NOT show a delete confirmation, SHALL NOT write to the mark store, and SHALL NOT update `persistedMarkedKeys`. The persisted snapshot in the mark store SHALL change only when the user invokes the save-marks action.
 
 #### Scenario: Header checkbox selects currently visible draft marks
 
@@ -347,7 +339,7 @@ The table header mark checkbox SHALL control only the draft mark state for curre
 - **AND** the user checks the table header mark checkbox
 - **THEN** `draftMarkedKeys` contains `A|` and `B|`
 - **AND** draft keys outside the visible row scope remain unchanged
-- **AND** localStorage and `persistedMarkedKeys` remain unchanged
+- **AND** the mark store and `persistedMarkedKeys` remain unchanged
 - **AND** no delete confirmation is shown
 
 #### Scenario: Header checkbox unselects currently visible draft marks
@@ -357,7 +349,7 @@ The table header mark checkbox SHALL control only the draft mark state for curre
 - **AND** the user unchecks the table header mark checkbox
 - **THEN** `draftMarkedKeys` does not contain `A|` or `B|`
 - **AND** `draftMarkedKeys` still contains `C|`
-- **AND** localStorage and `persistedMarkedKeys` remain unchanged
+- **AND** the mark store and `persistedMarkedKeys` remain unchanged
 - **AND** no delete confirmation is shown
 
 #### Scenario: Header checkbox preserves hidden draft marks
@@ -370,23 +362,35 @@ The table header mark checkbox SHALL control only the draft mark state for curre
 
 
 <!-- @trace
-source: vocabulary-control-bar-bulk-mark-adjustments
-updated: 2026-05-04
+source: optimize-vocabulary-data-format-and-storage
+updated: 2026-05-11
 code:
-  - src/styles/main.css
-  - src/modules/vocabulary/components/VocabularyStageTable.vue
+  - src/modules/vocabulary/storage/vocabularyMarksDb.ts
+  - tests/unit/__snapshots__/vocabularyTupleRegression.spec.ts.snap
   - src/modules/vocabulary/data/jpWords_N5.ts
-  - src/modules/vocabulary/views/VocabularyView.vue
-  - _private/propose.md
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - package.json
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - bash.exe.stackdump
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/modules/vocabulary/data/vocabularyEntryMapper.ts
+  - src/modules/vocabulary/storage/vocabularyMarksMigration.ts
   - src/modules/vocabulary/composables/useVocabularySession.ts
-  - src/modules/vocabulary/components/VocabularyControlBar.vue
   - PROJECT_ARCHITECTURE.md
+  - src/app/main.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
 tests:
-  - tests/e2e/vocabulary-word-practice.spec.ts
   - tests/component/VocabularyViewSmoke.spec.ts
-  - tests/component/VocabularyStageTable.spec.ts
   - tests/component/useVocabularySession.spec.ts
-  - tests/component/VocabularyControlBar.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/vocabularyMarksDb.spec.ts
+  - tests/unit/vocabularyEntryMapper.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/unit/vocabularyTupleRegression.spec.ts
+  - tests/unit/vocabularyMarksMigration.spec.ts
+  - tests/unit/appMain.spec.ts
 -->
 
 ---
@@ -434,4 +438,130 @@ tests:
   - tests/component/VocabularyStageTable.spec.ts
   - tests/component/useVocabularySession.spec.ts
   - tests/component/VocabularyControlBar.spec.ts
+-->
+
+---
+### Requirement: Vocabulary marks persistence uses IndexedDB
+
+The vocabulary mark persistence system SHALL store marks in an IndexedDB database named `vocabulary` with an object store named `marks`. Each record SHALL use the natural key (the entry text, a literal pipe separator, and the entry kanji value) as its primary identifier. The vocabulary mark persistence system SHALL NOT use localStorage as the primary storage for marks after the migration described in the next requirement completes.
+
+#### Scenario: Marks persist in the IndexedDB mark store across reloads
+
+- **WHEN** a user marks a vocabulary entry with text `おい` and empty kanji and reloads the page
+- **THEN** the IndexedDB database `vocabulary` contains a record in the `marks` object store with key `おい|`
+- **AND** the marks visible on the vocabulary view match the IndexedDB mark store contents
+
+##### Example: stored record shape
+
+| text | kanji | Stored IndexedDB record key | Stored record id field |
+| ---- | ----- | --------------------------- | ---------------------- |
+| `おい` | empty | `おい|` | `おい|` |
+| `会う` | `あう` | `会う|あう` | `会う|あう` |
+
+#### Scenario: IndexedDB unavailable degrades to in-memory marks
+
+- **WHEN** IndexedDB cannot be opened (private browsing, strict browser configuration, storage quota exhausted)
+- **THEN** mark read operations return an empty list
+- **AND** mark write operations are no-ops at the storage layer
+- **AND** mark toggling and filtering continue to work in-memory for the current session
+- **AND** a single console warning is emitted the first time IndexedDB open fails per session
+- **AND** marks do not persist across reloads in this degraded state
+
+
+<!-- @trace
+source: optimize-vocabulary-data-format-and-storage
+updated: 2026-05-11
+code:
+  - src/modules/vocabulary/storage/vocabularyMarksDb.ts
+  - tests/unit/__snapshots__/vocabularyTupleRegression.spec.ts.snap
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - package.json
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - bash.exe.stackdump
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/modules/vocabulary/data/vocabularyEntryMapper.ts
+  - src/modules/vocabulary/storage/vocabularyMarksMigration.ts
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/app/main.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+tests:
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/vocabularyMarksDb.spec.ts
+  - tests/unit/vocabularyEntryMapper.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/unit/vocabularyTupleRegression.spec.ts
+  - tests/unit/vocabularyMarksMigration.spec.ts
+  - tests/unit/appMain.spec.ts
+-->
+
+---
+### Requirement: Marks persistence migrates from localStorage to the IndexedDB mark store on first run
+
+On application startup, the vocabulary mark persistence system SHALL detect existing localStorage-backed marks (any prior schema version) and SHALL migrate them to the IndexedDB mark store before serving any mark read or accepting any mark write from the rest of the application. The vocabulary mark persistence system SHALL NOT remove the localStorage marks key until every mark has been successfully written to the IndexedDB mark store.
+
+#### Scenario: Migration moves localStorage version 2 marks to IndexedDB
+
+- **WHEN** localStorage contains a version 2 mark snapshot with keys `おい|` and `会う|あう`
+- **AND** the IndexedDB `vocabulary` database is empty or absent
+- **THEN** after migration completes, the IndexedDB `marks` object store contains records for `おい|` and `会う|あう`
+- **AND** localStorage no longer contains the marks key
+
+#### Scenario: Migration is idempotent across interrupted startups
+
+- **WHEN** migration begins and fails before all keys have been written to IndexedDB
+- **THEN** localStorage still contains the original marks snapshot after the failure
+- **AND** the next application startup detects unfinished migration and retries
+- **AND** retried migration produces the same final IndexedDB mark store contents as a single successful run
+
+#### Scenario: Migration resolves legacy version 1 ids before writing
+
+- **WHEN** localStorage contains a version 1 mark snapshot with `markedIds` for entries that exist in the current normalized vocabulary
+- **AND** the IndexedDB `vocabulary` database is empty or absent
+- **THEN** migration resolves each numeric id to a natural key via the current normalized vocabulary order
+- **AND** writes the resolved natural keys to the IndexedDB `marks` object store
+- **AND** removes the localStorage marks key only after all resolved keys have been written
+
+##### Example: legacy migration path
+
+| Source localStorage | Current normalized vocabulary | Final IndexedDB keys |
+| ------------------- | ----------------------------- | -------------------- |
+| version 1 with markedIds [1, 2] | position 1 = `おい|`, position 2 = `会う|あう` | `おい|`, `会う|あう` |
+| version 2 with markedKeys [`おい|`] | position 1 = `おい|` | `おい|` |
+
+<!-- @trace
+source: optimize-vocabulary-data-format-and-storage
+updated: 2026-05-11
+code:
+  - src/modules/vocabulary/storage/vocabularyMarksDb.ts
+  - tests/unit/__snapshots__/vocabularyTupleRegression.spec.ts.snap
+  - src/modules/vocabulary/data/jpWords_N5.ts
+  - src/modules/vocabulary/data/jpWords_N4.ts
+  - package.json
+  - src/modules/vocabulary/data/jpWords_N2.ts
+  - bash.exe.stackdump
+  - src/modules/vocabulary/storage/vocabularyMarksStorage.ts
+  - src/modules/vocabulary/data/vocabularyEntryMapper.ts
+  - src/modules/vocabulary/storage/vocabularyMarksMigration.ts
+  - src/modules/vocabulary/composables/useVocabularySession.ts
+  - PROJECT_ARCHITECTURE.md
+  - src/app/main.ts
+  - src/modules/vocabulary/data/jpWords_N1.ts
+  - src/modules/vocabulary/types/vocabulary.ts
+  - src/modules/vocabulary/data/jpWords_N3.ts
+tests:
+  - tests/component/VocabularyViewSmoke.spec.ts
+  - tests/component/useVocabularySession.spec.ts
+  - tests/e2e/vocabulary-word-practice.spec.ts
+  - tests/unit/vocabularyMarksDb.spec.ts
+  - tests/unit/vocabularyEntryMapper.spec.ts
+  - tests/unit/vocabularyMarksStorage.spec.ts
+  - tests/unit/vocabularyTupleRegression.spec.ts
+  - tests/unit/vocabularyMarksMigration.spec.ts
+  - tests/unit/appMain.spec.ts
 -->

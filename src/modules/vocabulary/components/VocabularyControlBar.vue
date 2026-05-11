@@ -84,63 +84,67 @@ function jlptLevelWrapperTestId(level: VocabularyJlptLevel) {
     </div>
 
     <div class="vocabulary-level-controls" data-testid="vocabulary-level-controls">
-      <div class="vocabulary-level-controls-left" data-testid="vocabulary-level-controls-left">
-        <div
-          v-for="level in vocabularyJlptLevels"
-          :key="level"
-          :data-testid="jlptLevelWrapperTestId(level)"
-        >
-          <BaseCheckbox
-            :data-testid="jlptLevelTestId(level)"
-            :model-value="props.selectedJlptLevels.has(level)"
-            :label="level"
-            @update:model-value="updateJlptLevel(level, $event)"
-          />
+      <div class="vocabulary-level-controls-inner">
+        <div class="vocabulary-level-controls-left" data-testid="vocabulary-level-controls-left">
+          <div
+            v-for="level in vocabularyJlptLevels"
+            :key="level"
+            :data-testid="jlptLevelWrapperTestId(level)"
+          >
+            <BaseCheckbox
+              :data-testid="jlptLevelTestId(level)"
+              :model-value="props.selectedJlptLevels.has(level)"
+              :label="level"
+              @update:model-value="updateJlptLevel(level, $event)"
+            />
+          </div>
         </div>
-      </div>
-      <div class="vocabulary-level-controls-right" data-testid="vocabulary-level-controls-right">
-        <BaseButton
-          v-if="props.canShowStartQuiz"
-          data-testid="vocabulary-start-quiz-button"
-          variant="primary"
-          :disabled="!props.canStartQuiz"
-          @click="emit('startQuiz')"
-        >
-          開始測驗
-        </BaseButton>
+        <div class="vocabulary-level-controls-right" data-testid="vocabulary-level-controls-right">
+          <BaseButton
+            v-if="props.canShowStartQuiz"
+            data-testid="vocabulary-start-quiz-button"
+            variant="primary"
+            :disabled="!props.canStartQuiz"
+            @click="emit('startQuiz')"
+          >
+            開始測驗
+          </BaseButton>
+        </div>
       </div>
     </div>
 
     <div class="vocabulary-action-controls" data-testid="vocabulary-action-controls">
-      <div class="vocabulary-action-controls-left" data-testid="vocabulary-action-controls-left">
-        <BaseCheckbox
-          data-testid="vocabulary-filter-show-kanji"
-          :model-value="props.showKanji"
-          label="漢字"
-          @update:model-value="emit('update:showKanji', $event)"
-        />
-        <BaseCheckbox
-          data-testid="vocabulary-filter-show-all-sounds"
-          :model-value="props.showAllSounds"
-          label="全部字音"
-          @update:model-value="emit('update:showAllSounds', $event)"
-        />
-        <BaseCheckbox
-          data-testid="vocabulary-filter-show-marked-only"
-          :model-value="props.showMarkedOnly"
-          label="僅註記"
-          @update:model-value="emit('update:showMarkedOnly', $event)"
-        />
-      </div>
-      <div class="vocabulary-action-controls-right" data-testid="vocabulary-action-controls-right">
-        <BaseButton
-          data-testid="vocabulary-save-marks-button"
-          variant="secondary"
-          :class="{ invisible: !props.canSaveMarks }"
-          @click="emit('saveMarks')"
-        >
-          儲存註記
-        </BaseButton>
+      <div class="vocabulary-action-controls-inner">
+        <div class="vocabulary-action-controls-left" data-testid="vocabulary-action-controls-left">
+          <BaseCheckbox
+            data-testid="vocabulary-filter-show-kanji"
+            :model-value="props.showKanji"
+            label="漢字"
+            @update:model-value="emit('update:showKanji', $event)"
+          />
+          <BaseCheckbox
+            data-testid="vocabulary-filter-show-all-sounds"
+            :model-value="props.showAllSounds"
+            label="全部字音"
+            @update:model-value="emit('update:showAllSounds', $event)"
+          />
+          <BaseCheckbox
+            data-testid="vocabulary-filter-show-marked-only"
+            :model-value="props.showMarkedOnly"
+            label="僅註記"
+            @update:model-value="emit('update:showMarkedOnly', $event)"
+          />
+        </div>
+        <div class="vocabulary-action-controls-right" data-testid="vocabulary-action-controls-right">
+          <BaseButton
+            data-testid="vocabulary-save-marks-button"
+            variant="secondary"
+            :class="{ invisible: !props.canSaveMarks }"
+            @click="emit('saveMarks')"
+          >
+            儲存註記
+          </BaseButton>
+        </div>
       </div>
     </div>
   </section>

@@ -1,6 +1,7 @@
 ---
 name: spectra-analyze
 description: "Analyze artifact consistency for a change"
+effort: medium
 context: fork
 agent: Explore
 disallowedTools: [Edit, Write]

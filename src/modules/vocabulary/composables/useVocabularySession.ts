@@ -11,6 +11,7 @@ import {
   readVocabularyMarksSnapshot,
   writeVocabularyMarksSnapshot
 } from '@/modules/vocabulary/storage/vocabularyMarksStorage';
+import { migrateMarksFromLocalStorage } from '@/modules/vocabulary/storage/vocabularyMarksMigration';
 import { normalizeVocabularyEntries } from '@/modules/vocabulary/utils/vocabularyFilters';
 
 type VocabularyStageLoader = () => Promise<{ default: RawVocabularyEntry[] }>;
@@ -121,7 +122,7 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     return left.size === right.size && [...left].every((key) => right.has(key));
   }
 
-  function hydrateMarksWhenAllStagesLoaded() {
+  async function hydrateMarksWhenAllStagesLoaded() {
     if (marksHydrated.value) {
       return;
     }
@@ -130,14 +131,18 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
       return;
     }
 
-    const snapshot = readVocabularyMarksSnapshot(vocabularyEntries.value);
-    const nextPersistedMarkedKeys = new Set(snapshot?.markedKeys ?? []);
+    // Idempotent: handles v1 (with dictionary) leftover localStorage data;
+    // no-op if migration already completed at app startup.
+    await migrateMarksFromLocalStorage(vocabularyEntries.value);
+
+    const snapshot = await readVocabularyMarksSnapshot(vocabularyEntries.value);
+    const nextPersistedMarkedKeys = new Set<string>(snapshot?.markedKeys ?? []);
     const hasLocalDraftChanges = !haveSameMarkKeys(draftMarkedKeys.value, persistedMarkedKeys.value);
 
     persistedMarkedKeys.value = nextPersistedMarkedKeys;
     draftMarkedKeys.value = hasLocalDraftChanges
-      ? new Set([...nextPersistedMarkedKeys, ...draftMarkedKeys.value])
-      : new Set(nextPersistedMarkedKeys);
+      ? new Set<string>([...nextPersistedMarkedKeys, ...draftMarkedKeys.value])
+      : new Set<string>(nextPersistedMarkedKeys);
     marksHydrated.value = true;
   }
 
@@ -155,7 +160,7 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
 
     if (levelsToLoad.length === 0) {
       await Promise.all(requestedLevels.map((level) => stageLoadPromises.get(level)).filter(Boolean));
-      hydrateMarksWhenAllStagesLoaded();
+      await hydrateMarksWhenAllStagesLoaded();
       return;
     }
 
@@ -203,7 +208,7 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
       await loadPromise;
     }
 
-    hydrateMarksWhenAllStagesLoaded();
+    await hydrateMarksWhenAllStagesLoaded();
   }
 
   function updateMarkedKeys(target: typeof draftMarkedKeys, key: string, value: boolean) {
@@ -257,9 +262,9 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     draftMarkedKeys.value = nextMarkedKeys;
   }
 
-  function persistMarkedKeys(markedKeys: Set<string>) {
+  async function persistMarkedKeys(markedKeys: Set<string>): Promise<boolean> {
     if (markedKeys.size === 0) {
-      clearVocabularyMarksSnapshot();
+      await clearVocabularyMarksSnapshot();
       persistedMarkedKeys.value = new Set();
       draftMarkedKeys.value = new Set();
       return true;
@@ -271,7 +276,8 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
       updatedAt: new Date().toISOString()
     };
 
-    if (!writeVocabularyMarksSnapshot(snapshot)) {
+    const writeOk = await writeVocabularyMarksSnapshot(snapshot);
+    if (!writeOk) {
       window.alert('儲存註記失敗，請確認資料格式是否正確。');
       return false;
     }
@@ -281,7 +287,7 @@ export function useVocabularySession(options: UseVocabularySessionOptions = {}) 
     return true;
   }
 
-  function saveMarks() {
+  async function saveMarks(): Promise<boolean> {
     if (!window.confirm('確定要註記嗎？')) {
       return false;
     }

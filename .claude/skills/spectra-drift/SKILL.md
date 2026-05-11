@@ -1,6 +1,7 @@
 ---
 name: spectra-drift
 description: "Detect drift between a Spectra change and the current codebase state"
+effort: medium
 context: fork
 agent: Explore
 disallowedTools: [Edit, Write]
