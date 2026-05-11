@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import IconBookmarkOutline from '~icons/fa6-regular/bookmark';
+import IconBookmarkSolid from '~icons/fa6-solid/bookmark';
 import type { N5GrammarSection } from '@/modules/n5Grammar/types/grammarNotes';
 
 const props = withDefaults(
@@ -7,20 +9,28 @@ const props = withDefaults(
     section: N5GrammarSection;
     defaultExpanded?: boolean;
     completed?: boolean;
+    bookmarked?: boolean;
+    showBookmark?: boolean;
   }>(),
   {
     completed: false,
-    defaultExpanded: false
+    defaultExpanded: false,
+    bookmarked: false,
+    showBookmark: true
   }
 );
 
 const emit = defineEmits<{
   'update:completed': [completed: boolean];
+  'update:bookmarked': [bookmarked: boolean];
 }>();
 
 const expanded = ref(props.defaultExpanded && !props.completed);
 const contentVisible = computed(() => expanded.value && !props.completed);
 const completionLabel = computed(() => `標記 ${props.section.title} 為已學完`);
+const bookmarkLabel = computed(() =>
+  props.bookmarked ? `取消 ${props.section.title} 的閱讀位置書籤` : `將 ${props.section.title} 標記為上次讀到的位置`
+);
 
 watch(
   () => props.completed,
@@ -50,6 +60,13 @@ function toggleCompleted(event: Event) {
 
   emit('update:completed', nextCompleted);
 }
+
+function toggleBookmark(event: Event) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  emit('update:bookmarked', !props.bookmarked);
+}
 </script>
 
 <template>
@@ -60,6 +77,37 @@ function toggleCompleted(event: Event) {
       :class="{ 'is-expanded': contentVisible, 'is-completed': completed }"
     >
       <h2 class="n5-grammar-section-heading">
+        <button
+          v-if="showBookmark"
+          type="button"
+          :data-testid="`n5-grammar-bookmark-hit-area-${section.id}`"
+          class="n5-grammar-section-bookmark-hit-area"
+          :class="{ 'is-bookmarked': bookmarked }"
+          :aria-label="bookmarkLabel"
+          :aria-pressed="bookmarked ? 'true' : 'false'"
+          @click="toggleBookmark"
+        >
+          <IconBookmarkSolid
+            v-if="bookmarked"
+            :data-testid="`n5-grammar-bookmark-solid-${section.id}`"
+            class="n5-grammar-section-bookmark-icon"
+            aria-hidden="true"
+          />
+          <span
+            v-else
+            :data-testid="`n5-grammar-bookmark-outline-${section.id}`"
+            class="n5-grammar-section-bookmark-outline-stack"
+          >
+            <IconBookmarkSolid
+              class="n5-grammar-section-bookmark-icon-fill"
+              aria-hidden="true"
+            />
+            <IconBookmarkOutline
+              class="n5-grammar-section-bookmark-icon n5-grammar-section-bookmark-icon-border"
+              aria-hidden="true"
+            />
+          </span>
+        </button>
         <label
           :data-testid="`n5-grammar-completion-hit-area-${section.id}`"
           class="n5-grammar-section-completion-hit-area"

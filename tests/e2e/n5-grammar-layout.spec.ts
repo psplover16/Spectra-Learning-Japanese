@@ -181,6 +181,74 @@ test('375px 下 N5 文法 section header 會在滾動時接續黏在頂端', asy
   await expect.poll(() => topGrammarHeaderTestId(page)).toBe('n5-grammar-header-sentence-basics');
 });
 
+test('375px 下書籤切換、跨 reload 還原、離線可用、勾已讀自動清書籤、finished 區無書籤按鈕', async ({ context, page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await gotoApp(page, '/n5-grammar');
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload();
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+
+  const sentenceBookmarkHitArea = page.getByTestId('n5-grammar-bookmark-hit-area-sentence-basics');
+  const sentenceBookmarkOutline = page.getByTestId('n5-grammar-bookmark-outline-sentence-basics');
+  const sentenceBookmarkSolid = page.getByTestId('n5-grammar-bookmark-solid-sentence-basics');
+  const politeBookmarkHitArea = page.getByTestId('n5-grammar-bookmark-hit-area-polite-overview');
+  const politeBookmarkOutline = page.getByTestId('n5-grammar-bookmark-outline-polite-overview');
+  const politeBookmarkSolid = page.getByTestId('n5-grammar-bookmark-solid-polite-overview');
+  const sentenceCheckbox = page.getByTestId('n5-grammar-completion-sentence-basics');
+  const sentenceCheckboxHitArea = page.getByTestId('n5-grammar-completion-hit-area-sentence-basics');
+
+  await expect(sentenceBookmarkHitArea).toBeVisible();
+  await expect(sentenceBookmarkOutline).toBeVisible();
+  await expect(sentenceBookmarkSolid).toHaveCount(0);
+  await expect(sentenceBookmarkHitArea).toHaveAttribute('aria-pressed', 'false');
+
+  const sentenceHeaderBox = await page.getByTestId('n5-grammar-header-sentence-basics').boundingBox();
+  const bookmarkBox = await sentenceBookmarkHitArea.boundingBox();
+  if (!sentenceHeaderBox || !bookmarkBox) {
+    throw new Error('Failed to read bounding boxes for bookmark layout assertion');
+  }
+  expect(bookmarkBox.x).toBeLessThan(sentenceHeaderBox.x + sentenceHeaderBox.width / 2);
+  expect(bookmarkBox.width).toBeGreaterThanOrEqual(44);
+  expect(bookmarkBox.height).toBeGreaterThanOrEqual(44);
+
+  await sentenceBookmarkHitArea.click();
+  await expect(sentenceBookmarkSolid).toBeVisible();
+  await expect(sentenceBookmarkOutline).toHaveCount(0);
+  await expect(sentenceBookmarkHitArea).toHaveAttribute('aria-pressed', 'true');
+
+  await politeBookmarkHitArea.scrollIntoViewIfNeeded();
+  await politeBookmarkHitArea.click();
+  await expect(politeBookmarkSolid).toBeVisible();
+  await expect(politeBookmarkOutline).toHaveCount(0);
+  await expect(sentenceBookmarkSolid).toHaveCount(0);
+  await expect(sentenceBookmarkOutline).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+  await expect(politeBookmarkSolid).toBeVisible();
+  await expect(sentenceBookmarkOutline).toBeVisible();
+  await expect(sentenceBookmarkSolid).toHaveCount(0);
+
+  await context.setOffline(true);
+  await sentenceBookmarkHitArea.scrollIntoViewIfNeeded();
+  await sentenceBookmarkHitArea.click({ force: true });
+  await expect(sentenceBookmarkSolid).toBeVisible();
+  await expect(politeBookmarkSolid).toHaveCount(0);
+  await context.setOffline(false);
+
+  await sentenceCheckboxHitArea.scrollIntoViewIfNeeded();
+  await sentenceCheckboxHitArea.click();
+  await expect(sentenceCheckbox).toBeChecked();
+  await expect(page.getByTestId('n5-grammar-bookmark-hit-area-sentence-basics')).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+  await expect(sentenceCheckbox).toBeChecked();
+  await expect(page.getByTestId('n5-grammar-bookmark-hit-area-sentence-basics')).toHaveCount(0);
+  await expect(politeBookmarkSolid).toHaveCount(0);
+  await expect(politeBookmarkOutline).toBeVisible();
+});
+
 test('375px 下完成註記 reload 後保留，且離線時仍鎖定收合', async ({ context, page }) => {
   await page.setViewportSize({ width: 375, height: 900 });
   await gotoApp(page, '/n5-grammar');
