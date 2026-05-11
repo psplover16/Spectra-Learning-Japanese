@@ -173,12 +173,26 @@ describe('VocabularyViewSmoke', () => {
     expect(appearsBefore(levelControls.element, saveMarks.element)).toBe(true);
     expect(startQuiz.element).toBeInstanceOf(HTMLElement);
     expect(actionControlsRight.find('[data-testid="vocabulary-start-quiz-button"]').exists()).toBe(false);
-    expect(actionControls.element.firstElementChild).toBe(actionControlsLeft.element);
-    expect(actionControls.element.lastElementChild).toBe(actionControlsRight.element);
+    // After the reading-mode-transition refactor, action-controls wraps its
+    // children in an `.vocabulary-action-controls-inner` element so that the
+    // outer container can drive a grid-template-rows collapse without
+    // disrupting the inner flex layout. Assert that the inner is the only
+    // direct child and that left/right are first/last inside the inner.
+    const actionControlsInner = actionControls.get('.vocabulary-action-controls-inner');
+    expect(actionControls.element.firstElementChild).toBe(actionControlsInner.element);
+    expect(actionControls.element.lastElementChild).toBe(actionControlsInner.element);
+    expect(actionControlsInner.element.firstElementChild).toBe(actionControlsLeft.element);
+    expect(actionControlsInner.element.lastElementChild).toBe(actionControlsRight.element);
     expect(controlBar.find('[data-testid="vocabulary-filter-practice-mode"]').exists()).toBe(false);
     expect(markedOnly.text()).toContain('僅註記');
     expect(actionControls.text()).not.toContain('只顯示註記');
   });
+
+  // NOTE: CSS computed-style assertions for reading-mode transitions live in
+  // tests/e2e/vocabulary-word-practice.spec.ts because jsdom does not load
+  // bundled stylesheets nor fully compute cascaded styles for `visibility`
+  // and `grid-template-rows`. The component-level click→class wiring is
+  // already covered by "預設為操作模式..." above.
 
   it('預設為操作模式，並可切換閱讀模式且保留搜尋列與模式按鈕列', async () => {
     const { wrapper } = await mountVocabularyView();

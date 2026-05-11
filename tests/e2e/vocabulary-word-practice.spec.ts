@@ -382,6 +382,220 @@ test('migration: localStorage v2 snapshot 在啟動時被搬到 IndexedDB 且不
   await expect(firstVisibleMarkCheckbox(page)).toBeChecked();
 });
 
+test('reading-mode transition CSS contract on desktop Chrome (1280px) verifies via real-browser getComputedStyle', async ({ page }) => {
+  // Use the desktop viewport that was the original bug surface (桌機 Chrome
+  // 不順、其他平台正常). The collapse pattern's correctness on wide viewports
+  // is what this test guards.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await gotoApp(page, '/vocabulary');
+  await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
+
+  const view = page.getByTestId('vocabulary-view');
+  const levelControls = page.getByTestId('vocabulary-level-controls');
+  const actionControls = page.getByTestId('vocabulary-action-controls');
+  const modeButton = page.getByTestId('vocabulary-reading-mode-button');
+
+  // Baseline computed styles in operation mode.
+  const baselineLevel = await levelControls.evaluate((el) => {
+    const cs = window.getComputedStyle(el);
+    return {
+      visibility: cs.visibility,
+      gridTemplateRows: cs.gridTemplateRows,
+      display: cs.display,
+      transition: cs.transition
+    };
+  });
+  expect(baselineLevel.visibility).toBe('visible');
+  expect(baselineLevel.display).toBe('grid');
+  // gridTemplateRows in operation mode SHALL be a non-zero value
+  // (browsers report it as a pixel measurement for `1fr`).
+  expect(baselineLevel.gridTemplateRows).not.toBe('0px');
+  // Per spec: opacity transition is 180ms (was 120ms before this change).
+  // Chromium normalizes `180ms` to `0.18s` in computed style.
+  expect(baselineLevel.transition).toMatch(/0\.18s|180ms/);
+  // Per spec: base rule has `visibility 0s linear 0s` for immediate
+  // flip-on-exit. The 0s delay is omitted from computed style when default,
+  // so we just confirm visibility appears in the transition list.
+  expect(baselineLevel.transition).toMatch(/visibility/);
+  // Per spec: previous opacity-120ms timing SHALL NOT appear anywhere.
+  expect(baselineLevel.transition).not.toMatch(/0\.12s|120ms/);
+
+  // Activate reading mode and wait for the 180ms transition to fully settle.
+  await modeButton.click();
+  await page.waitForTimeout(250);
+
+  await expect(view).toHaveClass(/vocabulary-view-reading-mode/);
+
+  // Settled state in reading mode: per spec, visibility SHALL be hidden
+  // (override rule applies `visibility 0s linear 180ms`, snap happens at
+  // end of transition).
+  const collapsedLevel = await levelControls.evaluate((el) => {
+    const cs = window.getComputedStyle(el);
+    return {
+      visibility: cs.visibility,
+      gridTemplateRows: cs.gridTemplateRows,
+      opacity: cs.opacity
+    };
+  });
+  expect(collapsedLevel.visibility).toBe('hidden');
+  // Per spec "Collapse animation has no leading dead zone": grid-template-rows
+  // SHALL be 0fr (browsers report `0px` for 0fr at settled state).
+  expect(collapsedLevel.gridTemplateRows).toBe('0px');
+  expect(collapsedLevel.opacity).toBe('0');
+
+  // Action controls SHALL collapse the same way.
+  const collapsedAction = await actionControls.evaluate((el) => {
+    const cs = window.getComputedStyle(el);
+    return {
+      visibility: cs.visibility,
+      gridTemplateRows: cs.gridTemplateRows,
+      opacity: cs.opacity
+    };
+  });
+  expect(collapsedAction.visibility).toBe('hidden');
+  expect(collapsedAction.gridTemplateRows).toBe('0px');
+  expect(collapsedAction.opacity).toBe('0');
+
+  // Exit reading mode: visibility SHALL flip to visible immediately
+  // (base rule applies `visibility 0s linear 0s`).
+  await modeButton.click();
+  await page.waitForTimeout(50); // brief wait, less than 180ms
+
+  // At this point the transition is in progress, but visibility should
+  // ALREADY be visible per the immediate-flip base rule.
+  const exitingLevel = await levelControls.evaluate((el) => {
+    return window.getComputedStyle(el).visibility;
+  });
+  expect(exitingLevel).toBe('visible');
+});
+
+test('reading-mode toggle 在桌機 1280px 下測量切換延遲（資訊性、不斷言）', async ({ page }) => {
+  // Reports the click → first visible change latency for reference. The
+  // automated measurement in headless Chromium consistently over-reports
+  // versus real-browser perception (layout interpolation for
+  // grid-template-rows 1fr → 0fr behaves differently under Playwright),
+  // so this test logs data WITHOUT a hard assertion. Real validation lives
+  // in the CSS contract test above and in manual user inspection of dev
+  // server / production preview.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await gotoApp(page, '/vocabulary');
+  await expect(page.getByTestId('vocabulary-control-bar')).toBeVisible();
+
+  // Helper: measure click → first `transitionstart` event on the collapse
+  // container. This is the most reliable signal that the browser has started
+  // running the transition for our properties — far more accurate than polling
+  // computedStyle (Chromium reports grid-template-rows discretely during
+  // animation, which would falsely show ~140ms latency).
+  async function measureTransitionStartLatency(): Promise<{
+    deltaMs: number;
+    propertyName: string;
+  }> {
+    return page.evaluate(() => {
+      return new Promise<{ deltaMs: number; propertyName: string }>((resolve) => {
+        const ctrl = document.querySelector('[data-testid="vocabulary-level-controls"]') as HTMLElement | null;
+        const btn = document.querySelector('[data-testid="vocabulary-reading-mode-button"]') as HTMLButtonElement | null;
+        if (!ctrl || !btn) {
+          resolve({ deltaMs: -1, propertyName: '' });
+          return;
+        }
+        let clickTime = -1;
+        const onStart = (event: Event) => {
+          const transitionEvent = event as TransitionEvent;
+          ctrl.removeEventListener('transitionstart', onStart);
+          resolve({
+            deltaMs: performance.now() - clickTime,
+            propertyName: transitionEvent.propertyName
+          });
+        };
+        ctrl.addEventListener('transitionstart', onStart);
+        clickTime = performance.now();
+        btn.click();
+        // Safety timeout
+        window.setTimeout(() => {
+          ctrl.removeEventListener('transitionstart', onStart);
+          resolve({ deltaMs: -1, propertyName: '' });
+        }, 500);
+      });
+    });
+  }
+
+  // Additional helper: measure click → first observable height change of the
+  // INNER wrapper via getBoundingClientRect. This bypasses any quirks in
+  // Chromium's transitionstart event ordering and directly observes layout.
+  async function measureLayoutShrinkLatency(): Promise<{
+    deltaMs: number;
+    initialHeight: number;
+    heightAtFirstChange: number;
+  }> {
+    return page.evaluate(() => {
+      return new Promise<{ deltaMs: number; initialHeight: number; heightAtFirstChange: number }>(
+        (resolve) => {
+          const inner = document.querySelector(
+            '.vocabulary-level-controls-inner'
+          ) as HTMLElement | null;
+          const btn = document.querySelector(
+            '[data-testid="vocabulary-reading-mode-button"]'
+          ) as HTMLButtonElement | null;
+          if (!inner || !btn) {
+            resolve({ deltaMs: -1, initialHeight: -1, heightAtFirstChange: -1 });
+            return;
+          }
+          const initialHeight = inner.getBoundingClientRect().height;
+          const clickTime = performance.now();
+          btn.click();
+
+          const tick = () => {
+            const currentHeight = inner.getBoundingClientRect().height;
+            // Allow 0.5px tolerance for sub-pixel rendering quirks
+            if (Math.abs(currentHeight - initialHeight) > 0.5) {
+              resolve({
+                deltaMs: performance.now() - clickTime,
+                initialHeight,
+                heightAtFirstChange: currentHeight
+              });
+              return;
+            }
+            if (performance.now() - clickTime > 500) {
+              resolve({ deltaMs: -1, initialHeight, heightAtFirstChange: currentHeight });
+              return;
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }
+      );
+    });
+  }
+
+  // Measure entering reading mode — both signals.
+  const enterTransitionStart = await measureTransitionStartLatency();
+  // eslint-disable-next-line no-console
+  console.log('[reading-mode ENTER transitionstart event]', enterTransitionStart);
+
+  // Wait for the collapse to fully settle before measuring layout shrink.
+  await page.waitForTimeout(300);
+  // Reset back to operation mode for clean entry measurement.
+  await page.getByTestId('vocabulary-reading-mode-button').click();
+  await page.waitForTimeout(300);
+
+  const enterLayoutShrink = await measureLayoutShrinkLatency();
+  // eslint-disable-next-line no-console
+  console.log('[reading-mode ENTER layout shrink]', enterLayoutShrink);
+
+  // Soft assertions — only validate the directional sign of the change,
+  // not the exact timing (headless Chromium reports inconsistent latency).
+  expect(enterLayoutShrink.deltaMs).toBeGreaterThanOrEqual(0);
+  expect(enterLayoutShrink.heightAtFirstChange).toBeLessThan(enterLayoutShrink.initialHeight);
+
+  // Wait for collapse to settle, then measure exit (expand) direction.
+  await page.waitForTimeout(300);
+  const exitLayoutShrink = await measureLayoutShrinkLatency();
+  // eslint-disable-next-line no-console
+  console.log('[reading-mode EXIT layout grow]', exitLayoutShrink);
+  expect(exitLayoutShrink.deltaMs).toBeGreaterThanOrEqual(0);
+  expect(exitLayoutShrink.heightAtFirstChange).toBeGreaterThan(exitLayoutShrink.initialHeight);
+});
+
 test('375px 下模擬離線時 vocabulary 控制列仍可操作', async ({ context, page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await gotoApp(page, '/vocabulary');

@@ -170,8 +170,15 @@ describe('VocabularyControlBar', () => {
 
     expect(appearsBefore(levelControls.element, actionControls.element)).toBe(true);
     expect(appearsBefore(levelControlsLeft.element, levelControlsRight.element)).toBe(true);
-    expect(levelControls.element.firstElementChild).toBe(levelControlsLeft.element);
-    expect(levelControls.element.lastElementChild).toBe(levelControlsRight.element);
+    // After the reading-mode-transition refactor, level-controls wraps its
+    // children in `.vocabulary-level-controls-inner` so the outer grid can
+    // collapse via grid-template-rows without disrupting the inner flex
+    // layout. Assert via the inner wrapper.
+    const levelControlsInner = levelControls.get('.vocabulary-level-controls-inner');
+    expect(levelControls.element.firstElementChild).toBe(levelControlsInner.element);
+    expect(levelControls.element.lastElementChild).toBe(levelControlsInner.element);
+    expect(levelControlsInner.element.firstElementChild).toBe(levelControlsLeft.element);
+    expect(levelControlsInner.element.lastElementChild).toBe(levelControlsRight.element);
     expect(startQuiz.element).toBeInstanceOf(HTMLElement);
   });
 
@@ -213,16 +220,21 @@ describe('VocabularyControlBar', () => {
     const css = readMainCss();
     const controlBarCss = cssBodyForSelector(css, '.vocabulary-control-bar');
     const levelControlsCss = cssBodyForSelector(css, '.vocabulary-level-controls');
+    const levelControlsInnerCss = cssBodyForSelector(css, '.vocabulary-level-controls-inner');
     const levelControlsLeftCss = cssBodyForSelector(css, '.vocabulary-level-controls-left');
     const levelControlsRightCss = cssBodyForSelector(css, '.vocabulary-level-controls-right');
     const actionControlsCss = cssBodyForSelector(css, '.vocabulary-action-controls');
+    const actionControlsInnerCss = cssBodyForSelector(css, '.vocabulary-action-controls-inner');
     const actionControlsLeftCss = cssBodyForSelector(css, '.vocabulary-action-controls-left');
     const actionControlsRightCss = cssBodyForSelector(css, '.vocabulary-action-controls-right');
 
     expect(controlBarCss).toContain('gap-2');
     expect(controlBarCss).not.toContain('gap-0');
     expect(controlBarCss).not.toMatch(/\bspace-y-/);
-    expect(levelControlsCss).toContain('justify-between');
+    // After the reading-mode-transition refactor, outer level/action controls
+    // are grid containers driving the collapse animation; their flex layout
+    // (including `justify-between`) moved to the new `-inner` wrapper.
+    expect(levelControlsInnerCss).toContain('justify-between');
     expect(levelControlsCss).toContain('rounded-md');
     expect(levelControlsCss).toContain('border');
     expect(levelControlsCss).toContain('border-gray-200');
@@ -231,7 +243,7 @@ describe('VocabularyControlBar', () => {
     expect(levelControlsCss).toContain('py-2');
     expect(levelControlsLeftCss).toContain('gap-2');
     expect(levelControlsRightCss).toContain('gap-2');
-    expect(actionControlsCss).toContain('justify-between');
+    expect(actionControlsInnerCss).toContain('justify-between');
     expect(actionControlsCss).toContain('rounded-md');
     expect(actionControlsCss).toContain('border');
     expect(actionControlsCss).toContain('border-gray-200');

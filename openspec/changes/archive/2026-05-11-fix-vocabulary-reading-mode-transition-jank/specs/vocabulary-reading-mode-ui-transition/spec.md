@@ -1,24 +1,38 @@
 ## ADDED Requirements
 
-### Requirement: Reading mode toggle animates control bar and table region in sync
+### Requirement: Reading mode toggle animates control bar collapse and table scroll growth in sync
 
-When the user toggles the vocabulary view between operation mode and reading mode, the vocabulary control bar collapse animation (level controls and action controls) and the table region visual change (border, padding, max-height) SHALL start within the same animation frame and SHALL complete within the same animation frame. The collapse animation SHALL use a single shared `transition-duration` value so that no visual sub-region finishes before another.
+When the user toggles the vocabulary view between operation mode and reading mode, the vocabulary control bar collapse animation (level controls and action controls) and the table scroll max-height growth SHALL start within the same animation frame and SHALL complete within the same animation frame. The collapse animation SHALL use a single shared `transition-duration` value so that no visual sub-region finishes before another. The table region itself SHALL NOT acquire decorative border, padding, background fill, or shadow when entering reading mode — reading mode SHALL maximize available table space rather than wrap the table in a visible container. When reading mode is active, the table scroll container SHALL also drop its default bottom padding so that scrolling to the last row leaves no extra spacer between the row and the bottom of the scroll container; operation mode SHALL retain the default bottom padding for breathing room.
 
-#### Scenario: Entering reading mode animates both regions together
+#### Scenario: Entering reading mode animates the control bar collapse and table growth together
 
 - **GIVEN** the vocabulary view is in operation mode with the level controls and action controls visible
 - **WHEN** the user activates the reading mode button
 - **THEN** the level controls and action controls begin collapsing within 16 ms of the click
-- **AND** the table region border, padding, and max-height begin changing within the same 16 ms window
-- **AND** all four visual changes complete within 16 ms of each other
+- **AND** the table scroll region max-height begins growing within the same 16 ms window
+- **AND** all three visual changes complete within 16 ms of each other
+- **AND** the table region SHALL NOT show any added border, padding, background, or shadow at any point during or after the transition
 
-#### Scenario: Exiting reading mode animates both regions together
+#### Scenario: Exiting reading mode animates the control bar expand and table shrink together
 
 - **GIVEN** the vocabulary view is in reading mode
 - **WHEN** the user activates the operation mode button
 - **THEN** the level controls and action controls begin expanding within 16 ms of the click
-- **AND** the table region border, padding, and max-height begin changing within the same 16 ms window
-- **AND** all four visual changes complete within 16 ms of each other
+- **AND** the table scroll region max-height begins shrinking within the same 16 ms window
+- **AND** all three visual changes complete within 16 ms of each other
+
+#### Scenario: Reading mode drops the table scroll bottom spacer
+
+- **GIVEN** the vocabulary view is in reading mode and the loaded vocabulary has more rows than fit on screen
+- **WHEN** the user scrolls the table to the last row
+- **THEN** the last row sits flush against the bottom of the scroll container (zero padding between the row and the container's bottom edge)
+- **AND** the only remaining white space below the last row is the parent view padding and the device safe-area inset, neither of which this change modifies
+
+#### Scenario: Operation mode retains the table scroll bottom spacer
+
+- **GIVEN** the vocabulary view is in operation mode and the loaded vocabulary has more rows than fit on screen
+- **WHEN** the user scrolls the table to the last row
+- **THEN** the last row sits 0.75rem above the bottom edge of the scroll container, preserving the default scroll-bottom breathing space
 
 ### Requirement: Collapse animation has no leading dead zone on wide viewports
 

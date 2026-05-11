@@ -723,18 +723,29 @@ textarea {
 
   .vocabulary-view-reading-mode .vocabulary-level-controls,
   .vocabulary-view-reading-mode .vocabulary-action-controls {
-    max-height: 0;
+    grid-template-rows: 0fr;
     border-width: 0;
     padding-top: 0;
     padding-bottom: 0;
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
-    overflow: hidden;
+    transition: grid-template-rows 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 180ms ease, visibility 0s linear 180ms;
+  }
+
+  .vocabulary-view-reading-mode .vocabulary-level-controls-inner,
+  .vocabulary-view-reading-mode .vocabulary-action-controls-inner {
+    /* Squish content visually so multi-row wrapped checkboxes do not
+       disappear "row-by-row" as overflow:hidden clips them on narrow
+       viewports. Combined with the outer grid-template-rows collapse,
+       this gives a continuous compress + clip motion rather than discrete
+       row drops. */
+    transform: scaleY(0);
   }
 
   .vocabulary-control-bar {
     @apply relative z-20 flex flex-col gap-2 px-1;
+    transition: gap 180ms ease;
   }
 
   .vocabulary-control-row,
@@ -759,9 +770,19 @@ textarea {
   }
 
   .vocabulary-level-controls {
-    @apply flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
-    max-height: 8rem;
-    transition: max-height 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 120ms ease;
+    @apply rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 180ms ease, visibility 0s linear 0s;
+  }
+
+  .vocabulary-level-controls-inner {
+    @apply flex flex-wrap items-center justify-between gap-3;
+    min-height: 0;
+    overflow: hidden;
+    transform-origin: top;
+    transition: transform 180ms ease;
+    will-change: transform;
   }
 
   .vocabulary-level-controls-left {
@@ -773,9 +794,19 @@ textarea {
   }
 
   .vocabulary-action-controls {
-    @apply flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
-    max-height: 6rem;
-    transition: max-height 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 120ms ease;
+    @apply rounded-md border border-gray-200 bg-neutral-50 px-2 py-2;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 180ms ease, padding 180ms ease, border-width 180ms ease, opacity 180ms ease, visibility 0s linear 0s;
+  }
+
+  .vocabulary-action-controls-inner {
+    @apply flex items-center justify-between gap-3;
+    min-height: 0;
+    overflow: hidden;
+    transform-origin: top;
+    transition: transform 180ms ease;
+    will-change: transform;
   }
 
   .vocabulary-action-controls-left {
@@ -811,11 +842,12 @@ textarea {
   }
 
   .vocabulary-table-region-reading-mode {
-    @apply z-10 rounded-md border border-clay/15 bg-parchment p-1 shadow-soft;
+    @apply z-10;
   }
 
   .vocabulary-table-region-reading-mode .vocabulary-table-scroll {
     max-height: calc(100dvh - 112px);
+    padding-bottom: 0;
   }
 
   .vocabulary-table-scroll {
@@ -823,6 +855,7 @@ textarea {
     max-height: calc(100dvh - 196px);
     padding-bottom: 0.75rem;
     scroll-padding-bottom: 0.75rem;
+    transition: max-height 180ms ease;
   }
 
   .vocabulary-table {
@@ -834,11 +867,11 @@ textarea {
   }
 
   .vocabulary-header-cell {
-    @apply border border-gray-300 bg-neutral-100 px-0.5 py-0.5 text-left align-top text-xs font-bold leading-4 text-ink;
+    @apply border border-gray-300 bg-neutral-100 px-0.5 py-0.5 text-left align-middle text-xs font-bold leading-4 text-ink;
   }
 
   .vocabulary-header-toggle {
-    @apply inline-flex items-center whitespace-nowrap;
+    @apply flex h-full items-center whitespace-nowrap;
     gap: 0.4rem;
   }
 
@@ -924,7 +957,10 @@ textarea {
     padding: 2px;
   }
 
-  .vocabulary-header-cell,
+  .vocabulary-header-cell {
+    padding: 3px;
+  }
+
   .vocabulary-body-cell {
     padding: 2px;
   }
